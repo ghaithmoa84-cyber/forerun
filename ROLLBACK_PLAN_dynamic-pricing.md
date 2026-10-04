@@ -81,6 +81,12 @@ DELETE FROM _prisma_migrations WHERE migration_name = '20261005011000_add_platfo
 npx prisma migrate resolve --rolled-back 20261005011000_add_platform_pricing
 ```
 
+### 3.1.2 تراجع الخطوة 6A-3.2 (إصلاح حفظ لقطة الطلب B2 وجعل config إلزاميًا)
+تعديل برمجيات بحت في مسارات `PricingService` وخدمات الطلبات والاختبارات (`c3cc60d` و `f26e2e0`):
+- لا يمس أي schema أو migrations أو جداول قاعدة البيانات.
+- التراجع عنه يتم عبر `git revert f26e2e0 c3cc60d` (أو التراجع عن الـ commits) وإعادة النشر بأمان تام.
+- لا يؤثر على أي قيود مالية في `LedgerEntry` (append-only) للطلبات السابقة.
+
 ### 3.2 التراجع العميق — بعد Delivery (أيام)
 ```bash
 # R4: إيقاف كل traffic على endpoints التسعير
