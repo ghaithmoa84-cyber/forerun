@@ -26,9 +26,10 @@ import { getOperationalDate } from '../../../src/modules/settlements/settlements
  *    - 4.2 (i): getCurrentSettlement vs ΣLedger[RUNNER_SHARE].
  *    - 4.3 (ii): closeDay vs ΣLedger[RUNNER_SHARE].
  *    - 4.4 (iii): ΣSettlementItem vs order ledger constraints.
- * 5. Rounding Defect Characterization & Future Invariant:
- *    - 5.1 (Characterization): Demonstrates 1 SYP drift (90 vs 91) on odd fees (61 + 61).
- *    - 5.2 (Future Invariant - it.skip): Equality requirement for 6A-5.
+ * 5. Rounding Invariant & Per-Order Share Unification (Sprint 6A-3.3):
+ *    - 5.1 (Regression Guard): Enforces zero drift between closeDay and getCurrentSettlement on odd fees (61 + 61 -> 90 vs 90).
+ *    - 5.2 (Desired Invariant): Equality requirement between getCurrentSettlement and closeDay.
+ *    - 5.3 (Ledger Matching): Equality between ΣLedger[RUNNER_SHARE], closeDay, and getCurrentSettlement on odd fees.
  * 6. recalculateFee behavior and documentation of live-recalculation bug (B2):
  *    - 6.1: Extra stores fee recalculated dynamically as runner purchases stores.
  *    - 6.2 (Mechanism B2 - it.skip): Snapshot preservation requirement for 6A-4.
@@ -478,56 +479,49 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   });
 
   // =========================================================================
-  // 5. Rounding Defect Characterization & Future Invariant
+  // 5. Rounding Invariant & Per-Order Share Unification
   // =========================================================================
-  describe('5. Rounding Defect on Odd Fees (Characterization & Target Invariant)', () => {
+  describe('5. Rounding Invariant on Odd Fees (Per-Order Share Unification)', () => {
     /**
-     * Characterization test: documents the CURRENT behavior on odd order fees (e.g. 61 SYP).
+     * Regression Guard: verifies that on odd fees (e.g. 61 SYP), both getCurrentSettlement
+     * and closeDay compute shares per order:
+     * - closeDay: floor(61 * 0.75) + floor(61 * 0.75) = 45 + 45 = 90
+     * - getCurrentSettlement: floor(61 * 0.75) + floor(61 * 0.75) = 45 + 45 = 90
      *
-     * In current code:
-     * - closeDay (settlements.service.ts:~158):
-     *   Loops per order: Math.floor(61 * 0.75) + Math.floor(61 * 0.75) = 45 + 45 = 90
-     * - getCurrentSettlement (settlements.service.ts:~522):
-     *   Sums fees first: Math.floor((61 + 61) * 0.75) = Math.floor(122 * 0.75) = 91
-     *
-     * Result: 1 SYP drift between live preview and closed daily settlement.
-     *
-     * // TODO(6A-3.3): replace characterization with the equality assertion
+     * Result: Exactly 0 SYP drift between live preview and closed daily settlement.
      */
-    it('5.1 (Characterization) should document current rounding drift (90 vs 91) between closeDay and getCurrentSettlement on odd fees', async () => {
+    it('5.1 (Regression Guard) should enforce zero rounding drift between closeDay and getCurrentSettlement on odd fees (both yield 90 SYP)', async () => {
       await setupTwoDeliveredOrdersWithOddFees();
 
-      // Current settlement live preview calculates floor of sum: floor(122 * 0.75) = 91
+      // Current settlement live preview calculates per-order shares: floor(61 * 0.75) + floor(61 * 0.75) = 45 + 45 = 90
       const currentRes = await request
         .get('/api/v1/runner/settlements/current')
         .set('Authorization', `Bearer ${runnerToken}`);
 
       expect(currentRes.status).toBe(200);
       const currentRunnerShare = currentRes.body.estimatedRunnerShare;
-      expect(currentRunnerShare).toBe(91);
+      expect(currentRunnerShare).toBe(90);
 
-      // closeDay daily settlement calculates sum of floors: floor(61*0.75) + floor(61*0.75) = 90
+      // closeDay daily settlement calculates per-order shares: floor(61 * 0.75) + floor(61 * 0.75) = 45 + 45 = 90
       const operationalDate = getOperationalDate();
       const closeDayRes = await request
         .post('/api/v1/admin/settlements/close-day')
         .set('Authorization', `Bearer ${adminToken}`)
-        .send({ operationalDate, notes: 'Rounding characterization test' });
+        .send({ operationalDate, notes: 'Rounding regression guard test' });
 
       expect(closeDayRes.status).toBe(201);
       const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
       expect(closedRunnerShare).toBe(90);
 
-      // Characterization assertion: documents current 1 SYP difference explicitly (91 vs 90)
-      expect(currentRunnerShare - closedRunnerShare).toBe(1);
+      // Regression guard assertion: zero drift between live preview and closed daily settlement
+      expect(currentRunnerShare - closedRunnerShare).toBe(0);
     });
 
     /**
-     * // TODO(6A-3.3): replace characterization with the equality assertion
-     *
-     * Desired invariant for Sprint 6A (after unifying SettlementsService share computation with RUNNER_SHARE_BP):
+     * Invariant for Sprint 6A (after unifying SettlementsService share computation per order):
      * getCurrentSettlement and closeDay must match each other (zero drift on odd fees).
      */
-    it.skip('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare on odd fees', async () => {
+    it('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare on odd fees', async () => {
       await setupTwoDeliveredOrdersWithOddFees();
 
       const currentRes = await request
@@ -543,6 +537,68 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
 
       // Target invariant: 0 drift between live preview and closed daily settlement
+      expect(currentRunnerShare).toBe(closedRunnerShare);
+    });
+
+    it('5.3 should verify ΣLedger[RUNNER_SHARE] equals closeDay.runnerShare and getCurrentSettlement.runnerShare when orders delivered with 61 SYP', async () => {
+      // Create two orders with 1 store each
+      const createRes1 = await createCustomerOrder(['Store Odd 1']);
+      expect(createRes1.status).toBe(201);
+      const order1Id = createRes1.body.id;
+      await reviewAndApproveOrder(order1Id, false);
+
+      // Fabricate snapshot baseFee=61 before runner execution and delivery
+      await prisma.order.update({
+        where: { id: order1Id },
+        data: { baseFee: 61, totalFee: 61 },
+      });
+      await assignAndDeliverOrder(order1Id);
+
+      const createRes2 = await createCustomerOrder(['Store Odd 2']);
+      expect(createRes2.status).toBe(201);
+      const order2Id = createRes2.body.id;
+      await reviewAndApproveOrder(order2Id, false);
+
+      await prisma.order.update({
+        where: { id: order2Id },
+        data: { baseFee: 61, totalFee: 61 },
+      });
+      await assignAndDeliverOrder(order2Id);
+
+      // 1. Verify Ledger entries: each delivered order wrote RUNNER_SHARE = floor(61 * 0.75) = 45
+      const ledgerEntries = await prisma.ledgerEntry.findMany({
+        where: {
+          orderId: { in: [order1Id, order2Id] },
+          type: 'RUNNER_SHARE',
+        },
+      });
+      expect(ledgerEntries).toHaveLength(2);
+      expect(ledgerEntries[0].amount).toBe(45);
+      expect(ledgerEntries[1].amount).toBe(45);
+      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+      expect(sumLedgerRunnerShare).toBe(90);
+
+      // 2. Verify getCurrentSettlement live preview: loops per order -> 45 + 45 = 90
+      const currentRes = await request
+        .get('/api/v1/runner/settlements/current')
+        .set('Authorization', `Bearer ${runnerToken}`);
+      expect(currentRes.status).toBe(200);
+      const currentRunnerShare = currentRes.body.estimatedRunnerShare;
+      expect(currentRunnerShare).toBe(90);
+
+      // 3. Verify closeDay: loops per order -> 45 + 45 = 90
+      const operationalDate = getOperationalDate();
+      const closeDayRes = await request
+        .post('/api/v1/admin/settlements/close-day')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ operationalDate, notes: 'Odd fee ledger matching verification' });
+      expect(closeDayRes.status).toBe(201);
+      const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
+      expect(closedRunnerShare).toBe(90);
+
+      // Invariant: ΣLedger[RUNNER_SHARE] === getCurrentSettlement.runnerShare === closeDay.runnerShare
+      expect(sumLedgerRunnerShare).toBe(currentRunnerShare);
+      expect(sumLedgerRunnerShare).toBe(closedRunnerShare);
       expect(currentRunnerShare).toBe(closedRunnerShare);
     });
   });

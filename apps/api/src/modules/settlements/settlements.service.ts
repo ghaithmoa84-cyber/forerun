@@ -517,11 +517,16 @@ export class SettlementsService {
     }));
 
     const totalOrders = orders.length;
-    const totalFees = orders.reduce((sum, o) => sum + o.totalFee, 0);
-    const {
-      runnerShare: estimatedRunnerShare,
-      platformShare: estimatedPlatformShare,
-    } = splitShares(totalFees);
+    let totalFees = 0;
+    let estimatedRunnerShare = 0;
+    let estimatedPlatformShare = 0;
+
+    for (const o of orders) {
+      totalFees += o.totalFee;
+      const split = splitShares(o.totalFee);
+      estimatedRunnerShare += split.runnerShare;
+      estimatedPlatformShare += split.platformShare;
+    }
 
     return RunnerCurrentSettlementSchema.parse({
       operationalDate,
