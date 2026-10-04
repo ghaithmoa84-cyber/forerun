@@ -1093,14 +1093,6 @@ export class RunnerOrdersService {
       customerId: string;
     }
   > {
-    // Pre-transaction 409 check: if already DELIVERED, return immediately without any action
-    const preCheckOrder = await this.prisma.order.findFirst({
-      where: { id: orderId },
-    });
-    if (preCheckOrder?.status === 'DELIVERED') {
-      throw new ConflictException('ORDER_ALREADY_DELIVERED');
-    }
-
     const result = await this.prisma.$transaction(
       async (tx) => {
         const { order } = await this.validateDeliveryPreconditions(
