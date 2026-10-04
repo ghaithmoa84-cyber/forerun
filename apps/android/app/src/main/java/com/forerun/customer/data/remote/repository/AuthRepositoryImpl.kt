@@ -130,7 +130,7 @@ class AuthRepositoryImpl @Inject constructor(
             socketManager?.disconnect()
         } catch (_: Exception) {}
 
-        val refreshToken = tokenStorage.getRefreshToken()
+        val refreshToken = runCatching { tokenStorage.getRefreshToken() }.getOrNull()
         if (!refreshToken.isNullOrBlank()) {
             try {
                 authApi.logout(LogoutRequest(refreshToken))
@@ -138,7 +138,7 @@ class AuthRepositoryImpl @Inject constructor(
                 // Logout endpoint error shouldn't prevent clearing local credentials
             }
         }
-        tokenStorage.clearAll()
+        runCatching { tokenStorage.clearAll() }
         return ApiResponse.Success(Unit)
     }
 
