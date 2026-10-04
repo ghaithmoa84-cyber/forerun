@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PRICING } from '@forerun/shared-constants';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -54,7 +59,7 @@ export class PricingService {
       !Number.isInteger(params.purchasedStoreCount) ||
       params.purchasedStoreCount < 0
     ) {
-      throw new ForbiddenException(
+      throw new BadRequestException(
         'purchasedStoreCount must be a non-negative integer',
       );
     }
