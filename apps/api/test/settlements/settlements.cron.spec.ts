@@ -13,7 +13,7 @@ describe('SettlementsService cron helpers', () => {
   let service: SettlementsService;
 
   beforeEach(() => {
-    notificationsService = { emitToAdmin: vi.fn() };
+    notificationsService = { emitToAdmin: vi.fn().mockResolvedValue(undefined) };
     prisma = {
       order: { findMany: vi.fn() },
       $transaction: vi.fn(),

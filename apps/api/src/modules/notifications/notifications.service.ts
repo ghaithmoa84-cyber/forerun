@@ -27,15 +27,20 @@ export class NotificationsService {
     }
   }
 
-  emitToCustomer(customerUserId: string, event: string, data: unknown, sound?: SoundType): void {
+  async emitToCustomer(
+    customerUserId: string,
+    event: string,
+    data: unknown,
+    sound?: SoundType,
+  ): Promise<void> {
     this.emit(SOCKET_SERVERS.orders, `customer:${customerUserId}`, event, data, sound);
 
     if (this.fcmService && typeof data === 'object' && data !== null) {
-      this.triggerCustomerFcm(customerUserId, event, data as Record<string, unknown>).catch(
-        (err) => {
-          this.logger.warn(`Failed to trigger customer FCM for event ${event}`, err);
-        },
-      );
+      try {
+        await this.triggerCustomerFcm(customerUserId, event, data as Record<string, unknown>);
+      } catch (err) {
+        this.logger.warn(`Failed to trigger customer FCM for event ${event}`, err);
+      }
     }
   }
 
@@ -124,15 +129,28 @@ export class NotificationsService {
     });
   }
 
-  emitToRunner(runnerUserId: string, event: string, data: unknown, sound?: SoundType): void {
+  async emitToRunner(
+    runnerUserId: string,
+    event: string,
+    data: unknown,
+    sound?: SoundType,
+  ): Promise<void> {
     this.emit(SOCKET_SERVERS.orders, `runner:${runnerUserId}`, event, data, sound);
   }
 
-  emitToAdmin(event: string, data: unknown, sound?: SoundType): void {
+  async emitToAdmin(
+    event: string,
+    data: unknown,
+    sound?: SoundType,
+  ): Promise<void> {
     this.emit(SOCKET_SERVERS.admin, 'admin:all', event, data, sound);
   }
 
-  emitToAll(event: string, data: unknown, sound?: SoundType): void {
+  async emitToAll(
+    event: string,
+    data: unknown,
+    sound?: SoundType,
+  ): Promise<void> {
     this.emit(SOCKET_SERVERS.orders, '', event, data, sound);
   }
 }
