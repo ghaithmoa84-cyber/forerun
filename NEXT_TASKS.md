@@ -1,11 +1,37 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-01
+> **آخر تحديث:** 2026-10-05
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
 ---
 
+## مسار التسعير الديناميكي (Sprint 6A & 6B — القرارات D6–D10)
+
+> **حارس الإنتاج:** `MAX_CUSTOM_FEE = 0` في 6A كحارس إنتاج، ويُرفع إلى 500 في 6B بعد اكتمال أسطح الزبون والمندوب.
+
+### سبرنت 6A (Backend + أسطح الأدمن)
+| # | المهمة | الحالة | المسؤول | ملاحظات |
+|---|---|---|---|---|
+| 6A-S1 | **اختبارات تكامل تثبّت سلوك التسعير الحالي** (Order / Approve / Deliver / Settlement / Invariants / Recalculate) | ⏳ قيد التنفيذ | @feature-dev + @test-engineer | البند S1 — تجميد السلوك الحالي باختبارات تكامل دون تعديل كود الأعمال |
+| 6A-1 | **جرد `order.create`** للتأكد من تمرير `baseFee` و `totalFee` صراحةً | ⏳ قيد التنفيذ | @feature-dev | شرط أمان قبل إزالة `@default(60)` من `schema.prisma:208,211` |
+| 6A-2 | **Migration لجدول `PlatformPricing` وحقل `customFee` وعلاقة `User`** | ⏳ مخططة | @feature-dev | القرار D6 — مع إدراج صف seed افتراضي آمن |
+| 6A-3 | **تحديث `shared-types`** بمخططات وأنواع التسعير و `customFee` | ⏳ مخططة | @feature-dev | DTOs و Zod schemas للتحقق المشترك |
+| 6A-4 | **تحديث `PricingService` وحفظ لقطة الطلب (B2)** | ⏳ مخططة | @feature-dev | قراءة الأسعار من DB مع إبقاء `calculateFee` نقية، وحفظ `baseFee/peripheralFee` عند `recalculateFee` |
+| 6A-5 | **توحيد مصدر الحصص في `SettlementsService` (B1)** | ⏳ مخططة | @feature-dev | القرار D7 — اعتماد `RUNNER_SHARE_BP = 7500` ومطابقة Ledger تماماً |
+| 6A-6 | **حارس الإنتاج `MAX_CUSTOM_FEE = 0`** في `shared-constants` | ⏳ مخططة | @feature-dev | القرار D9 — حارس إنتاج يمنع فرض رسوم إضافية حتى اكتمال 6B |
+| 6A-7 | **مسارات الأدمن للتحكم بالتسعير وتعديل رسم الطلب** (`PATCH /admin/orders/:id/fee`) | ⏳ مخططة | @feature-dev | القرار D8 — إشعار + AuditLog دون اشتراط موافقة العميل |
+| 6A-8 | **شاشات لوحة تحكم الأدمن** لإدارة الأسعار وبطاقة مراجعة وتعديل رسم الطلب | ⏳ مخططة | @feature-dev | أسطح الإدارة في `admin-web` |
+
+### سبرنت 6B (أسطح الزبون والمندوب وAndroid)
+| # | المهمة | الحالة | المسؤول | ملاحظات |
+|---|---|---|---|---|
+| 6B-1 | **أسطح العميل (`customer-web`)** | ⏳ مخططة | @feature-dev | عرض `customFee` و `customFeeReason` في تفاصيل الطلب ومنع التناقض الحسابي (H4) |
+| 6B-2 | **أسطح المندوب (`runner-pwa`)** | ⏳ مخططة | @feature-dev | عرض `customFee` وتفاصيل الرسوم في شاشات المندوب |
+| 6B-3 | **تطبيق Android للعميل** | ⏳ مخططة | @feature-dev | تحديث DTOs وشاشات الطلبات لعرض الرسوم الإضافية والسبب |
+| 6B-4 | **رفع حارس الإنتاج `MAX_CUSTOM_FEE = 500`** | ⏳ مخططة | @feature-dev | بعد اكتمال واختبار كافة أسطح العرض للزبون والمندوب |
+
+---
 
 ## مسار Android (مرقّم 8D–10 — لا يدخل ترقيم `Sprint N` الخاص بـ backend)
 
@@ -57,7 +83,7 @@
 
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
 |---|---|---|---|---|---|
-| S1 | اختبار تكامل Pricing | متوسطة | ⏳ غير مُنجَز | @feature-dev | `apps/api/vitest.config.ts:21` يستثني `test/integration/**` — لا تغطية تسعير. |
+| S1 | اختبار تكامل Pricing | متوسطة | ⏳ قيد التنفيذ (Sprint 6A-S1) | @feature-dev + @test-engineer | تغطية مسار التسعير الحالي بالكامل باختبارات تكامل قبل أي تعديل. |
 | S2 | مراجعة أمنية موثّقة | عالية | 🟡 **بانتظار التوقيع** | @test-engineer | الوثيقة جاهزة: [docs/SECURITY-AND-CODE-REVIEW.md](docs/SECURITY-AND-CODE-REVIEW.md) الإصدار 2 — 33 بنداً مفتوحاً موثّقاً بـ`ملف:سطر` على `744bf23` + قسم مرفوضات مُثبتة بالدليل. **المتبقّي: توقيع المستخدم.** |
 | S3 | خط أساس الأداء `docs/performance-baseline.md` | متوسطة | ⏳ **الملف غير موجود** | @test-engineer | مُشار إليه في Sprint 6 Brief لكنه لم يُنشأ. |
 | S4 | Sentry — تفعيل على الإنتاج | منخفضة | ⏸️ مؤجل | @feature-dev | `SENTRY_DSN` غير مضبوط. |
