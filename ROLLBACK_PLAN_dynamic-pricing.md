@@ -87,6 +87,12 @@ npx prisma migrate resolve --rolled-back 20261005011000_add_platform_pricing
 - التراجع عنه يتم عبر `git revert f26e2e0 c3cc60d` (أو التراجع عن الـ commits) وإعادة النشر بأمان تام.
 - لا يؤثر على أي قيود مالية في `LedgerEntry` (append-only) للطلبات السابقة.
 
+### 3.1.3 تراجع الخطوة 6A-3.3 (توحيد حساب الحصص لكل طلب B1)
+تعديل برمجي بحت في حسابات التسوية (`646f9d4` و `78b4400`):
+- لا يمس أي schema أو migrations أو جداول قاعدة البيانات.
+- التراجع عنه يتم عبر `git revert 78b4400 646f9d4` بأمان تام.
+- لا يمس أي قيود تاريخية في `LedgerEntry` (append-only).
+
 ### 3.2 التراجع العميق — بعد Delivery (أيام)
 ```bash
 # R4: إيقاف كل traffic على endpoints التسعير
