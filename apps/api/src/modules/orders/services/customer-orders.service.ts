@@ -19,10 +19,11 @@ import { PrismaService } from '../../../database/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
 import { TelegramService } from '../../notifications/telegram.service.js';
-import { PricingService } from '../../pricing/pricing.service.js';
+import { PricingService, type FeeResult } from '../../pricing/pricing.service.js';
 import { OrderStateMachine } from '../../../state-machine/order-state-machine.js';
 import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.js';
 import { mapOrderItem } from './order-mapper.js';
+import type { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CustomerOrdersService {
@@ -38,10 +39,13 @@ export class CustomerOrdersService {
 
   private readonly logger = new Logger(CustomerOrdersService.name);
 
-  async createOrder(
+  /**
+   * Validates customer existence and ensures non-anyStore items provide customStoreName.
+   */
+  private async validateOrderPreconditions(
     userId: string,
-    dto: CreateOrderRequest,
-  ): Promise<CreateOrderResponse> {
+    items: CreateOrderRequest['items'],
+  ) {
     const customer = await this.prisma.customer.findUnique({
       where: { userId },
       include: { user: { select: { name: true } } },
@@ -50,9 +54,7 @@ export class CustomerOrdersService {
       throw new NotFoundException('Customer not found');
     }
 
-    const storeGroups = new Map<string, typeof dto.items>();
-
-    for (const item of dto.items) {
+    for (const item of items) {
       const key = item.anyStore
         ? '__any_store__'
         : (item.customStoreName ?? '').trim();
@@ -61,6 +63,30 @@ export class CustomerOrdersService {
           'Item customStoreName is required when anyStore is false',
         );
       }
+    }
+
+    return customer;
+  }
+
+  /**
+   * Groups order items by store and constructs the structured store dataset.
+   */
+  private buildOrderStoresData(items: CreateOrderRequest['items']): Array<{
+    storeName: string;
+    isAnyStore: boolean;
+    items: Array<{
+      itemName: string;
+      quantity: string;
+      customStoreName?: string | null;
+      anyStore: boolean;
+    }>;
+  }> {
+    const storeGroups = new Map<string, typeof items>();
+
+    for (const item of items) {
+      const key = item.anyStore
+        ? '__any_store__'
+        : (item.customStoreName ?? '').trim();
       const group = storeGroups.get(key);
       if (group) {
         group.push(item);
@@ -69,197 +95,272 @@ export class CustomerOrdersService {
       }
     }
 
-    const orderStoresData = Array.from(storeGroups.entries()).map(
-      ([storeName, items]) => ({
-        storeName: storeName === '__any_store__' ? 'أي متجر' : storeName,
-        isAnyStore: storeName === '__any_store__',
-        items: items.map((item) => ({
-          itemName: item.itemName,
-          quantity: item.quantity,
-          customStoreName: item.customStoreName,
-          anyStore: item.anyStore,
-        })),
-      }),
-    );
+    return Array.from(storeGroups.entries()).map(([storeName, storeItems]) => ({
+      storeName: storeName === '__any_store__' ? 'أي متجر' : storeName,
+      isAnyStore: storeName === '__any_store__',
+      items: storeItems.map((item) => ({
+        itemName: item.itemName,
+        quantity: item.quantity,
+        customStoreName: item.customStoreName,
+        anyStore: item.anyStore,
+      })),
+    }));
+  }
 
-    const purchasedStoreCount = orderStoresData.length;
-    const fee = this.pricingService.calculateFee({
+  /**
+   * Calculates estimated fee for a new order based on store count.
+   */
+  private calculateOrderFee(storeCount: number): FeeResult {
+    return this.pricingService.calculateFee({
       isPeripheral: false,
-      purchasedStoreCount,
+      purchasedStoreCount: storeCount,
     });
+  }
 
-    const result = await this.prisma.$transaction(
-      async (tx) => {
-        if (dto.preferredRunnerId) {
-          const preferredRunner = await tx.runner.findUnique({
-            where: { id: dto.preferredRunnerId },
-            include: { user: true },
-          });
-          if (!preferredRunner) {
-            throw new NotFoundException('Preferred runner not found');
-          }
-          const isPreferredRunnerActive =
-            String(preferredRunner.status) !== 'SUSPENDED' &&
-            preferredRunner.user.status === 'VERIFIED';
-          if (!isPreferredRunnerActive) {
-            throw new UnprocessableEntityException(
-              'PREFERRED_RUNNER_NOT_AVAILABLE',
-            );
-          }
-        }
-
-        const order = await tx.order.create({
-          data: {
-            customerId: customer.id,
-            deliveryLat: dto.deliveryAddress.lat,
-            deliveryLng: dto.deliveryAddress.lng,
-            deliveryDesc: dto.deliveryAddress.description,
-            notes: dto.notes,
-            preferredRunnerId: dto.preferredRunnerId,
-            waitForPreferred: dto.waitForPreferred,
-            baseFee: fee.baseFee,
-            peripheralFee: fee.peripheralFee,
-            extraStoresFee: fee.extraStoresFee,
-            totalFee: fee.totalFee,
-          },
-        });
-
-        const transitionResult = this.orderStateMachine.transition(
-          'DRAFT',
-          'PENDING_REVIEW',
-          'CUSTOMER',
-        );
-
-        const updated = await tx.order.updateMany({
-          where: { id: order.id, status: order.status },
-          data: {
-            orderNumber: `${CONFIG.ORDER_NUMBER_PREFIX}-${String(
-              order.seqNumber,
-            ).padStart(CONFIG.ORDER_NUMBER_PAD_LENGTH, '0')}`,
-            status: transitionResult.to,
-          },
-        });
-        if (updated.count === 0) {
-          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
-        }
-        const updatedOrder = await tx.order.findUniqueOrThrow({
-          where: { id: order.id },
-        });
-
-        const allItems: Array<{
-          orderId: string;
-          orderStoreId: string;
+  /**
+   * Creates the order, orderStores, and orderItems within a transaction and logs audit entries.
+   */
+  private async createOrderRecord(
+    tx: Prisma.TransactionClient,
+    params: {
+      customerId: string;
+      userId: string;
+      dto: CreateOrderRequest;
+      fee: FeeResult;
+      orderStoresData: Array<{
+        storeName: string;
+        isAnyStore: boolean;
+        items: Array<{
           itemName: string;
           quantity: string;
-          customStoreName: string | null;
+          customStoreName?: string | null;
           anyStore: boolean;
-        }> = [];
+        }>;
+      }>;
+    },
+  ) {
+    const { customerId, userId, dto, fee, orderStoresData } = params;
 
-        for (const store of orderStoresData) {
-          const orderStore = await tx.orderStore.create({
-            data: {
-              orderId: updatedOrder.id,
-              storeName: store.storeName,
-              isAnyStore: store.isAnyStore,
-              status: 'PENDING',
-              addedBy: 'CUSTOMER',
-            },
-          });
-
-          for (const item of store.items) {
-            allItems.push({
-              orderId: updatedOrder.id,
-              orderStoreId: orderStore.id,
-              itemName: item.itemName,
-              quantity: item.quantity,
-              customStoreName: item.customStoreName,
-              anyStore: item.anyStore,
-            });
-          }
-        }
-
-        await tx.orderItem.createMany({ data: allItems });
-
-        await this.auditService.log(
-          {
-            orderId: updatedOrder.id,
-            actorId: userId,
-            actorRole: 'CUSTOMER',
-            event: 'ORDER_CREATED',
-            fromStatus: 'DRAFT',
-            toStatus: 'PENDING_REVIEW',
-            meta: { orderNumber: updatedOrder.orderNumber },
-          },
-          tx,
+    if (dto.preferredRunnerId) {
+      const preferredRunner = await tx.runner.findUnique({
+        where: { id: dto.preferredRunnerId },
+        include: { user: true },
+      });
+      if (!preferredRunner) {
+        throw new NotFoundException('Preferred runner not found');
+      }
+      const isPreferredRunnerActive =
+        String(preferredRunner.status) !== 'SUSPENDED' &&
+        preferredRunner.user.status === 'VERIFIED';
+      if (!isPreferredRunnerActive) {
+        throw new UnprocessableEntityException(
+          'PREFERRED_RUNNER_NOT_AVAILABLE',
         );
+      }
+    }
 
-        await this.auditService.log(
-          {
-            orderId: updatedOrder.id,
-            actorId: userId,
-            actorRole: 'CUSTOMER',
-            event: 'ORDER_SUBMITTED',
-            fromStatus: 'PENDING_REVIEW',
-            toStatus: 'PENDING_REVIEW',
-            meta: { orderNumber: updatedOrder.orderNumber },
-          },
-          tx,
-        );
-
-        return { order: updatedOrder, fee };
+    const order = await tx.order.create({
+      data: {
+        customerId,
+        deliveryLat: dto.deliveryAddress.lat,
+        deliveryLng: dto.deliveryAddress.lng,
+        deliveryDesc: dto.deliveryAddress.description,
+        notes: dto.notes,
+        preferredRunnerId: dto.preferredRunnerId,
+        waitForPreferred: dto.waitForPreferred,
+        baseFee: fee.baseFee,
+        peripheralFee: fee.peripheralFee,
+        extraStoresFee: fee.extraStoresFee,
+        totalFee: fee.totalFee,
       },
-      { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
+    });
+
+    const transitionResult = this.orderStateMachine.transition(
+      'DRAFT',
+      'PENDING_REVIEW',
+      'CUSTOMER',
     );
 
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: {
+        orderNumber: `${CONFIG.ORDER_NUMBER_PREFIX}-${String(
+          order.seqNumber,
+        ).padStart(CONFIG.ORDER_NUMBER_PAD_LENGTH, '0')}`,
+        status: transitionResult.to,
+      },
+    });
+    if (updated.count === 0) {
+      throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+    }
+    const updatedOrder = await tx.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+
+    const allItems: Array<{
+      orderId: string;
+      orderStoreId: string;
+      itemName: string;
+      quantity: string;
+      customStoreName: string | null;
+      anyStore: boolean;
+    }> = [];
+
+    for (const store of orderStoresData) {
+      const orderStore = await tx.orderStore.create({
+        data: {
+          orderId: updatedOrder.id,
+          storeName: store.storeName,
+          isAnyStore: store.isAnyStore,
+          status: 'PENDING',
+          addedBy: 'CUSTOMER',
+        },
+      });
+
+      for (const item of store.items) {
+        allItems.push({
+          orderId: updatedOrder.id,
+          orderStoreId: orderStore.id,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          customStoreName: item.customStoreName ?? null,
+          anyStore: item.anyStore,
+        });
+      }
+    }
+
+    await tx.orderItem.createMany({ data: allItems });
+
+    await this.auditService.log(
+      {
+        orderId: updatedOrder.id,
+        actorId: userId,
+        actorRole: 'CUSTOMER',
+        event: 'ORDER_CREATED',
+        fromStatus: 'DRAFT',
+        toStatus: 'PENDING_REVIEW',
+        meta: { orderNumber: updatedOrder.orderNumber },
+      },
+      tx,
+    );
+
+    await this.auditService.log(
+      {
+        orderId: updatedOrder.id,
+        actorId: userId,
+        actorRole: 'CUSTOMER',
+        event: 'ORDER_SUBMITTED',
+        fromStatus: 'PENDING_REVIEW',
+        toStatus: 'PENDING_REVIEW',
+        meta: { orderNumber: updatedOrder.orderNumber },
+      },
+      tx,
+    );
+
+    return updatedOrder;
+  }
+
+  /**
+   * Emits WebSocket event to admin and posts order summary to Telegram channel.
+   */
+  private async sendOrderCreationNotifications(params: {
+    order: { id: string; orderNumber: string | null; totalFee: number };
+    customerName: string;
+    itemCount: number;
+  }): Promise<void> {
+    const { order, customerName, itemCount } = params;
+
     try {
-      await this.notificationsService.emitToAdmin('order:new', {
-        orderId: result.order.id,
-        orderNumber: result.order.orderNumber,
-        customerName: customer.user?.name ?? '',
-        itemCount: dto.items.length,
-      }, 'new_order');
+      await this.notificationsService.emitToAdmin(
+        'order:new',
+        {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          customerName,
+          itemCount,
+        },
+        'new_order',
+      );
     } catch (error) {
-      this.logger.warn('Notification emit failed', { error, orderId: result.order.id });
+      this.logger.warn('Notification emit failed', {
+        error,
+        orderId: order.id,
+      });
     }
 
     try {
       const fullOrder = await this.prisma.order.findUnique({
-        where: { id: result.order.id },
+        where: { id: order.id },
         include: {
           orderStores: { where: { isDeleted: false } },
           customer: { include: { user: true } },
         },
       });
 
-      const storeNames = fullOrder?.orderStores
-        ?.map((os) => os.storeName)
-        .filter(Boolean)
-        .join('، ') || 'غير محدد';
+      const storeNames =
+        fullOrder?.orderStores
+          ?.map((os) => os.storeName)
+          .filter(Boolean)
+          .join('، ') || 'غير محدد';
 
-      const storesLine = (fullOrder?.orderStores?.length ?? 0) > 1
-        ? `المتاجر (${fullOrder?.orderStores.length}): ${storeNames}`
-        : `المتجر: ${storeNames}`;
+      const storesLine =
+        (fullOrder?.orderStores?.length ?? 0) > 1
+          ? `المتاجر (${fullOrder?.orderStores.length}): ${storeNames}`
+          : `المتجر: ${storeNames}`;
 
       await this.telegramService.sendMessage(
         `🛍️ <b>طلب جديد</b>\n` +
-        `رقم الطلب: <b>#${result.order.orderNumber}</b>\n` +
-        `العميل: ${fullOrder?.customer?.user?.name ?? customer.user?.name ?? 'غير محدد'}\n` +
-        `${storesLine}\n` +
-        `الإجمالي: ${result.order.totalFee} ل.س`
+          `رقم الطلب: <b>#${order.orderNumber}</b>\n` +
+          `العميل: ${fullOrder?.customer?.user?.name ?? customerName ?? 'غير محدد'}\n` +
+          `${storesLine}\n` +
+          `الإجمالي: ${order.totalFee} ل.س`
       );
     } catch (error) {
-      this.logger.warn('Telegram notification failed', { error, orderId: result.order.id });
+      this.logger.warn('Telegram notification failed', {
+        error,
+        orderId: order.id,
+      });
     }
+  }
+
+  async createOrder(
+    userId: string,
+    dto: CreateOrderRequest,
+  ): Promise<CreateOrderResponse> {
+    const customer = await this.validateOrderPreconditions(userId, dto.items);
+
+    const orderStoresData = this.buildOrderStoresData(dto.items);
+
+    const fee = this.calculateOrderFee(orderStoresData.length);
+
+    const order = await this.prisma.$transaction(
+      async (tx) => {
+        return this.createOrderRecord(tx, {
+          customerId: customer.id,
+          userId,
+          dto,
+          fee,
+          orderStoresData,
+        });
+      },
+      { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
+    );
+
+    await this.sendOrderCreationNotifications({
+      order,
+      customerName: customer.user?.name ?? '',
+      itemCount: dto.items.length,
+    });
 
     return {
-      id: result.order.id,
-      orderNumber: result.order.orderNumber!,
-      status: result.order.status,
+      id: order.id,
+      orderNumber: order.orderNumber!,
+      status: order.status,
       estimatedFee: {
-        baseFee: result.fee.baseFee,
-        peripheralFee: result.fee.peripheralFee,
-        extraStoresFee: result.fee.extraStoresFee,
-        totalFee: result.fee.totalFee,
+        baseFee: fee.baseFee,
+        peripheralFee: fee.peripheralFee,
+        extraStoresFee: fee.extraStoresFee,
+        totalFee: fee.totalFee,
         note: 'الرسم النهائي يُحدد بعد المراجعة',
       },
     };

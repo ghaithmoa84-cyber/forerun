@@ -740,6 +740,347 @@ export class RunnerOrdersService {
     };
   }
 
+  /**
+   * Validates runner verification status, order readiness, and store completion.
+   */
+  private async validateDeliveryPreconditions(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    runnerUserId: string,
+  ): Promise<{
+    runner: Prisma.RunnerGetPayload<{ include: { user: true } }>;
+    order: Prisma.OrderGetPayload<{
+      include: { runner: true; customer: true; orderStores: true };
+    }>;
+  }> {
+    const runner = await tx.runner.findUnique({
+      where: { userId: runnerUserId },
+      include: { user: true },
+    });
+    if (!runner || runner.user.status !== 'VERIFIED') {
+      throw new UnprocessableEntityException('Runner is not verified');
+    }
+
+    const order = await tx.order.findFirst({
+      where: { id: orderId, runnerId: runner.id },
+      include: { runner: true, customer: true, orderStores: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.status !== 'DELIVERED') {
+      if (order.status !== 'OUT_FOR_DELIVERY') {
+        throw new UnprocessableEntityException(
+          'Order is not ready for delivery',
+        );
+      }
+      if (
+        order.orderStores.length === 0 ||
+        order.orderStores.some((store) => store.status === 'PENDING')
+      ) {
+        throw new UnprocessableEntityException(
+          'All stores must be purchased or skipped before delivery',
+        );
+      }
+    }
+
+    return { runner, order };
+  }
+
+  /**
+   * Handles idempotency validation and claims the delivery lock using idempotencyKey.
+   */
+  private async processIdempotentDelivery(
+    tx: Prisma.TransactionClient,
+    order: Prisma.OrderGetPayload<{
+      include: { runner: true; customer: true; orderStores: true };
+    }>,
+    idempotencyKey: string,
+  ): Promise<{
+    order: Prisma.OrderGetPayload<{
+      include?: { runner: true; customer: true; orderStores: true };
+    }>;
+    idempotent: boolean;
+    ledgerEntries: unknown[];
+    runnerId: string | null;
+    customerId: string;
+    customerUserId: string;
+  } | null> {
+    if (order.status === 'DELIVERED') {
+      this.orderStateMachine.validateIdempotencyKeyForDelivered(
+        order,
+        idempotencyKey,
+      );
+      if (order.idempotencyKey !== idempotencyKey) {
+        throw new ConflictException('Idempotency key mismatch');
+      }
+      return {
+        order,
+        idempotent: true,
+        ledgerEntries: [],
+        runnerId: order.runnerId,
+        customerId: order.customerId,
+        customerUserId: order.customer.userId,
+      };
+    }
+
+    this.orderStateMachine.validateIdempotencyKeyForDelivered(
+      order,
+      idempotencyKey,
+    );
+    const claimed = await tx.order.updateMany({
+      where: {
+        id: order.id,
+        status: 'OUT_FOR_DELIVERY',
+        idempotencyKey: null,
+      },
+      data: { idempotencyKey },
+    });
+    if (claimed.count === 0) {
+      const current = await tx.order.findUnique({ where: { id: order.id } });
+      if (current?.status === 'DELIVERED') {
+        this.orderStateMachine.validateIdempotencyKeyForDelivered(
+          current,
+          idempotencyKey,
+        );
+        if (current.idempotencyKey === idempotencyKey) {
+          return {
+            order: current!,
+            idempotent: true,
+            ledgerEntries: [],
+            runnerId: current.runnerId,
+            customerId: current.customerId,
+            customerUserId: order.customer.userId,
+          };
+        }
+      }
+      throw new ConflictException('Delivery is already being processed');
+    }
+
+    return null;
+  }
+
+  /**
+   * Transitions order to DELIVERED, runner to AVAILABLE, and updates customer stats.
+   */
+  private async updateOrderAndRunnerState(
+    tx: Prisma.TransactionClient,
+    order: Prisma.OrderGetPayload<{
+      include: { runner: true; customer: true; orderStores: true };
+    }>,
+    runnerUserId: string,
+  ) {
+    const transitionResult = this.orderStateMachine.transition(
+      order.status as OrderStatus,
+      'DELIVERED',
+      'RUNNER',
+      { actorId: runnerUserId },
+    );
+    const feeResult: RecalculateFeeResult =
+      await this.pricingService.recalculateFee(order.id, tx);
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: {
+        status: transitionResult.to,
+        deliveredAt: new Date(),
+      },
+    });
+    if (updated.count === 0) {
+      throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+    }
+    const updatedOrder = await tx.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+
+    if (!order.runnerId || !order.runner) {
+      throw new NotFoundException('Runner not found');
+    }
+    const runnerTransition = this.runnerStateMachine.transition(
+      order.runner.status,
+      'AVAILABLE',
+      'SYSTEM',
+      { actorId: runnerUserId },
+    );
+    const runnerUpdated = await tx.runner.updateMany({
+      where: { id: order.runnerId, status: order.runner.status },
+      data: { status: 'AVAILABLE' },
+    });
+    if (runnerUpdated.count === 0) {
+      throw new UnprocessableEntityException('RUNNER_NOT_AVAILABLE');
+    }
+
+    await tx.customer.update({
+      where: { id: order.customerId },
+      data: {
+        completedOrders: { increment: 1 },
+        totalFeesPaid: { increment: feeResult.newFee.totalFee },
+      },
+    });
+
+    return {
+      updatedOrder,
+      feeResult,
+      transitionResult,
+      runnerTransition,
+    };
+  }
+
+  /**
+   * Records ledger entries for order fees and shares, and logs audit events.
+   */
+  private async calculateAndRecordLedger(
+    tx: Prisma.TransactionClient,
+    params: {
+      orderId: string;
+      orderNumber: string | null;
+      runnerId: string | null;
+      customerId: string;
+      fromOrderStatus: string;
+      toOrderStatus: OrderStatus;
+      runnerStatus: string;
+      runnerTransitionTo: string;
+      runnerUserId: string;
+      feeResult: RecalculateFeeResult;
+      idempotencyKey: string;
+    },
+  ): Promise<unknown[]> {
+    const {
+      orderId,
+      orderNumber,
+      runnerId,
+      fromOrderStatus,
+      toOrderStatus,
+      runnerStatus,
+      runnerTransitionTo,
+      runnerUserId,
+      feeResult,
+      idempotencyKey,
+    } = params;
+
+    const ledgerEntries = await this.ledgerService.createMany(
+      [
+        {
+          type: 'ORDER_FEE_TOTAL',
+          amount: feeResult.newFee.totalFee,
+          description: `Order fee for ${orderNumber}`,
+          orderId,
+          runnerId: runnerId ?? undefined,
+          meta: { idempotencyKey },
+        },
+        {
+          type: 'RUNNER_SHARE',
+          amount: feeResult.newFee.runnerShare,
+          description: `Runner share for ${orderNumber}`,
+          orderId,
+          runnerId: runnerId ?? undefined,
+          meta: { idempotencyKey },
+        },
+        {
+          type: 'PLATFORM_SHARE',
+          amount: feeResult.newFee.platformShare,
+          description: `Platform share for ${orderNumber}`,
+          orderId,
+          runnerId: runnerId ?? undefined,
+          meta: { idempotencyKey },
+        },
+      ],
+      tx,
+    );
+
+    await this.auditService.log(
+      {
+        orderId,
+        actorId: runnerUserId,
+        actorRole: 'RUNNER',
+        event: 'ORDER_DELIVERED',
+        fromStatus: fromOrderStatus,
+        toStatus: toOrderStatus,
+        meta: {
+          orderNumber,
+          idempotencyKey,
+        },
+      },
+      tx,
+    );
+    await this.auditService.log(
+      {
+        orderId,
+        actorId: runnerUserId,
+        actorRole: 'SYSTEM',
+        event: 'LEDGER_ENTRY_CREATED',
+        meta: {
+          orderNumber,
+          count: ledgerEntries.length,
+          types: ledgerEntries.map((entry) => entry.type),
+        },
+      },
+      tx,
+    );
+    await this.auditService.log(
+      {
+        actorId: runnerUserId,
+        actorRole: 'SYSTEM',
+        event: 'RUNNER_STATUS_CHANGED',
+        fromStatus: runnerStatus,
+        toStatus: runnerTransitionTo,
+        meta: {
+          runnerId,
+          orderId,
+        },
+      },
+      tx,
+    );
+
+    return ledgerEntries;
+  }
+
+  /**
+   * Sends notifications to customer, runner, and admin outside the transaction.
+   */
+  private async sendDeliveryNotifications(
+    customerUserId: string,
+    runnerUserId: string,
+    order: {
+      id: string;
+      orderNumber: string | null;
+      status: string;
+      deliveredAt: Date | null;
+    },
+  ): Promise<void> {
+    try {
+      await this.notificationsService.emitToCustomer(
+        customerUserId,
+        'order:delivered',
+        {
+          orderId: order.id,
+          deliveredAt: order.deliveredAt,
+        },
+        'success',
+      );
+      await this.notificationsService.emitToRunner(
+        runnerUserId,
+        'order:delivered',
+        { orderId: order.id },
+        'success',
+      );
+      await this.notificationsService.emitToAdmin(
+        'order:status_changed',
+        {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          newStatus: order.status,
+        },
+        'status_update',
+      );
+    } catch (error) {
+      this.logger.warn('Notification emit failed', {
+        error,
+        orderId: order.id,
+      });
+    }
+  }
+
   async deliverOrder(
     orderId: string,
     runnerUserId: string,
@@ -762,207 +1103,41 @@ export class RunnerOrdersService {
 
     const result = await this.prisma.$transaction(
       async (tx) => {
-        const runner = await tx.runner.findUnique({
-          where: { userId: runnerUserId },
-          include: { user: true },
-        });
-        if (!runner || runner.user.status !== 'VERIFIED') {
-          throw new UnprocessableEntityException('Runner is not verified');
-        }
+        const { order } = await this.validateDeliveryPreconditions(
+          tx,
+          orderId,
+          runnerUserId,
+        );
 
-        const order = await tx.order.findFirst({
-          where: { id: orderId, runnerId: runner.id },
-          include: { runner: true, customer: true, orderStores: true },
-        });
-        if (!order) {
-          throw new NotFoundException('Order not found');
-        }
-
-        if (order.status === 'DELIVERED') {
-          this.orderStateMachine.validateIdempotencyKeyForDelivered(
-            order,
-            dto.idempotencyKey,
-          );
-          if (order.idempotencyKey !== dto.idempotencyKey) {
-            throw new ConflictException('Idempotency key mismatch');
-          }
-          return {
-            order,
-            idempotent: true,
-            ledgerEntries: [],
-            runnerId: order.runnerId,
-            customerId: order.customerId,
-            customerUserId: order.customer.userId,
-          };
-        }
-
-        if (order.status !== 'OUT_FOR_DELIVERY') {
-          throw new UnprocessableEntityException(
-            'Order is not ready for delivery',
-          );
-        }
-        if (
-          order.orderStores.length === 0 ||
-          order.orderStores.some((store) => store.status === 'PENDING')
-        ) {
-          throw new UnprocessableEntityException(
-            'All stores must be purchased or skipped before delivery',
-          );
-        }
-
-        this.orderStateMachine.validateIdempotencyKeyForDelivered(
+        const idempotentResult = await this.processIdempotentDelivery(
+          tx,
           order,
           dto.idempotencyKey,
         );
-        const claimed = await tx.order.updateMany({
-          where: {
-            id: order.id,
-            status: 'OUT_FOR_DELIVERY',
-            idempotencyKey: null,
-          },
-          data: { idempotencyKey: dto.idempotencyKey },
-        });
-        if (claimed.count === 0) {
-          const current = await tx.order.findUnique({ where: { id: order.id } });
-          if (current?.status === 'DELIVERED') {
-            this.orderStateMachine.validateIdempotencyKeyForDelivered(
-              current,
-              dto.idempotencyKey,
-            );
-            if (current.idempotencyKey === dto.idempotencyKey) {
-              return {
-                order: current!,
-                idempotent: true,
-                ledgerEntries: [],
-                runnerId: current.runnerId,
-                customerId: current.customerId,
-                customerUserId: order.customer.userId,
-              };
-            }
-          }
-          throw new ConflictException('Delivery is already being processed');
+        if (idempotentResult) {
+          return idempotentResult;
         }
 
-        const transitionResult = this.orderStateMachine.transition(
-          order.status as OrderStatus,
-          'DELIVERED',
-          'RUNNER',
-          { actorId: runnerUserId },
-        );
-        const feeResult: RecalculateFeeResult =
-          await this.pricingService.recalculateFee(order.id, tx);
-        const updated = await tx.order.updateMany({
-          where: { id: order.id, status: order.status },
-          data: {
-            status: transitionResult.to,
-            deliveredAt: new Date(),
-          },
-        });
-        if (updated.count === 0) {
-          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
-        }
-        const updatedOrder = await tx.order.findUniqueOrThrow({
-          where: { id: order.id },
-        });
+        const {
+          updatedOrder,
+          feeResult,
+          transitionResult,
+          runnerTransition,
+        } = await this.updateOrderAndRunnerState(tx, order, runnerUserId);
 
-        if (!order.runnerId || !order.runner) {
-          throw new NotFoundException('Runner not found');
-        }
-        const runnerTransition = this.runnerStateMachine.transition(
-          order.runner.status,
-          'AVAILABLE',
-          'SYSTEM',
-          { actorId: runnerUserId },
-        );
-        const runnerUpdated = await tx.runner.updateMany({
-          where: { id: order.runnerId, status: order.runner.status },
-          data: { status: 'AVAILABLE' },
+        const ledgerEntries = await this.calculateAndRecordLedger(tx, {
+          orderId: order.id,
+          orderNumber: updatedOrder.orderNumber,
+          runnerId: order.runnerId,
+          customerId: order.customerId,
+          fromOrderStatus: order.status,
+          toOrderStatus: transitionResult.to,
+          runnerStatus: order.runner!.status,
+          runnerTransitionTo: runnerTransition.to,
+          runnerUserId,
+          feeResult,
+          idempotencyKey: dto.idempotencyKey,
         });
-        if (runnerUpdated.count === 0) {
-          throw new UnprocessableEntityException('RUNNER_NOT_AVAILABLE');
-        }
-
-        await tx.customer.update({
-          where: { id: order.customerId },
-          data: {
-            completedOrders: { increment: 1 },
-            totalFeesPaid: { increment: feeResult.newFee.totalFee },
-          },
-        });
-
-        const ledgerEntries = await this.ledgerService.createMany(
-          [
-            {
-              type: 'ORDER_FEE_TOTAL',
-              amount: feeResult.newFee.totalFee,
-              description: `Order fee for ${updatedOrder.orderNumber}`,
-              orderId: updatedOrder.id,
-              runnerId: updatedOrder.runnerId ?? undefined,
-              meta: { idempotencyKey: dto.idempotencyKey },
-            },
-            {
-              type: 'RUNNER_SHARE',
-              amount: feeResult.newFee.runnerShare,
-              description: `Runner share for ${updatedOrder.orderNumber}`,
-              orderId: updatedOrder.id,
-              runnerId: updatedOrder.runnerId ?? undefined,
-              meta: { idempotencyKey: dto.idempotencyKey },
-            },
-            {
-              type: 'PLATFORM_SHARE',
-              amount: feeResult.newFee.platformShare,
-              description: `Platform share for ${updatedOrder.orderNumber}`,
-              orderId: updatedOrder.id,
-              runnerId: updatedOrder.runnerId ?? undefined,
-              meta: { idempotencyKey: dto.idempotencyKey },
-            },
-          ],
-          tx,
-        );
-
-        await this.auditService.log(
-          {
-            orderId: order.id,
-            actorId: runnerUserId,
-            actorRole: 'RUNNER',
-            event: 'ORDER_DELIVERED',
-            fromStatus: order.status,
-            toStatus: transitionResult.to,
-            meta: {
-              orderNumber: updatedOrder.orderNumber,
-              idempotencyKey: dto.idempotencyKey,
-            },
-          },
-          tx,
-        );
-        await this.auditService.log(
-          {
-            orderId: order.id,
-            actorId: runnerUserId,
-            actorRole: 'SYSTEM',
-            event: 'LEDGER_ENTRY_CREATED',
-            meta: {
-              orderNumber: updatedOrder.orderNumber,
-              count: ledgerEntries.length,
-              types: ledgerEntries.map((entry) => entry.type),
-            },
-          },
-          tx,
-        );
-        await this.auditService.log(
-          {
-            actorId: runnerUserId,
-            actorRole: 'SYSTEM',
-            event: 'RUNNER_STATUS_CHANGED',
-            fromStatus: order.runner.status,
-            toStatus: runnerTransition.to,
-            meta: {
-              runnerId: order.runnerId,
-              orderId: order.id,
-            },
-          },
-          tx,
-        );
 
         return {
           order: updatedOrder,
@@ -977,40 +1152,21 @@ export class RunnerOrdersService {
     );
 
     if (!result.idempotent) {
-      try {
-        await this.notificationsService.emitToCustomer(
-          result.customerUserId,
-          'order:delivered',
-          {
-            orderId: result.order!.id,
-            deliveredAt: result.order!.deliveredAt,
-          },
-          'success',
-        );
-        await this.notificationsService.emitToRunner(
-          runnerUserId,
-          'order:delivered',
-          { orderId: result.order!.id },
-          'success',
-        );
-        await this.notificationsService.emitToAdmin('order:status_changed', {
-          orderId: result.order!.id,
-          orderNumber: result.order!.orderNumber,
-          newStatus: result.order!.status,
-        }, 'status_update');
-      } catch (error) {
-        this.logger.warn('Notification emit failed', { error, orderId: result.order!.id });
-      }
+      await this.sendDeliveryNotifications(
+        result.customerUserId,
+        runnerUserId,
+        result.order,
+      );
     }
 
     return {
-      orderId: result.order!.id,
-      orderNumber: result.order!.orderNumber!,
-      status: result.order!.status,
+      orderId: result.order.id,
+      orderNumber: result.order.orderNumber!,
+      status: result.order.status,
       idempotent: result.idempotent,
       ledgerEntries: result.ledgerEntries ?? [],
-      runnerId: result.order!.runnerId,
-      customerId: result.order!.customerId,
+      runnerId: result.order.runnerId,
+      customerId: result.order.customerId,
     };
   }
 }
