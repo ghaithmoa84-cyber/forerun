@@ -13,6 +13,9 @@ describe('PricingService', () => {
       findUnique: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
+    platformPricing: {
+      findUnique: ReturnType<typeof vi.fn>;
+    };
   };
   let auditService: {
     log: ReturnType<typeof vi.fn>;
@@ -24,6 +27,9 @@ describe('PricingService', () => {
       order: {
         findUnique: vi.fn(),
         update: vi.fn(),
+      },
+      platformPricing: {
+        findUnique: vi.fn(),
       },
     };
     auditService = {
@@ -340,4 +346,170 @@ describe('PricingService', () => {
       expect(prisma.order.findUnique).not.toHaveBeenCalled();
     });
   });
+
+  describe('calculateFee with custom config', () => {
+    it('uses custom PricingConfig when provided', () => {
+      const customConfig = {
+        baseFee: 100,
+        peripheralFee: 50,
+        extraStoreFee: 30,
+      };
+
+      const result = service.calculateFee(
+        {
+          isPeripheral: true,
+          purchasedStoreCount: 3,
+        },
+        customConfig,
+      );
+
+      // base: 100, peripheral: 50, extraStores: (3-1)*30 = 60 -> total: 210
+      expect(result.baseFee).toBe(100);
+      expect(result.peripheralFee).toBe(50);
+      expect(result.extraStoresFee).toBe(60);
+      expect(result.totalFee).toBe(210);
+      expect(result.runnerShare).toBe(Math.floor(210 * PRICING.RUNNER_SHARE));
+      expect(result.platformShare).toBe(Math.ceil(210 * PRICING.PLATFORM_SHARE));
+    });
+
+    it('defaults to 60/40/20 when config is omitted', () => {
+      const result = service.calculateFee({
+        isPeripheral: true,
+        purchasedStoreCount: 2,
+      });
+
+      // base: 60, peripheral: 40, extraStores: (2-1)*20 = 20 -> total: 120
+      expect(result.baseFee).toBe(60);
+      expect(result.peripheralFee).toBe(40);
+      expect(result.extraStoresFee).toBe(20);
+      expect(result.totalFee).toBe(120);
+    });
+  });
+
+  describe('getPricingConfig', () => {
+    it('returns values when default row exists in DB', async () => {
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 80,
+        peripheralFee: 50,
+        extraStoreFee: 25,
+      });
+
+      const config = await service.getPricingConfig();
+
+      expect(config).toEqual({
+        baseFee: 80,
+        peripheralFee: 50,
+        extraStoreFee: 25,
+      });
+      expect(prisma.platformPricing.findUnique).toHaveBeenCalledWith({
+        where: { id: 'default' },
+      });
+    });
+
+    it('returns fallback DEFAULT_PRICING_CONFIG and logs warn when row is null', async () => {
+      prisma.platformPricing.findUnique.mockResolvedValue(null);
+
+      const config = await service.getPricingConfig();
+
+      expect(config).toEqual({
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 20,
+      });
+    });
+
+    it('returns fallback when row contains negative or non-integer values', async () => {
+      service.disableCacheForTesting();
+
+      // Case 1: negative baseFee
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: -10,
+        peripheralFee: 40,
+        extraStoreFee: 20,
+      });
+      let config = await service.getPricingConfig();
+      expect(config).toEqual({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 });
+
+      // Case 2: non-integer peripheralFee
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 60,
+        peripheralFee: 40.5,
+        extraStoreFee: 20,
+      });
+      config = await service.getPricingConfig();
+      expect(config).toEqual({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 });
+    });
+
+    it('returns fallback and does not throw when DB throws an error', async () => {
+      prisma.platformPricing.findUnique.mockRejectedValue(new Error('DB Connection Timeout'));
+
+      const config = await service.getPricingConfig();
+
+      expect(config).toEqual({
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 20,
+      });
+    });
+
+    it('caches config in-memory for TTL duration (two calls within 30s make one DB query)', async () => {
+      service.enableCacheForTesting(30_000);
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 75,
+        peripheralFee: 35,
+        extraStoreFee: 15,
+      });
+
+      const config1 = await service.getPricingConfig();
+      const config2 = await service.getPricingConfig();
+
+      expect(config1).toEqual(config2);
+      expect(prisma.platformPricing.findUnique).toHaveBeenCalledTimes(1);
+    });
+
+    it('bypasses cache when disableCacheForTesting is called', async () => {
+      service.disableCacheForTesting();
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 75,
+        peripheralFee: 35,
+        extraStoreFee: 15,
+      });
+
+      await service.getPricingConfig();
+      await service.getPricingConfig();
+
+      expect(prisma.platformPricing.findUnique).toHaveBeenCalledTimes(2);
+    });
+
+    it('reads via transaction client when tx is passed', async () => {
+      const mockTx = {
+        platformPricing: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'default',
+            baseFee: 90,
+            peripheralFee: 45,
+            extraStoreFee: 25,
+          }),
+        },
+      };
+
+      const config = await service.getPricingConfig(mockTx as any);
+
+      expect(config).toEqual({
+        baseFee: 90,
+        peripheralFee: 45,
+        extraStoreFee: 25,
+      });
+      expect(mockTx.platformPricing.findUnique).toHaveBeenCalledWith({
+        where: { id: 'default' },
+      });
+      expect(prisma.platformPricing.findUnique).not.toHaveBeenCalled();
+    });
+  });
 });
+
