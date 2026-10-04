@@ -68,6 +68,11 @@ export class OrdersGateway
         return;
       }
 
+      if (user.status === 'SUSPENDED') {
+        client.disconnect(true);
+        return;
+      }
+
       if (user.role === 'CUSTOMER') {
         client.join(`customer:${payload.sub}`);
       } else if (user.role === 'RUNNER') {
