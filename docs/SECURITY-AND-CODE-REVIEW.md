@@ -108,9 +108,9 @@
 |---|---|---|---|---|
 | T-1 | `.github/workflows/integration-tests.yml:9` | **`if: false`** — job التكامل معطَّل كلياً. اختبارات `deliver-order` / `create-order` / `auth` موجودة وتعمل محلياً، لكن **لا بوابة تراجع آلية في CI على مسار التسليم المالي**. | 🟡 | احذف السطر. البنية التحتية جاهزة: Postgres service (`:12–25`)، و`migrate deploy` (`:60`)، وأمر `test:integration` (`apps/api/package.json:24`). |
 | T-2 | `apps/api/vitest.config.ts:21` | `exclude: ['test/integration/**/*.spec.ts']` يمنع تشغيلها عبر `pnpm test`. | 🟡 | مقبول كتصميم (حفظ سرعة اختبار الوحدة)، بشرط تفعيل `T-1`. |
-| T-3 | `apps/api/test/` (21 ملفاً) | **صفر اختبارات** لـ `pricing.service.ts` — المحرّك الحسابي غير المغطى. | 🟡 | `pricing.service.spec.ts`: سيناريوهات + الحالات الحدية. |
-| T-4 | `apps/api/test/settlements/settlements.cron.spec.ts` فقط | `closeDay` (`:246–303`) و`confirmSettlement` بلا اختبارات معاملات. | 🟡 | اختبارات: صحّة القيود · منع الازدواجية · `floor`/`ceil` عند `settlements.service.ts:140–141`. |
-| T-5 | نفس | **صفر اختبارات** لـ `admin-order-command.service.ts` (`approve` / `reject` / `assignRunner`). | 🟡 | تغطية المسارات الثلاثة. |
+| T-3 | `apps/api/test/` (21 ملفاً) | **صفر اختبارات** لـ `pricing.service.ts` — المحرّك الحسابي غير المغطى. | 🟡 | `pricing.service.spec.ts`: سيناريوهات + الحالات الحدية (✅ **مُنجَز في المسار الرابع**). |
+| T-4 | `apps/api/test/settlements/settlements.cron.spec.ts` فقط | `closeDay` (`:246–303`) و`confirmSettlement` بلا اختبارات معاملات. | 🟡 | اختبارات: صحّة القيود · منع الازدواجية · `floor`/`ceil` عند `settlements.service.ts:140–141` (✅ **مُنجَز في المسار الرابع**). |
+| T-5 | نفس | **صفر اختبارات** لـ `admin-order-command.service.ts` (`approve` / `reject` / `assignRunner`). | 🟡 | تغطية المسارات الثلاثة (✅ **مُنجَز في المسار الرابع**). |
 | T-6 | `apps/android/app/src/androidTest/` | **غير موجود** — 0% تغطية UI. | 🟢 | مساران: تسجيل الدخول + تفاصيل الطلب (Compose Test). |
 
 **ملاحظة على T-1:** الإصدار 1 عدّها 🔴. أُعيد تصنيفها إلى 🟡 بقرار صريح: غياب بوابة التراجع **عيب عملية** لا عيب سلوك — لا يُعطِّل طلباً ولا يُفسد قيداً مالياً، لكنه يجعل R-1 قابلاً للعودة في أي مراجعة لاحقة ما لم يُصلَح. البند `S1` في [NEXT_TASKS.md](../NEXT_TASKS.md) يغطي الجذر نفسه (اختبار تكامل التسعير · `T-2` + `T-3`).
