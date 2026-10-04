@@ -87,7 +87,8 @@ model User {
   auditLogs     AuditLog[]
 
   // الطلبات التي ألغاها هذا المستخدم
-  cancelledOrders Order[] @relation("CancelledByUser")
+  cancelledOrders  Order[]           @relation("CancelledByUser")
+  platformPricings PlatformPricing[]
 
   @@index([whatsapp])
   @@index([role, status])
@@ -451,5 +452,19 @@ model DeviceToken {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+// ─────────────────────────────────────────
+// PLATFORM PRICING (إعدادات أسعار المنصة)
+// ─────────────────────────────────────────
+
+model PlatformPricing {
+  id              String   @id @default("default")
+  baseFee         Int
+  extraStoreFee   Int
+  peripheralFee   Int
+  updatedAt       DateTime @updatedAt
+  updatedByUserId String?
+  updatedByUser   User?    @relation(fields: [updatedByUserId], references: [id])
 }
 
