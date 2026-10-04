@@ -1,7 +1,7 @@
 import {
   Injectable,
-  ForbiddenException,
   BadRequestException,
+  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
@@ -102,7 +102,7 @@ export class PricingService {
     }
 
     if (order.status === 'DELIVERED') {
-      throw new ForbiddenException(
+      throw new ConflictException(
         'Cannot recalculate fee for a delivered order',
       );
     }
