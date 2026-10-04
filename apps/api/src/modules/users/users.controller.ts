@@ -1,6 +1,5 @@
 import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
@@ -13,7 +12,7 @@ import {
 } from '@forerun/shared-types';
 
 @Controller('admin/users')
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 @Roles('ADMIN')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
