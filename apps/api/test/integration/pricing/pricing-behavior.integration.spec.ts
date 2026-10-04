@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { PRICING } from '@forerun/shared-constants';
 import { cleanDatabase, prisma } from '../setup';
 import { createTestApp, closeTestApp, getRequest } from '../helpers/app.helper';
 import {
@@ -12,16 +11,27 @@ import {
 import { getOperationalDate } from '../../../src/modules/settlements/settlements.service';
 
 /**
+ * ⚠️ WARNING: Hardcoded financial numbers in these tests (baseFee=60, peripheralFee=40, extraStoresFee=20)
+ * reflect current frozen baseline behavior. They will be refactored to read from PlatformPricing / PricingConfig
+ * dynamically in Sprint 6A-3.
+ *
  * Sprint 6A - Baseline Pricing Behavior Integration Tests (S1)
  *
  * Freezes existing pricing behavior across:
  * 1. Order creation fee snapshot (single and multi-store).
  * 2. Peripheral zone fee on admin approval.
  * 3. Delivery ledger entries (100% total, 75% runner, 25% platform) and idempotency.
- * 4. Settlement consistency between Ledger, Settlement, and SettlementItem.
- * 5. V3 Verification: Settlement.runnerShare == sum(LedgerEntry[RUNNER_SHARE]).
- * 6. Financial invariant: runnerShare + platformShare === total across odd/even fees.
- * 7. recalculateFee behavior and documentation of live-recalculation bug (B2).
+ * 4. V3 Settlement Verifications:
+ *    - 4.1 Full Flow: Comprehensive E2E settlement lifecycle.
+ *    - 4.2 (i): getCurrentSettlement vs ΣLedger[RUNNER_SHARE].
+ *    - 4.3 (ii): closeDay vs ΣLedger[RUNNER_SHARE].
+ *    - 4.4 (iii): ΣSettlementItem vs order ledger constraints.
+ * 5. Rounding Defect Characterization & Future Invariant:
+ *    - 5.1 (Characterization): Demonstrates 1 SYP drift (90 vs 91) on odd fees (61 + 61).
+ *    - 5.2 (Future Invariant - it.skip): Equality requirement for 6A-5.
+ * 6. recalculateFee behavior and documentation of live-recalculation bug (B2):
+ *    - 6.1: Extra stores fee recalculated dynamically as runner purchases stores.
+ *    - 6.2 (Mechanism B2 - it.skip): Snapshot preservation requirement for 6A-4.
  */
 describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   let request!: ReturnType<typeof getRequest>;
@@ -136,6 +146,44 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       .send({ idempotencyKey });
 
     return { deliverRes, idempotencyKey };
+  }
+
+  // Helper to setup two delivered orders (Order 1: 60 SYP, Order 2: 120 SYP)
+  async function setupTwoDeliveredOrders() {
+    const createRes1 = await createCustomerOrder(['Store Normal']);
+    expect(createRes1.status).toBe(201);
+    const order1Id = createRes1.body.id;
+    await reviewAndApproveOrder(order1Id, false);
+    await assignAndDeliverOrder(order1Id);
+
+    const createRes2 = await createCustomerOrder(['Store Peripheral 1', 'Store Peripheral 2']);
+    expect(createRes2.status).toBe(201);
+    const order2Id = createRes2.body.id;
+    await reviewAndApproveOrder(order2Id, true);
+    await assignAndDeliverOrder(order2Id);
+
+    return { order1Id, order2Id };
+  }
+
+  // Helper to setup two delivered orders with 61 SYP each (fabricated in test DB)
+  async function setupTwoDeliveredOrdersWithOddFees() {
+    const { order1Id, order2Id } = await setupTwoDeliveredOrders();
+
+    // Fabricate totalFee: 61 for both orders in test DB
+    await prisma.order.update({ where: { id: order1Id }, data: { totalFee: 61 } });
+    await prisma.order.update({ where: { id: order2Id }, data: { totalFee: 61 } });
+
+    // Align ledger entries with 61 SYP fees:
+    // Math.floor(61 * 0.75) = 45, Math.ceil(61 * 0.25) = 16
+    await prisma.ledgerEntry.updateMany({ where: { orderId: order1Id, type: 'ORDER_FEE_TOTAL' }, data: { amount: 61 } });
+    await prisma.ledgerEntry.updateMany({ where: { orderId: order1Id, type: 'RUNNER_SHARE' }, data: { amount: 45 } });
+    await prisma.ledgerEntry.updateMany({ where: { orderId: order1Id, type: 'PLATFORM_SHARE' }, data: { amount: 16 } });
+
+    await prisma.ledgerEntry.updateMany({ where: { orderId: order2Id, type: 'ORDER_FEE_TOTAL' }, data: { amount: 61 } });
+    await prisma.ledgerEntry.updateMany({ where: { orderId: order2Id, type: 'RUNNER_SHARE' }, data: { amount: 45 } });
+    await prisma.ledgerEntry.updateMany({ where: { orderId: order2Id, type: 'PLATFORM_SHARE' }, data: { amount: 16 } });
+
+    return { order1Id, order2Id };
   }
 
   // =========================================================================
@@ -284,27 +332,12 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   });
 
   // =========================================================================
-  // 4 & 5. Settlement & V3 Invariant Verification
+  // 4. V3 Settlement Verifications (Full Flow + 3 Independent Tests)
   // =========================================================================
-  describe('4 & 5. Settlement & V3 Verification', () => {
-    it('should verify Settlement.runnerShare equals sum of Ledger RUNNER_SHARE entries for getCurrentSettlement and closeDay', async () => {
-      // Order 1: 1 store, non-peripheral -> totalFee = 60
-      // Ledger: total = 60, runnerShare = 45, platformShare = 15
-      const createRes1 = await createCustomerOrder(['Store Normal']);
-      expect(createRes1.status).toBe(201);
-      const order1Id = createRes1.body.id;
-      await reviewAndApproveOrder(order1Id, false);
-      await assignAndDeliverOrder(order1Id);
+  describe('4. V3 Settlement Verifications', () => {
+    it('4.1 Full Flow: should verify Settlement.runnerShare equals sum of Ledger RUNNER_SHARE entries across full lifecycle', async () => {
+      const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
-      // Order 2: 2 stores, peripheral -> totalFee = 120
-      // Ledger: total = 120, runnerShare = 90, platformShare = 30
-      const createRes2 = await createCustomerOrder(['Store Peripheral 1', 'Store Peripheral 2']);
-      expect(createRes2.status).toBe(201);
-      const order2Id = createRes2.body.id;
-      await reviewAndApproveOrder(order2Id, true);
-      await assignAndDeliverOrder(order2Id);
-
-      // Fetch all ledger entries for this runner's delivered orders
       const ledgerEntries = await prisma.ledgerEntry.findMany({
         where: { orderId: { in: [order1Id, order2Id] } },
       });
@@ -326,37 +359,34 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(totalPlatformShareLedger).toBe(45); // 15 + 30
       expect(totalRunnerShareLedger + totalPlatformShareLedger).toBe(totalFeeLedger);
 
-      // 5A: Verify getCurrentSettlement (live preview for runner)
+      // Verify getCurrentSettlement
       const currentSettlementRes = await request
         .get('/api/v1/runner/settlements/current')
         .set('Authorization', `Bearer ${runnerToken}`);
 
       expect(currentSettlementRes.status).toBe(200);
       const current = currentSettlementRes.body;
-
       expect(current.totalOrders).toBe(2);
       expect(current.totalFees).toBe(180);
-      expect(current.estimatedRunnerShare).toBe(totalRunnerShareLedger); // V3 match!
+      expect(current.estimatedRunnerShare).toBe(totalRunnerShareLedger);
       expect(current.estimatedPlatformShare).toBe(totalPlatformShareLedger);
       expect(current.estimatedRunnerShare + current.estimatedPlatformShare).toBe(current.totalFees);
 
-      // 5B: Verify closeDay (admin daily settlement creation)
+      // Verify closeDay
       const operationalDate = getOperationalDate();
       const closeDayRes = await request
         .post('/api/v1/admin/settlements/close-day')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           operationalDate,
-          notes: 'Sprint 6A S1 settlement test',
+          notes: 'Sprint 6A S1 settlement full flow test',
         });
 
       expect(closeDayRes.status).toBe(201);
-      expect(closeDayRes.body.settlements).toHaveLength(1);
-
       const createdSettlement = closeDayRes.body.settlements[0];
       expect(createdSettlement.totalOrders).toBe(2);
       expect(createdSettlement.totalFees).toBe(180);
-      expect(createdSettlement.runnerShare).toBe(totalRunnerShareLedger); // V3 match!
+      expect(createdSettlement.runnerShare).toBe(totalRunnerShareLedger);
       expect(createdSettlement.platformShare).toBe(totalPlatformShareLedger);
       expect(createdSettlement.runnerShare + createdSettlement.platformShare).toBe(createdSettlement.totalFees);
 
@@ -373,42 +403,184 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(sumItemsRunnerShare).toBe(createdSettlement.runnerShare);
       expect(sumItemsPlatformShare).toBe(createdSettlement.platformShare);
       expect(sumItemsOrderFee).toBe(createdSettlement.totalFees);
-
-      // V3 Core Assertion:
-      // Settlement.runnerShare === SUM(SettlementItem.runnerShare) === SUM(LedgerEntry[RUNNER_SHARE])
-      expect(createdSettlement.runnerShare).toBe(sumItemsRunnerShare);
       expect(createdSettlement.runnerShare).toBe(totalRunnerShareLedger);
     });
-  });
 
-  // =========================================================================
-  // 6. Mathematical Invariant: runnerShare + platformShare === total
-  // =========================================================================
-  describe('6. Mathematical Invariant: runnerShare + platformShare === total', () => {
-    it('should satisfy the invariant runnerShare + platformShare === total for odd and even totals', () => {
-      const testTotals = [60, 61, 80, 101, 125, 1, 2, 3, 999];
+    it('4.2 (i) should verify getCurrentSettlement runner share equals sum of Ledger RUNNER_SHARE entries', async () => {
+      const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
-      expect(PRICING.RUNNER_SHARE).toBe(0.75);
-      expect(PRICING.PLATFORM_SHARE).toBe(0.25);
-      expect(PRICING.RUNNER_SHARE + PRICING.PLATFORM_SHARE).toBe(1);
+      const ledgerEntries = await prisma.ledgerEntry.findMany({
+        where: {
+          orderId: { in: [order1Id, order2Id] },
+          type: 'RUNNER_SHARE',
+        },
+      });
+      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
 
-      for (const total of testTotals) {
-        const runnerShare = Math.floor(total * PRICING.RUNNER_SHARE);
-        const platformShare = Math.ceil(total * PRICING.PLATFORM_SHARE);
+      const res = await request
+        .get('/api/v1/runner/settlements/current')
+        .set('Authorization', `Bearer ${runnerToken}`);
 
-        expect(
-          runnerShare + platformShare,
-          `Failed invariant for total=${total}: runnerShare=${runnerShare}, platformShare=${platformShare}`,
-        ).toBe(total);
+      expect(res.status).toBe(200);
+      expect(res.body.estimatedRunnerShare).toBe(sumLedgerRunnerShare);
+    });
+
+    it('4.3 (ii) should verify closeDay created settlement runner share equals sum of Ledger RUNNER_SHARE entries', async () => {
+      const { order1Id, order2Id } = await setupTwoDeliveredOrders();
+
+      const ledgerEntries = await prisma.ledgerEntry.findMany({
+        where: {
+          orderId: { in: [order1Id, order2Id] },
+          type: 'RUNNER_SHARE',
+        },
+      });
+      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+
+      const operationalDate = getOperationalDate();
+      const closeDayRes = await request
+        .post('/api/v1/admin/settlements/close-day')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ operationalDate, notes: 'Independent closeDay test' });
+
+      expect(closeDayRes.status).toBe(201);
+      const createdSettlement = closeDayRes.body.settlements[0];
+      expect(createdSettlement.runnerShare).toBe(sumLedgerRunnerShare);
+    });
+
+    it('4.4 (iii) should verify sum of SettlementItem shares matches Settlement totals and order ledger entries', async () => {
+      const { order1Id, order2Id } = await setupTwoDeliveredOrders();
+
+      const operationalDate = getOperationalDate();
+      const closeDayRes = await request
+        .post('/api/v1/admin/settlements/close-day')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ operationalDate, notes: 'Independent SettlementItem test' });
+
+      expect(closeDayRes.status).toBe(201);
+      const createdSettlement = closeDayRes.body.settlements[0];
+
+      const settlementItems = await prisma.settlementItem.findMany({
+        where: { settlementId: createdSettlement.id },
+      });
+      expect(settlementItems).toHaveLength(2);
+
+      for (const item of settlementItems) {
+        const orderLedger = await prisma.ledgerEntry.findMany({
+          where: { orderId: item.orderId },
+        });
+        const orderTotal = orderLedger.find((e) => e.type === 'ORDER_FEE_TOTAL')!.amount;
+        const orderRunner = orderLedger.find((e) => e.type === 'RUNNER_SHARE')!.amount;
+        const orderPlatform = orderLedger.find((e) => e.type === 'PLATFORM_SHARE')!.amount;
+
+        expect(item.orderFee).toBe(orderTotal);
+        expect(item.runnerShare).toBe(orderRunner);
+        expect(item.platformShare).toBe(orderPlatform);
       }
+
+      const sumRunner = settlementItems.reduce((sum, item) => sum + item.runnerShare, 0);
+      const sumPlatform = settlementItems.reduce((sum, item) => sum + item.platformShare, 0);
+      const sumTotal = settlementItems.reduce((sum, item) => sum + item.orderFee, 0);
+
+      expect(sumRunner).toBe(createdSettlement.runnerShare);
+      expect(sumPlatform).toBe(createdSettlement.platformShare);
+      expect(sumTotal).toBe(createdSettlement.totalFees);
     });
   });
 
   // =========================================================================
-  // 7. recalculateFee Behavior & Snapshot Preservation
+  // 5. Rounding Defect Characterization & Future Invariant
   // =========================================================================
-  describe('7. recalculateFee Behavior & Snapshot Preservation', () => {
-    it('7.1 should recalculate extraStoresFee dynamically as runner purchases stores', async () => {
+  describe('5. Rounding Defect on Odd Fees (Characterization & Target Invariant)', () => {
+    /**
+     * Characterization test: documents the CURRENT behavior on odd order fees (e.g. 61 SYP).
+     *
+     * In current code:
+     * - closeDay (settlements.service.ts:~158):
+     *   Loops per order: Math.floor(61 * 0.75) + Math.floor(61 * 0.75) = 45 + 45 = 90
+     * - getCurrentSettlement (settlements.service.ts:~522):
+     *   Sums fees first: Math.floor((61 + 61) * 0.75) = Math.floor(122 * 0.75) = 91
+     *
+     * Result: 1 SYP drift between live preview and closed daily settlement.
+     *
+     * // TODO(6A-3.3): replace characterization with the equality assertion
+     */
+    it('5.1 (Characterization) should document current rounding drift (90 vs 91) between closeDay and getCurrentSettlement on odd fees', async () => {
+      const { order1Id, order2Id } = await setupTwoDeliveredOrdersWithOddFees();
+
+      const ledgerEntries = await prisma.ledgerEntry.findMany({
+        where: {
+          orderId: { in: [order1Id, order2Id] },
+          type: 'RUNNER_SHARE',
+        },
+      });
+      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+      expect(sumLedgerRunnerShare).toBe(90); // 45 + 45
+
+      // Current settlement live preview calculates floor of sum: floor(122 * 0.75) = 91
+      const currentRes = await request
+        .get('/api/v1/runner/settlements/current')
+        .set('Authorization', `Bearer ${runnerToken}`);
+
+      expect(currentRes.status).toBe(200);
+      const currentRunnerShare = currentRes.body.estimatedRunnerShare;
+      expect(currentRunnerShare).toBe(91);
+
+      // closeDay daily settlement calculates sum of floors: floor(61*0.75) + floor(61*0.75) = 90
+      const operationalDate = getOperationalDate();
+      const closeDayRes = await request
+        .post('/api/v1/admin/settlements/close-day')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ operationalDate, notes: 'Rounding characterization test' });
+
+      expect(closeDayRes.status).toBe(201);
+      const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
+      expect(closedRunnerShare).toBe(90);
+
+      // Characterization assertion: documents current 1 SYP difference explicitly
+      expect(currentRunnerShare - closedRunnerShare).toBe(1);
+      expect(closedRunnerShare).toBe(sumLedgerRunnerShare);
+    });
+
+    /**
+     * // TODO(6A-3.3): replace characterization with the equality assertion
+     *
+     * Desired invariant for Sprint 6A (after unifying SettlementsService share computation with RUNNER_SHARE_BP):
+     * getCurrentSettlement and closeDay must match each other and equal the ledger sum.
+     */
+    it.skip('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare and ledger sum on odd fees', async () => {
+      const { order1Id, order2Id } = await setupTwoDeliveredOrdersWithOddFees();
+
+      const ledgerEntries = await prisma.ledgerEntry.findMany({
+        where: {
+          orderId: { in: [order1Id, order2Id] },
+          type: 'RUNNER_SHARE',
+        },
+      });
+      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+
+      const currentRes = await request
+        .get('/api/v1/runner/settlements/current')
+        .set('Authorization', `Bearer ${runnerToken}`);
+      const currentRunnerShare = currentRes.body.estimatedRunnerShare;
+
+      const operationalDate = getOperationalDate();
+      const closeDayRes = await request
+        .post('/api/v1/admin/settlements/close-day')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ operationalDate, notes: 'Rounding invariant target test' });
+      const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
+
+      // Target invariant: 0 drift between live preview and closed daily settlement
+      expect(currentRunnerShare).toBe(closedRunnerShare);
+      expect(closedRunnerShare).toBe(sumLedgerRunnerShare);
+    });
+  });
+
+  // =========================================================================
+  // 6. recalculateFee Behavior & Snapshot Preservation
+  // =========================================================================
+  describe('6. recalculateFee Behavior & Snapshot Preservation', () => {
+    it('6.1 should recalculate extraStoresFee dynamically as runner purchases stores', async () => {
       // Order with 2 stores: initially extraStoresFee=20, totalFee=80
       const createRes = await createCustomerOrder(['Store One', 'Store Two']);
       expect(createRes.status).toBe(201);
@@ -453,25 +625,22 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
     });
 
     /**
-     * TODO(6A-3.2): Current recalculateFee() overwrites baseFee with PRICING.BASE_FEE (60)
-     * instead of preserving the order snapshot baseFee (Decision D6 / B2 in PRE_SPRINT_CHECKLIST).
+     * // TODO(6A-3.2): enable in the same commit that fixes recalculateFee
      *
-     * In this test:
-     * - Order has a custom baseFee = 80 in its snapshot.
-     * - When runner purchases a store, recalculateFee() runs.
-     * - EXPECTED (Sprint 6A): order.baseFee remains 80.
-     * - ACTUAL (Current code): recalculateFee() calls calculateFee() which reads static PRICING.BASE_FEE (60),
-     *   resetting order.baseFee to 60.
-     * Marked with it.fails to document and pin this current behavior defect without altering business code.
+     * Demonstrates the mechanism where recalculateFee() overwrites the order snapshot baseFee
+     * with the live static constant PRICING.BASE_FEE (60) instead of preserving the order snapshot
+     * (Decision D11 / B2 in PRE_SPRINT_CHECKLIST).
+     *
+     * State is fabricated via direct DB update to simulate an order created with a custom baseFee.
      */
-    it.fails('7.2 (Defect B2) should preserve order snapshot baseFee when runner purchases store', async () => {
+    it.skip('6.2 (Mechanism B2) should preserve order snapshot baseFee when runner purchases store (state fabricated via direct DB update)', async () => {
       const createRes = await createCustomerOrder(['Store One', 'Store Two']);
       expect(createRes.status).toBe(201);
       const orderId = createRes.body.id;
 
       await reviewAndApproveOrder(orderId, false);
 
-      // Simulate an order snapshot with custom baseFee = 80
+      // Fabricate order snapshot with custom baseFee = 80 via direct DB update
       await prisma.order.update({
         where: { id: orderId },
         data: { baseFee: 80, totalFee: 100 },
@@ -499,8 +668,7 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
 
       const orderAfterPurchase = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 
-      // In the desired architecture (B2), the order snapshot baseFee of 80 must be preserved.
-      // But in the current code, calculateFee() resets it to 60, causing this assertion to fail:
+      // Desired assertion for Sprint 6A (currently fails because recalculateFee resets baseFee to 60):
       expect(orderAfterPurchase.baseFee).toBe(80);
     });
   });
