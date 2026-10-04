@@ -73,3 +73,21 @@
 # ------------------------------------------------------------------------------
 -keep class org.maplibre.android.** { *; }
 -dontwarn org.maplibre.android.**
+
+# ------------------------------------------------------------------------------
+# FORERUN Security Rules
+# ------------------------------------------------------------------------------
+
+# Strip all Log calls in release builds
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+}
+
+# Keep encrypted storage classes
+-keep class com.forerun.customer.core.storage.** { *; }
+-keep class androidx.security.crypto.** { *; }
+
