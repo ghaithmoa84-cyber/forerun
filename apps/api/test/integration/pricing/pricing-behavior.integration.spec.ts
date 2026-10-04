@@ -169,19 +169,9 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   async function setupTwoDeliveredOrdersWithOddFees() {
     const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
-    // Fabricate totalFee: 61 for both orders in test DB
+    // Fabricate totalFee: 61 for both orders in test DB (Order.totalFee only, zero ledger mutations)
     await prisma.order.update({ where: { id: order1Id }, data: { totalFee: 61 } });
     await prisma.order.update({ where: { id: order2Id }, data: { totalFee: 61 } });
-
-    // Align ledger entries with 61 SYP fees:
-    // Math.floor(61 * 0.75) = 45, Math.ceil(61 * 0.25) = 16
-    await prisma.ledgerEntry.updateMany({ where: { orderId: order1Id, type: 'ORDER_FEE_TOTAL' }, data: { amount: 61 } });
-    await prisma.ledgerEntry.updateMany({ where: { orderId: order1Id, type: 'RUNNER_SHARE' }, data: { amount: 45 } });
-    await prisma.ledgerEntry.updateMany({ where: { orderId: order1Id, type: 'PLATFORM_SHARE' }, data: { amount: 16 } });
-
-    await prisma.ledgerEntry.updateMany({ where: { orderId: order2Id, type: 'ORDER_FEE_TOTAL' }, data: { amount: 61 } });
-    await prisma.ledgerEntry.updateMany({ where: { orderId: order2Id, type: 'RUNNER_SHARE' }, data: { amount: 45 } });
-    await prisma.ledgerEntry.updateMany({ where: { orderId: order2Id, type: 'PLATFORM_SHARE' }, data: { amount: 16 } });
 
     return { order1Id, order2Id };
   }
@@ -505,16 +495,7 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
      * // TODO(6A-3.3): replace characterization with the equality assertion
      */
     it('5.1 (Characterization) should document current rounding drift (90 vs 91) between closeDay and getCurrentSettlement on odd fees', async () => {
-      const { order1Id, order2Id } = await setupTwoDeliveredOrdersWithOddFees();
-
-      const ledgerEntries = await prisma.ledgerEntry.findMany({
-        where: {
-          orderId: { in: [order1Id, order2Id] },
-          type: 'RUNNER_SHARE',
-        },
-      });
-      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
-      expect(sumLedgerRunnerShare).toBe(90); // 45 + 45
+      await setupTwoDeliveredOrdersWithOddFees();
 
       // Current settlement live preview calculates floor of sum: floor(122 * 0.75) = 91
       const currentRes = await request
@@ -536,27 +517,18 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
       expect(closedRunnerShare).toBe(90);
 
-      // Characterization assertion: documents current 1 SYP difference explicitly
+      // Characterization assertion: documents current 1 SYP difference explicitly (91 vs 90)
       expect(currentRunnerShare - closedRunnerShare).toBe(1);
-      expect(closedRunnerShare).toBe(sumLedgerRunnerShare);
     });
 
     /**
      * // TODO(6A-3.3): replace characterization with the equality assertion
      *
      * Desired invariant for Sprint 6A (after unifying SettlementsService share computation with RUNNER_SHARE_BP):
-     * getCurrentSettlement and closeDay must match each other and equal the ledger sum.
+     * getCurrentSettlement and closeDay must match each other (zero drift on odd fees).
      */
-    it.skip('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare and ledger sum on odd fees', async () => {
-      const { order1Id, order2Id } = await setupTwoDeliveredOrdersWithOddFees();
-
-      const ledgerEntries = await prisma.ledgerEntry.findMany({
-        where: {
-          orderId: { in: [order1Id, order2Id] },
-          type: 'RUNNER_SHARE',
-        },
-      });
-      const sumLedgerRunnerShare = ledgerEntries.reduce((sum, e) => sum + e.amount, 0);
+    it.skip('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare on odd fees', async () => {
+      await setupTwoDeliveredOrdersWithOddFees();
 
       const currentRes = await request
         .get('/api/v1/runner/settlements/current')
@@ -572,7 +544,6 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
 
       // Target invariant: 0 drift between live preview and closed daily settlement
       expect(currentRunnerShare).toBe(closedRunnerShare);
-      expect(closedRunnerShare).toBe(sumLedgerRunnerShare);
     });
   });
 

@@ -17,8 +17,8 @@
 | 6A-1 | **جرد `order.create`** للتأكد من تمرير `baseFee` و `totalFee` صراحةً | ✅ **مُنجَز** | @feature-dev | موضع وحيد في `customer-orders.service.ts:162` يمررهما صراحة، وحذف defaults من schema آمن |
 | 6A-2 | **Migration لجدول `PlatformPricing` وحقل `customFee` وعلاقة `User`** | ⏳ مخططة | @feature-dev | القرار D11 — مع إدراج صف seed افتراضي آمن |
 | 6A-3 | **تحديث `shared-types`** بمخططات وأنواع التسعير و `customFee` | ⏳ مخططة | @feature-dev | DTOs و Zod schemas للتحقق المشترك (القرار D11) |
-| 6A-4 | **تحديث `PricingService` وحفظ لقطة الطلب (B2)** | ⏳ مخططة | @feature-dev | قراءة الأسعار من DB مع إبقاء `calculateFee` نقية، وحفظ `baseFee/peripheralFee` عند `recalculateFee` |
-| 6A-5 | **توحيد مصدر الحصص في `SettlementsService` (B1)** | ⏳ مخططة | @feature-dev | القرار D12 — اعتماد `RUNNER_SHARE_BP = 7500` ومطابقة Ledger تماماً |
+| 6A-3.2 | **تحديث `PricingService` وحفظ لقطة الطلب (B2)** | ⏳ مخططة | @feature-dev | قراءة الأسعار من DB مع إبقاء `calculateFee` نقية، وحفظ `baseFee/peripheralFee` عند `recalculateFee`. **شرط الإنجاز:** إزالة `it.skip` وتفعيل الـ assertion المستهدفة في نفس commit الإصلاح. |
+| 6A-3.3 | **توحيد مصدر الحصص في `SettlementsService` (B1)** | ⏳ مخططة | @feature-dev | القرار D12 — اعتماد `RUNNER_SHARE_BP = 7500` ومطابقة Ledger تماماً ومعالجة عيب التقريب. **شرط الإنجاز:** إزالة `it.skip` وتفعيل الـ assertion المستهدفة في نفس commit الإصلاح. |
 | 6A-6 | **حارس الإنتاج `MAX_CUSTOM_FEE = 0`** في `shared-constants` | ⏳ مخططة | @feature-dev | القرار D14 — حارس إنتاج يمنع فرض رسوم إضافية حتى اكتمال 6B |
 | 6A-7 | **مسارات الأدمن للتحكم بالتسعير وتعديل رسم الطلب** (`PATCH /admin/orders/:id/fee`) | ⏳ مخططة | @feature-dev | القرار D13 — إشعار + AuditLog دون اشتراط موافقة العميل |
 | 6A-8 | **شاشات لوحة تحكم الأدمن** لإدارة الأسعار وبطاقة مراجعة وتعديل رسم الطلب | ⏳ مخططة | @feature-dev | أسطح الإدارة في `admin-web` (القرار D15) |
