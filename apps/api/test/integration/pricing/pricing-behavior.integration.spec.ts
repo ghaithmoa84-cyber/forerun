@@ -596,15 +596,13 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
     });
 
     /**
-     * // TODO(6A-3.2): enable in the same commit that fixes recalculateFee
-     *
-     * Demonstrates the mechanism where recalculateFee() overwrites the order snapshot baseFee
-     * with the live static constant PRICING.BASE_FEE (60) instead of preserving the order snapshot
+     * Demonstrates that recalculateFee() preserves the order snapshot baseFee (80)
+     * instead of resetting to the live static constant PRICING.BASE_FEE (60)
      * (Decision D11 / B2 in PRE_SPRINT_CHECKLIST).
      *
      * State is fabricated via direct DB update to simulate an order created with a custom baseFee.
      */
-    it.skip('6.2 (Mechanism B2) should preserve order snapshot baseFee when runner purchases store (state fabricated via direct DB update)', async () => {
+    it('6.2 (Mechanism B2) should preserve order snapshot baseFee when runner purchases store (state fabricated via direct DB update)', async () => {
       const createRes = await createCustomerOrder(['Store One', 'Store Two']);
       expect(createRes.status).toBe(201);
       const orderId = createRes.body.id;
@@ -641,6 +639,48 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
 
       // Desired assertion for Sprint 6A (currently fails because recalculateFee resets baseFee to 60):
       expect(orderAfterPurchase.baseFee).toBe(80);
+    });
+
+    it('6.3 should preserve baseFee and peripheralFee across store purchases and delivery for approved peripheral order, matching ledger', async () => {
+      // Create peripheral order with 2 stores
+      const createRes = await createCustomerOrder(['Peripheral Store 1', 'Peripheral Store 2']);
+      expect(createRes.status).toBe(201);
+      const orderId = createRes.body.id;
+
+      // Admin approves order as peripheral
+      const approveRes = await reviewAndApproveOrder(orderId, true);
+      expect(approveRes.status).toBe(200);
+
+      const orderBeforeRun = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+      expect(orderBeforeRun.baseFee).toBe(60);
+      expect(orderBeforeRun.peripheralFee).toBe(40);
+      expect(orderBeforeRun.extraStoresFee).toBe(20);
+      expect(orderBeforeRun.totalFee).toBe(120);
+
+      // Advance through assignment, purchases of all stores, and delivery
+      const { deliverRes } = await assignAndDeliverOrder(orderId);
+      expect(deliverRes.status).toBe(200);
+
+      // Verify order snapshots remain preserved
+      const deliveredOrder = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
+      expect(deliveredOrder.status).toBe('DELIVERED');
+      expect(deliveredOrder.baseFee).toBe(60);
+      expect(deliveredOrder.peripheralFee).toBe(40);
+      expect(deliveredOrder.extraStoresFee).toBe(20);
+      expect(deliveredOrder.totalFee).toBe(120);
+
+      // Verify ledger entries match totalFee and 75/25 breakdown
+      const entries = await prisma.ledgerEntry.findMany({ where: { orderId } });
+      expect(entries).toHaveLength(3);
+
+      const totalEntry = entries.find((e) => e.type === 'ORDER_FEE_TOTAL')!;
+      const runnerEntry = entries.find((e) => e.type === 'RUNNER_SHARE')!;
+      const platformEntry = entries.find((e) => e.type === 'PLATFORM_SHARE')!;
+
+      expect(totalEntry.amount).toBe(deliveredOrder.totalFee); // 120
+      expect(runnerEntry.amount).toBe(90); // 120 * 0.75
+      expect(platformEntry.amount).toBe(30); // 120 * 0.25
+      expect(runnerEntry.amount + platformEntry.amount).toBe(totalEntry.amount);
     });
   });
 });

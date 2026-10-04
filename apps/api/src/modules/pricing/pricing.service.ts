@@ -78,6 +78,16 @@ export class PricingService {
     this.cachedConfig = null;
   }
 
+  private splitShares(totalFee: number): {
+    runnerShare: number;
+    platformShare: number;
+  } {
+    return {
+      runnerShare: Math.floor(totalFee * PRICING.RUNNER_SHARE),
+      platformShare: Math.ceil(totalFee * PRICING.PLATFORM_SHARE),
+    };
+  }
+
   calculateFee(
     params: {
       isPeripheral: boolean;
@@ -101,14 +111,15 @@ export class PricingService {
     const extraStoresFee =
       Math.max(0, params.purchasedStoreCount - 1) * config.extraStoreFee;
     const totalFee = baseFee + peripheralFee + extraStoresFee;
+    const { runnerShare, platformShare } = this.splitShares(totalFee);
 
     return {
       baseFee,
       peripheralFee,
       extraStoresFee,
       totalFee,
-      runnerShare: Math.floor(totalFee * PRICING.RUNNER_SHARE),
-      platformShare: Math.ceil(totalFee * PRICING.PLATFORM_SHARE),
+      runnerShare,
+      platformShare,
     };
   }
 
@@ -166,6 +177,7 @@ export class PricingService {
   async recalculateFee(
     orderId: string,
     tx?: Prisma.TransactionClient,
+    config: PricingConfig = DEFAULT_PRICING_CONFIG,
   ): Promise<RecalculateFeeResult> {
     const client = tx ?? this.prisma;
 
@@ -188,15 +200,27 @@ export class PricingService {
       );
     }
 
+    // Preserve the order's existing fee snapshot (Bug B2 fix)
+    const baseFee = order.baseFee;
+    const peripheralFee = order.peripheralFee;
+
+    // Recalculate extraStoresFee only, based on purchased stores count
     const purchasedStoreCount = order.orderStores.length;
-    // TODO(6A-3.1b): replace with await pricingService.getPricingConfig(tx)
-    const newFee = this.calculateFee(
-      {
-        isPeripheral: order.isPeripheral,
-        purchasedStoreCount,
-      },
-      DEFAULT_PRICING_CONFIG,
-    );
+    // TODO(6A-3.1b): replace DEFAULT_PRICING_CONFIG with await this.getPricingConfig(tx)
+    const extraStoresFee =
+      Math.max(0, purchasedStoreCount - 1) * config.extraStoreFee;
+
+    const totalFee = baseFee + peripheralFee + extraStoresFee;
+    const { runnerShare, platformShare } = this.splitShares(totalFee);
+
+    const newFee: FeeResult = {
+      baseFee,
+      peripheralFee,
+      extraStoresFee,
+      totalFee,
+      runnerShare,
+      platformShare,
+    };
 
     const oldFee = {
       baseFee: order.baseFee,
@@ -211,11 +235,10 @@ export class PricingService {
       oldFee.extraStoresFee !== newFee.extraStoresFee ||
       oldFee.totalFee !== newFee.totalFee;
 
+    // Write back ONLY extraStoresFee and totalFee (DO NOT overwrite baseFee or peripheralFee)
     await client.order.update({
       where: { id: order.id },
       data: {
-        baseFee: newFee.baseFee,
-        peripheralFee: newFee.peripheralFee,
         extraStoresFee: newFee.extraStoresFee,
         totalFee: newFee.totalFee,
       },

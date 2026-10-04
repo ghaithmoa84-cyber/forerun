@@ -282,8 +282,6 @@ describe('PricingService', () => {
       expect(prisma.order.update).toHaveBeenCalledWith({
         where: { id: 'ord-456' },
         data: {
-          baseFee: 60,
-          peripheralFee: 0,
           extraStoresFee: 20,
           totalFee: 80,
         },
@@ -368,6 +366,171 @@ describe('PricingService', () => {
         },
       });
       expect(prisma.order.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('preserves order snapshot baseFee (80) after recalculation', async () => {
+      const mockOrder = {
+        id: 'ord-base80',
+        orderNumber: 'ORD-2026-080',
+        status: 'IN_PROGRESS',
+        customerId: 'cust-base80',
+        isPeripheral: false,
+        baseFee: 80,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        totalFee: 80,
+        orderStores: [{ status: 'PURCHASED' }, { status: 'PURCHASED' }],
+      };
+
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+      prisma.order.update.mockResolvedValue({
+        ...mockOrder,
+        extraStoresFee: 20,
+        totalFee: 100,
+      });
+
+      const result = await service.recalculateFee('ord-base80');
+
+      expect(result.feeChanged).toBe(true);
+      expect(result.newFee.baseFee).toBe(80);
+      expect(result.newFee.peripheralFee).toBe(0);
+      expect(result.newFee.extraStoresFee).toBe(20);
+      expect(result.newFee.totalFee).toBe(100);
+      expect(result.newFee.runnerShare).toBe(75);
+      expect(result.newFee.platformShare).toBe(25);
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'ord-base80' },
+        data: {
+          extraStoresFee: 20,
+          totalFee: 100,
+        },
+      });
+    });
+
+    it('preserves order snapshot peripheralFee (40) after recalculation', async () => {
+      const mockOrder = {
+        id: 'ord-peri40',
+        orderNumber: 'ORD-2026-040',
+        status: 'IN_PROGRESS',
+        customerId: 'cust-peri40',
+        isPeripheral: true,
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoresFee: 0,
+        totalFee: 100,
+        orderStores: [{ status: 'PURCHASED' }, { status: 'PURCHASED' }],
+      };
+
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+      prisma.order.update.mockResolvedValue({
+        ...mockOrder,
+        extraStoresFee: 20,
+        totalFee: 120,
+      });
+
+      const result = await service.recalculateFee('ord-peri40');
+
+      expect(result.feeChanged).toBe(true);
+      expect(result.newFee.baseFee).toBe(60);
+      expect(result.newFee.peripheralFee).toBe(40);
+      expect(result.newFee.extraStoresFee).toBe(20);
+      expect(result.newFee.totalFee).toBe(120);
+      expect(result.newFee.runnerShare).toBe(90);
+      expect(result.newFee.platformShare).toBe(30);
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'ord-peri40' },
+        data: {
+          extraStoresFee: 20,
+          totalFee: 120,
+        },
+      });
+    });
+
+    it('scales extraStoresFee correctly with store count (0, 1, 3 stores)', async () => {
+      // 0 stores
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-stores-0',
+        orderNumber: 'ORD-0',
+        status: 'IN_PROGRESS',
+        customerId: 'c0',
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 20,
+        totalFee: 80,
+        orderStores: [],
+      });
+      prisma.order.update.mockResolvedValue({});
+      const res0 = await service.recalculateFee('ord-stores-0');
+      expect(res0.newFee.extraStoresFee).toBe(0);
+      expect(res0.newFee.totalFee).toBe(60);
+
+      // 1 store
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-stores-1',
+        orderNumber: 'ORD-1',
+        status: 'IN_PROGRESS',
+        customerId: 'c1',
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 20,
+        totalFee: 80,
+        orderStores: [{ status: 'PURCHASED' }],
+      });
+      const res1 = await service.recalculateFee('ord-stores-1');
+      expect(res1.newFee.extraStoresFee).toBe(0);
+      expect(res1.newFee.totalFee).toBe(60);
+
+      // 3 stores
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-stores-3',
+        orderNumber: 'ORD-3',
+        status: 'IN_PROGRESS',
+        customerId: 'c3',
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        totalFee: 60,
+        orderStores: [
+          { status: 'PURCHASED' },
+          { status: 'PURCHASED' },
+          { status: 'PURCHASED' },
+        ],
+      });
+      const res3 = await service.recalculateFee('ord-stores-3');
+      expect(res3.newFee.extraStoresFee).toBe(40); // (3 - 1) * 20
+      expect(res3.newFee.totalFee).toBe(100);
+    });
+
+    it('calculates totalFee as sum and satisfies floor/ceil share splitting formula', async () => {
+      const mockOrder = {
+        id: 'ord-odd',
+        orderNumber: 'ORD-ODD',
+        status: 'IN_PROGRESS',
+        customerId: 'c-odd',
+        isPeripheral: false,
+        baseFee: 61,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        totalFee: 61,
+        orderStores: [{ status: 'PURCHASED' }, { status: 'PURCHASED' }],
+      };
+
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+      prisma.order.update.mockResolvedValue({});
+
+      // totalFee = 61 + 0 + 20 = 81
+      // runnerShare = floor(81 * 0.75) = floor(60.75) = 60
+      // platformShare = ceil(81 * 0.25) = ceil(20.25) = 21
+      const result = await service.recalculateFee('ord-odd');
+      expect(result.newFee.totalFee).toBe(81);
+      expect(result.newFee.runnerShare).toBe(60);
+      expect(result.newFee.platformShare).toBe(21);
+      expect(result.newFee.runnerShare + result.newFee.platformShare).toBe(81);
     });
   });
 
