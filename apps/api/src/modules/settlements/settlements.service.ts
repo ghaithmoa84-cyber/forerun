@@ -63,127 +63,236 @@ export class SettlementsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  /**
+   * Fetches delivered orders for the operational date and groups them by runner.
+   */
+  private async collectDeliveredOrders(
+    tx: Prisma.TransactionClient,
+    operationalDate: string,
+  ) {
+    const { start, end } = getUtcRangeForOperationalDate(operationalDate);
+
+    const orders = await tx.order.findMany({
+      where: {
+        status: 'DELIVERED',
+        createdAt: { gte: start, lte: end },
+      },
+      include: { runner: true },
+    });
+
+    const runnerOrderMap = new Map<string, typeof orders>();
+    for (const order of orders) {
+      if (!order.runnerId) continue;
+      if (!runnerOrderMap.has(order.runnerId)) {
+        runnerOrderMap.set(order.runnerId, []);
+      }
+      runnerOrderMap.get(order.runnerId)!.push(order);
+    }
+
+    return { orders, runnerOrderMap };
+  }
+
+  /**
+   * Identifies runners who already have settlement records for this operational date.
+   */
+  private async validateDayNotAlreadyClosed(
+    tx: Prisma.TransactionClient,
+    operationalDate: string,
+    runnerIds: string[],
+  ): Promise<Set<string>> {
+    const existing = await tx.settlement.findMany({
+      where: {
+        operationalDate,
+        runnerId: { in: runnerIds },
+      },
+      select: { runnerId: true },
+    });
+    return new Set(existing.map((s) => s.runnerId));
+  }
+
+  /**
+   * Pure function: calculates shares and breakdown items for a runner's orders without DB calls.
+   */
+  private calculateSettlementAmounts(
+    runnerOrders: Array<{ id: string; totalFee: number }>,
+  ): {
+    totalFees: number;
+    runnerShare: number;
+    platformShare: number;
+    items: Array<{
+      orderId: string;
+      orderFee: number;
+      runnerShare: number;
+      platformShare: number;
+    }>;
+  } {
+    let runnerShare = 0;
+    let platformShare = 0;
+    const items: Array<{
+      orderId: string;
+      orderFee: number;
+      runnerShare: number;
+      platformShare: number;
+    }> = [];
+
+    for (const order of runnerOrders) {
+      const fee = order.totalFee;
+      const rShare = Math.floor(fee * PRICING.RUNNER_SHARE);
+      const pShare = Math.ceil(fee * PRICING.PLATFORM_SHARE);
+      runnerShare += rShare;
+      platformShare += pShare;
+      items.push({
+        orderId: order.id,
+        orderFee: fee,
+        runnerShare: rShare,
+        platformShare: pShare,
+      });
+    }
+
+    const totalFees = runnerOrders.reduce(
+      (sum: number, o: { totalFee: number }) => sum + o.totalFee,
+      0,
+    );
+
+    return { totalFees, runnerShare, platformShare, items };
+  }
+
+  /**
+   * Creates settlement record and its breakdown items in DB.
+   */
+  private async createSettlementRecords(
+    tx: Prisma.TransactionClient,
+    params: {
+      runnerId: string;
+      operationalDate: string;
+      totalOrders: number;
+      totalFees: number;
+      runnerShare: number;
+      platformShare: number;
+      notes: string | null;
+      items: Array<{
+        orderId: string;
+        orderFee: number;
+        runnerShare: number;
+        platformShare: number;
+      }>;
+    },
+  ) {
+    const {
+      runnerId,
+      operationalDate,
+      totalOrders,
+      totalFees,
+      runnerShare,
+      platformShare,
+      notes,
+      items,
+    } = params;
+
+    const settlement = await tx.settlement.create({
+      data: {
+        runnerId,
+        operationalDate,
+        totalOrders,
+        totalFees,
+        runnerShare,
+        platformShare,
+        notes,
+      },
+    });
+
+    await tx.settlementItem.createMany({
+      data: items.map((item) => ({
+        settlementId: settlement.id,
+        orderId: item.orderId,
+        orderFee: item.orderFee,
+        runnerShare: item.runnerShare,
+        platformShare: item.platformShare,
+      })),
+    });
+
+    return settlement;
+  }
+
+  /**
+   * Records SETTLEMENT_CLOSED audit entry.
+   */
+  private async recordCloseDayAuditLog(
+    tx: Prisma.TransactionClient,
+    params: {
+      userId: string;
+      operationalDate: string;
+      runnerCount: number;
+      orderCount: number;
+    },
+  ): Promise<void> {
+    const { userId, operationalDate, runnerCount, orderCount } = params;
+
+    await this.auditService.log(
+      {
+        actorId: userId,
+        actorRole: 'ADMIN',
+        event: 'SETTLEMENT_CLOSED',
+        meta: {
+          operationalDate,
+          runnerCount,
+          orderCount,
+        },
+      },
+      tx,
+    );
+  }
+
   async closeDay(
     operationalDate: string,
     notes: string | null,
     userId: string,
     _adminId: string,
   ): Promise<CloseDayResult> {
-    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const { start, end } = getUtcRangeForOperationalDate(operationalDate);
+    const result = await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const { orders, runnerOrderMap } = await this.collectDeliveredOrders(
+          tx,
+          operationalDate,
+        );
 
-      const orders = await tx.order.findMany({
-        where: {
-          status: 'DELIVERED',
-          createdAt: { gte: start, lte: end },
-        },
-        include: { runner: true },
-      });
+        const existingRunnerIds = await this.validateDayNotAlreadyClosed(
+          tx,
+          operationalDate,
+          [...runnerOrderMap.keys()],
+        );
 
-      const runnerOrderMap = new Map<string, typeof orders>();
-      for (const order of orders) {
-        if (!order.runnerId) continue;
-        if (!runnerOrderMap.has(order.runnerId)) {
-          runnerOrderMap.set(order.runnerId, []);
-        }
-        runnerOrderMap.get(order.runnerId)!.push(order);
-      }
+        const settlements: CloseDayResult['settlements'] = [];
 
-      const settlements: Array<{
-        id: string;
-        runnerId: string;
-        operationalDate: string;
-        status: string;
-        totalOrders: number;
-        totalFees: number;
-        runnerShare: number;
-        platformShare: number;
-        notes: string | null;
-        closedAt: Date | null;
-        closedByAdminId: string | null;
-        createdAt: Date;
-      }> = [];
-      const existingRunnerIds = new Set(
-        (
-          await tx.settlement.findMany({
-            where: {
-              operationalDate,
-              runnerId: { in: [...runnerOrderMap.keys()] },
-            },
-            select: { runnerId: true },
-          })
-        ).map((s) => s.runnerId),
-      );
+        for (const [runnerId, runnerOrders] of runnerOrderMap) {
+          if (existingRunnerIds.has(runnerId)) continue;
 
-      for (const [runnerId, runnerOrders] of runnerOrderMap) {
-        if (existingRunnerIds.has(runnerId)) continue;
+          const calculated = this.calculateSettlementAmounts(runnerOrders);
 
-        let runnerShare = 0;
-        let platformShare = 0;
-        const items: Array<{
-          orderId: string;
-          orderFee: number;
-          runnerShare: number;
-          platformShare: number;
-        }> = [];
-
-        for (const order of runnerOrders) {
-          const fee = order.totalFee;
-          const rShare = Math.floor(fee * PRICING.RUNNER_SHARE);
-          const pShare = Math.ceil(fee * PRICING.PLATFORM_SHARE);
-          runnerShare += rShare;
-          platformShare += pShare;
-          items.push({
-            orderId: order.id,
-            orderFee: fee,
-            runnerShare: rShare,
-            platformShare: pShare,
-          });
-        }
-
-        const totalFees = runnerOrders.reduce((sum: number, o: { totalFee: number }) => sum + o.totalFee, 0);
-
-        const settlement = await tx.settlement.create({
-          data: {
+          const settlement = await this.createSettlementRecords(tx, {
             runnerId,
             operationalDate,
             totalOrders: runnerOrders.length,
-            totalFees,
-            runnerShare,
-            platformShare,
+            totalFees: calculated.totalFees,
+            runnerShare: calculated.runnerShare,
+            platformShare: calculated.platformShare,
             notes,
-          },
+            items: calculated.items,
+          });
+
+          settlements.push(settlement);
+        }
+
+        await this.recordCloseDayAuditLog(tx, {
+          userId,
+          operationalDate,
+          runnerCount: settlements.length,
+          orderCount: orders.length,
         });
 
-        await tx.settlementItem.createMany({
-          data: items.map((item) => ({
-            settlementId: settlement.id,
-            orderId: item.orderId,
-            orderFee: item.orderFee,
-            runnerShare: item.runnerShare,
-            platformShare: item.platformShare,
-          })),
-        });
-
-        settlements.push(settlement);
-      }
-
-      await this.auditService.log(
-        {
-          actorId: userId,
-          actorRole: 'ADMIN',
-          event: 'SETTLEMENT_CLOSED',
-          meta: {
-            operationalDate,
-            runnerCount: settlements.length,
-            orderCount: orders.length,
-          },
-        },
-        tx,
-      );
-
-      return { settlements, runnerCount: settlements.length };
-    });
+        return { settlements, runnerCount: settlements.length };
+      },
+    );
 
     this.notificationsService.emitToAdmin('settlement:closed', {
       date: operationalDate,

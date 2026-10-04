@@ -19,9 +19,10 @@ import type {
 import { PrismaService } from '../../../database/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
-import { PricingService } from '../../pricing/pricing.service.js';
+import { PricingService, type FeeResult } from '../../pricing/pricing.service.js';
 import { OrderStateMachine } from '../../../state-machine/order-state-machine.js';
 import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.js';
+import type { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminOrderCommandService {
@@ -36,214 +37,314 @@ export class AdminOrderCommandService {
     private readonly runnerStateMachine: RunnerStateMachine,
   ) {}
 
-  async approveOrder(
+  /**
+   * Validates order existence and loads relations required for approval.
+   */
+  private async validateApprovalPreconditions(
+    tx: Prisma.TransactionClient,
     orderId: string,
-    adminId: string,
-    dto: ApproveOrderRequest,
-  ): Promise<AdminOrderApprovalResult> {
-    const result = await this.prisma.$transaction(
-      async (tx) => {
-        const order = await tx.order.findUnique({
-          where: { id: orderId },
-          include: {
-            preferredRunner: true,
-            customer: true,
-            orderStores: true,
-          },
-        });
-
-        if (!order) {
-          throw new NotFoundException('Order not found');
-        }
-
-        const targetStatus =
-          order.preferredRunnerId &&
-          order.waitForPreferred &&
-          order.preferredRunner?.status !== 'AVAILABLE'
-            ? 'AWAITING_PREFERRED_RUNNER'
-            : 'AWAITING_RUNNER';
-
-        let transitionResult: { from: OrderStatus; to: OrderStatus; actor: string; description: string };
-
-        if (order.status === 'PENDING_REVIEW') {
-          // Transition 1: PENDING_REVIEW -> UNDER_REVIEW
-          this.orderStateMachine.transition(
-            'PENDING_REVIEW',
-            'UNDER_REVIEW',
-            'ADMIN',
-          );
-
-          await this.auditService.log(
-            {
-              orderId: order.id,
-              actorId: adminId,
-              actorRole: 'ADMIN',
-              event: 'ORDER_REVIEW_STARTED',
-              fromStatus: 'PENDING_REVIEW',
-              toStatus: 'UNDER_REVIEW',
-              meta: {
-                orderNumber: order.orderNumber,
-                notes: dto.notes ?? null,
-              },
-            },
-            tx,
-          );
-
-          // Transition 2: UNDER_REVIEW -> targetStatus
-          transitionResult = this.orderStateMachine.transition(
-            'UNDER_REVIEW',
-            targetStatus,
-            'ADMIN',
-          );
-        } else if (order.status === 'UNDER_REVIEW') {
-          transitionResult = this.orderStateMachine.transition(
-            'UNDER_REVIEW',
-            targetStatus,
-            'ADMIN',
-          );
-        } else {
-          transitionResult = this.orderStateMachine.transition(
-            order.status as OrderStatus,
-            targetStatus,
-            'ADMIN',
-          );
-        }
-
-        const newFee = this.pricingService.calculateFee({
-          isPeripheral: dto.isPeripheral,
-          purchasedStoreCount: order.orderStores.length,
-        });
-        const oldFee = {
-          baseFee: order.baseFee,
-          peripheralFee: order.peripheralFee,
-          extraStoresFee: order.extraStoresFee,
-          totalFee: order.totalFee,
-        };
-        const feeChanged =
-          order.isPeripheral !== dto.isPeripheral ||
-          oldFee.baseFee !== newFee.baseFee ||
-          oldFee.peripheralFee !== newFee.peripheralFee ||
-          oldFee.extraStoresFee !== newFee.extraStoresFee ||
-          oldFee.totalFee !== newFee.totalFee;
-
-        const updated = await tx.order.updateMany({
-          where: { id: order.id, status: order.status },
-          data: {
-            isPeripheral: dto.isPeripheral,
-            status: transitionResult.to,
-            reviewedAt: new Date(),
-            ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
-            ...(feeChanged
-              ? {
-                  baseFee: newFee.baseFee,
-                  peripheralFee: newFee.peripheralFee,
-                  extraStoresFee: newFee.extraStoresFee,
-                  totalFee: newFee.totalFee,
-                }
-              : {}),
-          },
-        });
-        if (updated.count === 0) {
-          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
-        }
-        const updatedOrder = await tx.order.findUniqueOrThrow({
-          where: { id: order.id },
-        });
-
-        await this.auditService.log(
-          {
-            orderId: order.id,
-            actorId: adminId,
-            actorRole: 'ADMIN',
-            event: 'ORDER_APPROVED',
-            fromStatus: 'UNDER_REVIEW',
-            toStatus: targetStatus,
-            meta: {
-              orderNumber: order.orderNumber,
-              isPeripheral: dto.isPeripheral,
-              notes: dto.notes ?? null,
-            },
-          },
-          tx,
-        );
-
-        if (dto.isPeripheral) {
-          await this.auditService.log(
-            {
-              orderId: order.id,
-              actorId: adminId,
-              actorRole: 'ADMIN',
-              event: 'ORDER_PERIPHERAL_SET',
-              fromStatus: 'UNDER_REVIEW',
-              toStatus: targetStatus,
-              meta: { orderNumber: order.orderNumber },
-            },
-            tx,
-          );
-        }
-
-        if (feeChanged) {
-          await this.auditService.log(
-            {
-              orderId: order.id,
-              actorId: adminId,
-              actorRole: 'ADMIN',
-              event: 'ORDER_FEE_UPDATED',
-              fromStatus: 'UNDER_REVIEW',
-              toStatus: targetStatus,
-              meta: {
-                orderNumber: order.orderNumber,
-                oldFee,
-                newFee,
-                reason: 'ADMIN_APPROVAL',
-              },
-            },
-            tx,
-          );
-        }
-
-        return {
-          order: updatedOrder,
-          customerId: order.customerId,
-          customerUserId: order.customer.userId,
-          feeChanged,
-          oldFee,
-          newFee,
-          oldStatus: order.status,
-        };
+  ) {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        preferredRunner: true,
+        customer: true,
+        orderStores: true,
       },
-      { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return order;
+  }
+
+  /**
+   * Resolves the target status based on preferred runner settings and availability.
+   */
+  private resolveTargetStatus(order: {
+    preferredRunnerId: string | null;
+    waitForPreferred: boolean;
+    preferredRunner?: { status: string } | null;
+  }): OrderStatus {
+    return order.preferredRunnerId &&
+      order.waitForPreferred &&
+      order.preferredRunner?.status !== 'AVAILABLE'
+      ? 'AWAITING_PREFERRED_RUNNER'
+      : 'AWAITING_RUNNER';
+  }
+
+  /**
+   * Executes status transitions to move order from PENDING_REVIEW / UNDER_REVIEW to targetStatus.
+   */
+  private async transitionApprovalStatus(
+    tx: Prisma.TransactionClient,
+    order: {
+      id: string;
+      orderNumber: string | null;
+      status: string;
+    },
+    adminId: string,
+    targetStatus: OrderStatus,
+    notes?: string | null,
+  ): Promise<void> {
+    if (order.status === 'PENDING_REVIEW') {
+      this.orderStateMachine.transition(
+        'PENDING_REVIEW',
+        'UNDER_REVIEW',
+        'ADMIN',
+      );
+
+      await this.auditService.log(
+        {
+          orderId: order.id,
+          actorId: adminId,
+          actorRole: 'ADMIN',
+          event: 'ORDER_REVIEW_STARTED',
+          fromStatus: 'PENDING_REVIEW',
+          toStatus: 'UNDER_REVIEW',
+          meta: {
+            orderNumber: order.orderNumber,
+            notes: notes ?? null,
+          },
+        },
+        tx,
+      );
+
+      this.orderStateMachine.transition(
+        'UNDER_REVIEW',
+        targetStatus,
+        'ADMIN',
+      );
+    } else if (order.status === 'UNDER_REVIEW') {
+      this.orderStateMachine.transition(
+        'UNDER_REVIEW',
+        targetStatus,
+        'ADMIN',
+      );
+    } else {
+      this.orderStateMachine.transition(
+        order.status as OrderStatus,
+        targetStatus,
+        'ADMIN',
+      );
+    }
+  }
+
+  /**
+   * Calculates new fees based on peripheral flag and store count, and updates order.
+   */
+  private async applyPeripheralFeeIfNeeded(
+    tx: Prisma.TransactionClient,
+    order: {
+      id: string;
+      status: string;
+      isPeripheral: boolean;
+      baseFee: number;
+      peripheralFee: number;
+      extraStoresFee: number;
+      totalFee: number;
+      orderStores: unknown[];
+    },
+    targetStatus: OrderStatus,
+    dto: ApproveOrderRequest,
+  ): Promise<{
+    updatedOrder: Prisma.OrderGetPayload<Record<string, never>>;
+    feeChanged: boolean;
+    oldFee: {
+      baseFee: number;
+      peripheralFee: number;
+      extraStoresFee: number;
+      totalFee: number;
+    };
+    newFee: FeeResult;
+  }> {
+    const newFee = this.pricingService.calculateFee({
+      isPeripheral: dto.isPeripheral,
+      purchasedStoreCount: order.orderStores.length,
+    });
+    const oldFee = {
+      baseFee: order.baseFee,
+      peripheralFee: order.peripheralFee,
+      extraStoresFee: order.extraStoresFee,
+      totalFee: order.totalFee,
+    };
+    const feeChanged =
+      order.isPeripheral !== dto.isPeripheral ||
+      oldFee.baseFee !== newFee.baseFee ||
+      oldFee.peripheralFee !== newFee.peripheralFee ||
+      oldFee.extraStoresFee !== newFee.extraStoresFee ||
+      oldFee.totalFee !== newFee.totalFee;
+
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, status: order.status as OrderStatus },
+      data: {
+        isPeripheral: dto.isPeripheral,
+        status: targetStatus,
+        reviewedAt: new Date(),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+        ...(feeChanged
+          ? {
+              baseFee: newFee.baseFee,
+              peripheralFee: newFee.peripheralFee,
+              extraStoresFee: newFee.extraStoresFee,
+              totalFee: newFee.totalFee,
+            }
+          : {}),
+      },
+    });
+    if (updated.count === 0) {
+      throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+    }
+    const updatedOrder = await tx.order.findUniqueOrThrow({
+      where: { id: order.id },
+    });
+
+    return {
+      updatedOrder,
+      feeChanged,
+      oldFee,
+      newFee,
+    };
+  }
+
+  /**
+   * Records audit logs for approval, peripheral flag change, and fee updates.
+   */
+  private async recordApprovalAuditLog(
+    tx: Prisma.TransactionClient,
+    params: {
+      orderId: string;
+      orderNumber: string | null;
+      adminId: string;
+      targetStatus: OrderStatus;
+      isPeripheral: boolean;
+      notes?: string | null;
+      feeChanged: boolean;
+      oldFee: {
+        baseFee: number;
+        peripheralFee: number;
+        extraStoresFee: number;
+        totalFee: number;
+      };
+      newFee: FeeResult;
+    },
+  ): Promise<void> {
+    const {
+      orderId,
+      orderNumber,
+      adminId,
+      targetStatus,
+      isPeripheral,
+      notes,
+      feeChanged,
+      oldFee,
+      newFee,
+    } = params;
+
+    await this.auditService.log(
+      {
+        orderId,
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        event: 'ORDER_APPROVED',
+        fromStatus: 'UNDER_REVIEW',
+        toStatus: targetStatus,
+        meta: {
+          orderNumber,
+          isPeripheral,
+          notes: notes ?? null,
+        },
+      },
+      tx,
     );
 
+    if (isPeripheral) {
+      await this.auditService.log(
+        {
+          orderId,
+          actorId: adminId,
+          actorRole: 'ADMIN',
+          event: 'ORDER_PERIPHERAL_SET',
+          fromStatus: 'UNDER_REVIEW',
+          toStatus: targetStatus,
+          meta: { orderNumber },
+        },
+        tx,
+      );
+    }
+
+    if (feeChanged) {
+      await this.auditService.log(
+        {
+          orderId,
+          actorId: adminId,
+          actorRole: 'ADMIN',
+          event: 'ORDER_FEE_UPDATED',
+          fromStatus: 'UNDER_REVIEW',
+          toStatus: targetStatus,
+          meta: {
+            orderNumber,
+            oldFee,
+            newFee,
+            reason: 'ADMIN_APPROVAL',
+          },
+        },
+        tx,
+      );
+    }
+  }
+
+  /**
+   * Sends notifications for status changes and fee updates to customer and admin.
+   */
+  private async sendApprovalNotifications(params: {
+    customerUserId: string;
+    order: {
+      id: string;
+      orderNumber: string | null;
+      status: string;
+    };
+    oldStatus: string;
+    feeChanged: boolean;
+    oldFee: { totalFee: number };
+    newFee: { totalFee: number };
+  }): Promise<void> {
+    const { customerUserId, order, oldStatus, feeChanged, oldFee, newFee } = params;
     try {
       await this.notificationsService.emitToCustomer(
-        result.customerUserId,
+        customerUserId,
         'order:status_changed',
         {
-          orderId: result.order.id,
-          orderNumber: result.order.orderNumber,
-          newStatus: result.order.status,
-          oldStatus: result.oldStatus,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          newStatus: order.status,
+          oldStatus,
         },
         'status_update',
       );
 
-      await this.notificationsService.emitToAdmin('order:status_changed', {
-        orderId: result.order.id,
-        orderNumber: result.order.orderNumber,
-        newStatus: result.order.status,
-      }, 'status_update');
+      await this.notificationsService.emitToAdmin(
+        'order:status_changed',
+        {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          newStatus: order.status,
+        },
+        'status_update',
+      );
 
-      if (result.feeChanged) {
+      if (feeChanged) {
         const feePayload = {
-          orderId: result.order.id,
-          oldFee: result.oldFee.totalFee,
-          newFee: result.newFee.totalFee,
+          orderId: order.id,
+          oldFee: oldFee.totalFee,
+          newFee: newFee.totalFee,
           reason: 'ADMIN_APPROVAL',
         };
 
         await this.notificationsService.emitToCustomer(
-          result.customerUserId,
+          customerUserId,
           'order:fee_updated',
           feePayload,
           'status_update',
@@ -258,9 +359,71 @@ export class AdminOrderCommandService {
     } catch (err) {
       this.logger.warn('[approveOrder] notifications failed silently', {
         error: err instanceof Error ? err.message : String(err),
-        orderId: result.order.id,
+        orderId: order.id,
       });
     }
+  }
+
+  async approveOrder(
+    orderId: string,
+    adminId: string,
+    dto: ApproveOrderRequest,
+  ): Promise<AdminOrderApprovalResult> {
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const order = await this.validateApprovalPreconditions(tx, orderId);
+
+        const targetStatus = this.resolveTargetStatus(order);
+
+        await this.transitionApprovalStatus(
+          tx,
+          order,
+          adminId,
+          targetStatus,
+          dto.notes,
+        );
+
+        const { updatedOrder, feeChanged, oldFee, newFee } =
+          await this.applyPeripheralFeeIfNeeded(
+            tx,
+            order,
+            targetStatus,
+            dto,
+          );
+
+        await this.recordApprovalAuditLog(tx, {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          adminId,
+          targetStatus,
+          isPeripheral: dto.isPeripheral,
+          notes: dto.notes,
+          feeChanged,
+          oldFee,
+          newFee,
+        });
+
+        return {
+          order: updatedOrder,
+          customerId: order.customerId,
+          customerUserId: order.customer.userId,
+          feeChanged,
+          oldFee,
+          newFee,
+          oldStatus: order.status,
+        };
+      },
+      { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
+    );
+
+    await this.sendApprovalNotifications({
+      customerUserId: result.customerUserId,
+      order: result.order,
+      oldStatus: result.oldStatus,
+      feeChanged: result.feeChanged,
+      oldFee: result.oldFee,
+      newFee: result.newFee,
+    });
 
     return {
       order: {
@@ -464,6 +627,265 @@ export class AdminOrderCommandService {
     };
   }
 
+  /**
+   * Validates runner availability, verified status, and ensures no active orders exist.
+   */
+  private async validateRunnerAvailability(
+    tx: Prisma.TransactionClient,
+    runnerId: string,
+  ) {
+    const runner = await tx.runner.findUnique({
+      where: { id: runnerId },
+      include: { user: true },
+    });
+
+    if (
+      !runner ||
+      runner.status !== 'AVAILABLE' ||
+      runner.user?.status !== 'VERIFIED'
+    ) {
+      throw new UnprocessableEntityException(
+        'Runner not available or not verified',
+      );
+    }
+
+    // F2: منع الإسناد لمندوب لديه طلب نشط (BUG-017)
+    const activeOrdersCount = await tx.order.count({
+      where: {
+        runnerId,
+        status: {
+          in: [
+            'ASSIGNED',
+            'IN_PROGRESS',
+            'OUT_FOR_DELIVERY',
+            'AWAITING_PREFERRED_RUNNER',
+          ],
+        },
+      },
+    });
+
+    if (activeOrdersCount > 0) {
+      throw new ConflictException(
+        'لا يمكن إسناد الطلب للمندوب لوجود طلب نشط قيد التنفيذ لديه مسبقًا',
+      );
+    }
+
+    return runner;
+  }
+
+  /**
+   * Transitions runner status to ON_MISSION, updates DB record, and logs audit entry.
+   */
+  private async transitionRunnerToOnMission(
+    tx: Prisma.TransactionClient,
+    runner: Prisma.RunnerGetPayload<{ include: { user: true } }>,
+    adminId: string,
+    orderId: string,
+  ): Promise<void> {
+    this.runnerStateMachine.transition(
+      runner.status,
+      'ON_MISSION',
+      'SYSTEM',
+    );
+
+    const updated = await tx.runner.updateMany({
+      where: { id: runner.id, status: runner.status },
+      data: { status: 'ON_MISSION' },
+    });
+    if (updated.count === 0) {
+      throw new UnprocessableEntityException('RUNNER_NOT_AVAILABLE');
+    }
+
+    // F3: تسجيل RUNNER_STATUS_CHANGED عند الإسناد (BUG-018)
+    await this.auditService.log(
+      {
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        event: 'RUNNER_STATUS_CHANGED',
+        fromStatus: runner.status,
+        toStatus: 'ON_MISSION',
+        meta: {
+          runnerId: runner.id,
+          orderId,
+        },
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Transitions order to ASSIGNED and updates runnerId and assignedAt timestamp.
+   */
+  private async transitionOrderToAssigned(
+    tx: Prisma.TransactionClient,
+    order: { id: string; status: OrderStatus },
+    runnerId: string,
+  ) {
+    const transitionResult = this.orderStateMachine.transition(
+      order.status,
+      'ASSIGNED',
+      'ADMIN',
+    );
+
+    const updatedOrder = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: {
+        status: transitionResult.to,
+        runnerId,
+        assignedAt: new Date(),
+      },
+    });
+    if (updatedOrder.count === 0) {
+      throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+    }
+
+    const orderRecord = await tx.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: {
+        customer: {
+          include: { user: true },
+        },
+        items: {
+          orderBy: { createdAt: 'asc' },
+        },
+        orderStores: true,
+      },
+    });
+
+    return {
+      transitionResult,
+      orderRecord,
+    };
+  }
+
+  /**
+   * Logs RUNNER_ASSIGNED audit event.
+   */
+  private async recordAssignmentAuditLog(
+    tx: Prisma.TransactionClient,
+    params: {
+      orderId: string;
+      orderNumber: string | null;
+      fromStatus: string;
+      toStatus: OrderStatus;
+      adminId: string;
+      runnerId: string;
+      previousRunnerId: string | null;
+    },
+  ): Promise<void> {
+    const {
+      orderId,
+      orderNumber,
+      fromStatus,
+      toStatus,
+      adminId,
+      runnerId,
+      previousRunnerId,
+    } = params;
+
+    await this.auditService.log(
+      {
+        orderId,
+        actorId: adminId,
+        actorRole: 'ADMIN',
+        event: 'RUNNER_ASSIGNED',
+        fromStatus,
+        toStatus,
+        meta: {
+          orderNumber,
+          runnerId,
+          previousRunnerId,
+        },
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Emits notifications to old runner (if reassigned), new runner, customer, and admin.
+   */
+  private async sendAssignmentNotifications(params: {
+    order: Prisma.OrderGetPayload<{
+      include: {
+        customer: { include: { user: true } };
+        items: true;
+        orderStores: true;
+      };
+    }>;
+    oldRunnerUserId: string | null;
+    runnerUserId: string;
+    runnerName: string;
+  }): Promise<void> {
+    const { order, oldRunnerUserId, runnerUserId, runnerName } = params;
+
+    try {
+      const assignedPayload = {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customer?.user?.name ?? '',
+        deliveryAddress: {
+          lat: order.deliveryLat,
+          lng: order.deliveryLng,
+          description: order.deliveryDesc,
+        },
+        items: order.items.map((item) => ({
+          itemName: item.itemName,
+          quantity: item.quantity,
+          customStoreName: item.customStoreName,
+          anyStore: item.anyStore,
+        })),
+        estimatedFee: {
+          baseFee: order.baseFee,
+          peripheralFee: order.peripheralFee,
+          extraStoresFee: order.extraStoresFee,
+          totalFee: order.totalFee,
+          note: 'الرسم النهائي يُحدد بعد المراجعة',
+        },
+      };
+
+      if (oldRunnerUserId) {
+        await this.notificationsService.emitToRunner(
+          oldRunnerUserId,
+          'order:reassigned',
+          { orderId: order.id },
+          'status_update',
+        );
+      }
+
+      await this.notificationsService.emitToRunner(
+        runnerUserId,
+        'order:assigned',
+        assignedPayload,
+        'new_order',
+      );
+
+      await this.notificationsService.emitToCustomer(
+        order.customer.userId,
+        'order:runner_assigned',
+        {
+          orderId: order.id,
+          runnerName,
+        },
+        'status_update',
+      );
+
+      await this.notificationsService.emitToAdmin(
+        'order:status_changed',
+        {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          newStatus: order.status,
+        },
+        'status_update',
+      );
+    } catch (err) {
+      this.logger.warn('[assignRunner] notifications failed silently', {
+        error: err instanceof Error ? err.message : String(err),
+        orderId: order.id,
+      });
+    }
+  }
+
   async assignRunner(
     orderId: string,
     adminId: string,
@@ -480,118 +902,31 @@ export class AdminOrderCommandService {
           throw new NotFoundException('Order not found');
         }
 
-        const runner = await tx.runner.findUnique({
-          where: { id: runnerId },
-          include: { user: true },
-        });
+        const runner = await this.validateRunnerAvailability(tx, runnerId);
 
-        if (
-          !runner ||
-          runner.status !== 'AVAILABLE' ||
-          runner.user?.status !== 'VERIFIED'
-        ) {
-          throw new UnprocessableEntityException(
-            'Runner not available or not verified',
-          );
-        }
-
-        // F2: منع الإسناد لمندوب لديه طلب نشط (BUG-017)
-        const activeOrdersCount = await tx.order.count({
-          where: {
-            runnerId,
-            status: {
-              in: [
-                'ASSIGNED',
-                'IN_PROGRESS',
-                'OUT_FOR_DELIVERY',
-                'AWAITING_PREFERRED_RUNNER',
-              ],
-            },
-          },
-        });
-
-        if (activeOrdersCount > 0) {
-          throw new ConflictException(
-            'لا يمكن إسناد الطلب للمندوب لوجود طلب نشط قيد التنفيذ لديه مسبقًا',
-          );
-        }
-
-        const transitionResult = this.orderStateMachine.transition(
-          order.status as OrderStatus,
-          'ASSIGNED',
-          'ADMIN',
-        );
-
-        this.runnerStateMachine.transition(
-          runner.status,
-          'ON_MISSION',
-          'SYSTEM',
-        );
-
-        const updated = await tx.runner.updateMany({
-          where: { id: runnerId, status: runner.status },
-          data: { status: 'ON_MISSION' },
-        });
-        if (updated.count === 0) {
-          throw new UnprocessableEntityException('RUNNER_NOT_AVAILABLE');
-        }
-
-        // F3: تسجيل RUNNER_STATUS_CHANGED عند الإسناد (BUG-018)
-        await this.auditService.log(
-          {
-            actorId: adminId,
-            actorRole: 'ADMIN',
-            event: 'RUNNER_STATUS_CHANGED',
-            fromStatus: runner.status,
-            toStatus: 'ON_MISSION',
-            meta: {
-              runnerId,
-              orderId,
-            },
-          },
+        await this.transitionRunnerToOnMission(
           tx,
+          runner,
+          adminId,
+          order.id,
         );
 
-        const updatedOrder = await tx.order.updateMany({
-          where: { id: order.id, status: order.status },
-          data: {
-            status: transitionResult.to,
+        const { transitionResult, orderRecord } =
+          await this.transitionOrderToAssigned(
+            tx,
+            order,
             runnerId,
-            assignedAt: new Date(),
-          },
-        });
-        if (updatedOrder.count === 0) {
-          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
-        }
-        const orderRecord = await tx.order.findUniqueOrThrow({
-          where: { id: order.id },
-          include: {
-            customer: {
-              include: { user: true },
-            },
-            items: {
-              orderBy: { createdAt: 'asc' },
-            },
-            orderStores: true,
-          },
-        });
+          );
 
-        await this.auditService.log(
-          {
-            orderId: order.id,
-            actorId: adminId,
-            actorRole: 'ADMIN',
-            event: 'RUNNER_ASSIGNED',
-            fromStatus: order.status,
-            toStatus: transitionResult.to,
-            meta: {
-              orderNumber: order.orderNumber,
-              runnerId: runnerId,
-              previousRunnerId: order.runnerId,
-            },
-          },
-          tx,
-        );
+        await this.recordAssignmentAuditLog(tx, {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          fromStatus: order.status,
+          toStatus: transitionResult.to,
+          adminId,
+          runnerId,
+          previousRunnerId: order.runnerId,
+        });
 
         return {
           order: orderRecord,
@@ -604,68 +939,12 @@ export class AdminOrderCommandService {
       { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
     );
 
-    try {
-      const assignedPayload = {
-        orderId: result.order.id,
-        orderNumber: result.order.orderNumber,
-        customerName: result.order.customer?.user?.name ?? '',
-        deliveryAddress: {
-          lat: result.order.deliveryLat,
-          lng: result.order.deliveryLng,
-          description: result.order.deliveryDesc,
-        },
-        items: result.order.items.map((item) => ({
-          itemName: item.itemName,
-          quantity: item.quantity,
-          customStoreName: item.customStoreName,
-          anyStore: item.anyStore,
-        })),
-        estimatedFee: {
-          baseFee: result.order.baseFee,
-          peripheralFee: result.order.peripheralFee,
-          extraStoresFee: result.order.extraStoresFee,
-          totalFee: result.order.totalFee,
-          note: 'الرسم النهائي يُحدد بعد المراجعة',
-        },
-      };
-
-      if (result.oldRunnerUserId) {
-        await this.notificationsService.emitToRunner(
-          result.oldRunnerUserId,
-          'order:reassigned',
-          { orderId: result.order.id },
-          'status_update',
-        );
-      }
-
-      await this.notificationsService.emitToRunner(
-        result.runnerUserId,
-        'order:assigned',
-        assignedPayload,
-        'new_order',
-      );
-
-      await this.notificationsService.emitToCustomer(
-        result.order.customer.userId,
-        'order:runner_assigned',
-        {
-          orderId: result.order.id,
-          runnerName: result.runnerName,
-        },
-        'status_update',
-      );
-
-      await this.notificationsService.emitToAdmin('order:status_changed', {
-        orderId: result.order.id,
-        orderNumber: result.order.orderNumber,
-        newStatus: result.order.status,
-      }, 'status_update');
-    } catch (err) {
-      this.logger.warn('[assignRunner] notifications failed silently', {
-        error: err instanceof Error ? err.message : String(err),
-        orderId: result.order.id,
-      });
-    }
+    await this.sendAssignmentNotifications({
+      order: result.order,
+      oldRunnerUserId: result.oldRunnerUserId,
+      runnerUserId: result.runnerUserId,
+      runnerName: result.runnerName,
+    });
 
     return {
       order: {
