@@ -129,7 +129,7 @@
 | A-6 | `android/.../data/.../AuthRepositoryImpl.kt:133, :141` | `tokenStorage.getRefreshToken()` و `clearAll()` **خارج** أي `try` (الشبكة محمية في `:125–131, :135–140`). مع A-5: فشل KeyStore يُسقط `logout()` → **A-4 يُفعَّل**. سلسلة فشل موثّقة. | 🟡 | تغليف الاستدعاءين بـ `runCatching` (✅ **مُنجَز في المسار الخامس**). |
 | A-7 | `android/gradle/libs.versions.toml:19` | `androidx.security:security-crypto = 1.1.0-alpha06` — **نسخة pre-release**، والتعليق في `:16` يوثّق انهيارات KeyStore في `1.0.0` على API 29+، و`minSdk = 26` (`build.gradle.kts:20`). | 🟡 | تقييم الترقية لاستقرة ≥1.1.0. |
 | A-8 | `auth/dto/logout.dto.ts:1–2` | ملف re-export بلا أي تصريح. **مستورد من ملفين**: `auth.service.ts:16` و `auth.controller.ts:6–7`. | 🟢 | استيراد مباشر من `@forerun/shared-types` وحذفه (✅ **مُنجَز في المسار الخامس**). |
-| A-9 | `prisma/schema.prisma:297` | `OrderStore.isDeleted` بلا فهرس؛ الفهرس الوحيد `@@index([orderId, status])` (`:303`). | 🟢 | `@@index([orderId, isDeleted])`. |
+| A-9 | `prisma/schema.prisma:297` | `OrderStore.isDeleted` بلا فهرس؛ الفهرس الوحيد `@@index([orderId, status])` (`:303`). | 🟢 | `@@index([orderId, isDeleted])` (✅ **مُنجَز في المسار السادس** مع migration مخصص). |
 | A-10 | `android/.../res/values/strings.xml:92, :96` | `orders_stub_desc` و `account_stub_desc` نصوص "قريباً" **لا يُشيران إليها أي ملف Kotlin ولا layout** — موارد ميتة في الـ APK. | 🟢 | حذفها (✅ **مُنجَز في المسار الخامس**). |
 
 **نقطة قوة موثّقة:** طبقة `apps/android/.../domain` نقية 100% — صفر استيراد من `ui` أو `data`.
@@ -140,13 +140,13 @@
 
 | # | الملف:السطر | المشكلة | الخطورة | الإجراء |
 |---|---|---|---|---|
-| I-1 | `Dockerfile:9–11` | نسخ `packages/` و `apps/api/` كاملَين **قبل** `pnpm install` → أي تعديل على `src` يُبطل طبقة التثبيت (`.dockerignore:2` يستثني `dist` فقط). | 🟡 | نسخ `package.json` + `pnpm-lock.yaml` فقط قبل التثبيت، والمصادر بعده. |
-| I-2 | `Dockerfile:11` | `pnpm install --no-frozen-lockfile` → خطر انحراف إصدارات عن المحلي. | 🟡 | `--frozen-lockfile`. |
-| I-3 | `Dockerfile:1, :17` | صورة واحدة بلا Multi-Stage، بلا `USER` → **root**، وتحتوي أدوات بناء (`:2` openssl، `:3` pnpm) وكود المصدر وdevDeps. لا `prisma migrate deploy` قبل الإقلاع، ولا `docker-compose` في المستودع. | 🟡 | Multi-Stage + `USER node` + توثيق أمر الترحيل قبل النشر. |
+| I-1 | `Dockerfile:9–11` | نسخ `packages/` و `apps/api/` كاملَين **قبل** `pnpm install` → أي تعديل على `src` يُبطل طبقة التثبيت (`.dockerignore:2` يستثني `dist` فقط). | 🟡 | نسخ `package.json` + `pnpm-lock.yaml` فقط قبل التثبيت، والمصادر بعده (✅ **مُنجَز في المسار السادس**). |
+| I-2 | `Dockerfile:11` | `pnpm install --no-frozen-lockfile` → خطر انحراف إصدارات عن المحلي. | 🟡 | `--frozen-lockfile` (✅ **مُنجَز في المسار السادس**). |
+| I-3 | `Dockerfile:1, :17` | صورة واحدة بلا Multi-Stage، بلا `USER` → **root**، وتحتوي أدوات بناء (`:2` openssl، `:3` pnpm) وكود المصدر وdevDeps. لا `prisma migrate deploy` قبل الإقلاع، ولا `docker-compose` في المستودع. | 🟡 | Multi-Stage + `USER node` + توثيق أمر الترحيل قبل النشر (✅ **مُنجَز في المسار السادس**). |
 | I-4 | `apps/api/src/main.ts:32–39` · `.env.example:10` | Sentry مُهيّأ شرطياً لكن `SENTRY_DSN` فارغ في `.env.example` و`.env` وCI (`integration-tests.yml:35`). | 🟡 | ضبطه في Railway. **مملوك بالفعل**: `NEXT_TASKS.md:37` (S4). |
 | I-5 | `apps/android/app/build.gradle.kts:140–142` | لا Crashlytics ولا Sentry (grep على المشروع = صفر). أخطاء المستخدم تصل نصاً عربياً فقط عبر `ApiCall.kt`. | 🟡 | Crashlytics — مشروع Firebase **جاهز** (`NEXT_TASKS.md:25`). |
 | I-6 | `strings.xml:361` | نصٌّ موجَّه للعميل يقول «رسوم التوصيل … تبدأ من الرسم الأساسي (**5,000 ل.س**)» بينما الكود `shared-constants/src/pricing.ts:2` = **60 ل.س** (والمواصفة `MVP Technical Specification.txt:640` تؤكّد 60). | 🟡 | **قرار منتج مطلوب**: إمّا تصحيح النص إلى 60 ل.س، أو تحديث `BASE_FEE` — ولا يُنفَّذ أيٌّ منهما بلا قرار. أخطر بند في هذا القسم لأنه معلومات مالية خاطئة تصل للعميل مباشرة. |
-| I-7 | `admin-order-command.service.ts:1090–1095` | `order:needs_attention` معرَّف في الأنواع (`shared-types/src/websocket.events.ts:32`) والمواصفة، باقٍ كـ TODO بلا emit site. | 🟢 | تنفيذ Cron أو شطبه من قائمة الأحداث. **مُتتبَّع مسبقاً**: `CHANGELOG.md:136` · `Sprint 3 Brief:497`. |
+| I-7 | `admin-order-command.service.ts:1090–1095` | `order:needs_attention` معرَّف في الأنواع (`shared-types/src/websocket.events.ts:32`) والمواصفة، باقٍ كـ TODO بلا emit site. | 🟢 | تنفيذ Cron أو شطبه من قائمة الأحداث (✅ **مُنجَز في المسار السادس** عبر `@Cron` `checkStaleOrders`). |
 
 ---
 
