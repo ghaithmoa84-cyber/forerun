@@ -8,6 +8,7 @@ export default defineConfig({
     setupFiles: ['test/integration/setup.ts'],
     pool: 'forks',
     singleFork: true,
+    fileParallelism: false,
     testTimeout: 30000,
     hookTimeout: 30000,
   },
