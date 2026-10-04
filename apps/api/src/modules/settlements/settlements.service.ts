@@ -18,7 +18,7 @@ import {
   type RunnerCurrentSettlement,
   type RunnerSettlementItem,
 } from '@forerun/shared-types';
-import { PRICING } from '@forerun/shared-constants';
+import { splitShares } from '../pricing/split-shares.js';
 
 import { fromZonedTime } from 'date-fns-tz';
 
@@ -155,8 +155,7 @@ export class SettlementsService {
 
     for (const order of runnerOrders) {
       const fee = order.totalFee;
-      const rShare = Math.floor(fee * PRICING.RUNNER_SHARE);
-      const pShare = Math.ceil(fee * PRICING.PLATFORM_SHARE);
+      const { runnerShare: rShare, platformShare: pShare } = splitShares(fee);
       runnerShare += rShare;
       platformShare += pShare;
       items.push({
@@ -519,8 +518,10 @@ export class SettlementsService {
 
     const totalOrders = orders.length;
     const totalFees = orders.reduce((sum, o) => sum + o.totalFee, 0);
-    const estimatedRunnerShare = Math.floor(totalFees * PRICING.RUNNER_SHARE);
-    const estimatedPlatformShare = Math.ceil(totalFees * PRICING.PLATFORM_SHARE);
+    const {
+      runnerShare: estimatedRunnerShare,
+      platformShare: estimatedPlatformShare,
+    } = splitShares(totalFees);
 
     return RunnerCurrentSettlementSchema.parse({
       operationalDate,

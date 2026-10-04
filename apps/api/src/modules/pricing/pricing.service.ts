@@ -6,8 +6,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { PRICING, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
+import { DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
 import type { PricingConfig } from '@forerun/shared-types';
+import { splitShares } from './split-shares.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -78,15 +79,6 @@ export class PricingService {
     this.cachedConfig = null;
   }
 
-  private splitShares(totalFee: number): {
-    runnerShare: number;
-    platformShare: number;
-  } {
-    return {
-      runnerShare: Math.floor(totalFee * PRICING.RUNNER_SHARE),
-      platformShare: Math.ceil(totalFee * PRICING.PLATFORM_SHARE),
-    };
-  }
 
   calculateFee(
     params: {
@@ -111,7 +103,7 @@ export class PricingService {
     const extraStoresFee =
       Math.max(0, params.purchasedStoreCount - 1) * config.extraStoreFee;
     const totalFee = baseFee + peripheralFee + extraStoresFee;
-    const { runnerShare, platformShare } = this.splitShares(totalFee);
+    const { runnerShare, platformShare } = splitShares(totalFee);
 
     return {
       baseFee,
@@ -211,7 +203,7 @@ export class PricingService {
       Math.max(0, purchasedStoreCount - 1) * config.extraStoreFee;
 
     const totalFee = baseFee + peripheralFee + extraStoresFee;
-    const { runnerShare, platformShare } = this.splitShares(totalFee);
+    const { runnerShare, platformShare } = splitShares(totalFee);
 
     const newFee: FeeResult = {
       baseFee,
