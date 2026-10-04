@@ -12,8 +12,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { TelegramService } from '../notifications/telegram.service.js';
 import { CONFIG, ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
-import type { RegisterRequest, LoginRequest, RefreshRequest } from '@forerun/shared-types';
-import type { LogoutDto } from './dto/logout.dto.js';
+import type { RegisterRequest, LoginRequest, RefreshRequest, LogoutDto } from '@forerun/shared-types';
 
 function generateSelector(): string {
   return randomBytes(16).toString('hex');

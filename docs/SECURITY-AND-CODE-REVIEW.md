@@ -121,16 +121,16 @@
 
 | # | الملف:السطر | المشكلة | الخطورة | الإجراء |
 |---|---|---|---|---|
-| A-1 | `receipts/receipts.controller.ts:37–65` | `PrismaService` محقون في المتحكم؛ `resolveOrderStore` ينفّذ 3 استعلامات متسلسلة (`:47, :54, :61`). | 🟡 | نقلها إلى `ReceiptsService` وإزالة الحقن. |
-| A-2 | `settlements/settlements.controller.ts:37–57` | نفس النمط؛ `resolveRunner` فيه قاعدة تجارية (`:52–53`: المندوب يجب أن يكون VERIFIED). | 🟡 | نقلها إلى `SettlementsService`. |
-| A-3 | `orders/orders.controller.ts:69` + 6 ملفات أخرى | `@UseGuards(VerifiedUserGuard, RolesGuard)` بينما `RolesGuard` مسجَّل عالمياً في `app.module.ts:142–144`. تكرار في `users:16` · `receipts:35` · `ledger:19` · `ratings:26` · `settlements:35` · `runners:25,79`. | 🟢 | حذف `RolesGuard` من الديكورات — 8 مواضع. لا أثر أمني (سلوك مطابق). |
-| A-4 | `android/.../ui/home/HomeViewModel.kt:111–116` | `logout()` ينفّذ `logoutUseCase()` داخل `viewModelScope.launch` بلا `try/catch/finally`؛ عند الفشل **لا يُطلق `_navigateToLogin.emit`** (`:114`) فيعلق المستخدم على الشاشة الرئيسية. | 🟡 | `try/finally` حول emit. مرتبط بـ A-5. |
-| A-5 | `android/.../core/storage/EncryptedTokenStorage.kt:16–30` | `MasterKey` (`:17`) و`EncryptedSharedPreferences.create` (`:23`) داخل `by lazy` بلا `try/catch` ولا منطق إعادة بناء. | 🟡 | `runCatching` + مسح prefs وإعادة بناء المفتاح عند `GeneralSecurityException`. |
-| A-6 | `android/.../data/.../AuthRepositoryImpl.kt:133, :141` | `tokenStorage.getRefreshToken()` و `clearAll()` **خارج** أي `try` (الشبكة محمية في `:125–131, :135–140`). مع A-5: فشل KeyStore يُسقط `logout()` → **A-4 يُفعَّل**. سلسلة فشل موثّقة. | 🟡 | تغليف الاستدعاءين. |
+| A-1 | `receipts/receipts.controller.ts:37–65` | `PrismaService` محقون في المتحكم؛ `resolveOrderStore` ينفّذ 3 استعلامات متسلسلة (`:47, :54, :61`). | 🟡 | نقلها إلى `ReceiptsService` وإزالة الحقن (✅ **مُنجَز في المسار الخامس**). |
+| A-2 | `settlements/settlements.controller.ts:37–57` | نفس النمط؛ `resolveRunner` فيه قاعدة تجارية (`:52–53`: المندوب يجب أن يكون VERIFIED). | 🟡 | نقلها إلى `SettlementsService` (✅ **مُنجَز في المسار الخامس**). |
+| A-3 | `orders/orders.controller.ts:69` + 6 ملفات أخرى | `@UseGuards(VerifiedUserGuard, RolesGuard)` بينما `RolesGuard` مسجَّل عالمياً في `app.module.ts:142–144`. تكرار في `users:16` · `receipts:35` · `ledger:19` · `ratings:26` · `settlements:35` · `runners:25,79`. | 🟢 | حذف `RolesGuard` من الديكورات — 8 مواضع. لا أثر أمني (سلوك مطابق) (✅ **مُنجَز في المسار الخامس**). |
+| A-4 | `android/.../ui/home/HomeViewModel.kt:111–116` | `logout()` ينفّذ `logoutUseCase()` داخل `viewModelScope.launch` بلا `try/catch/finally`؛ عند الفشل **لا يُطلق `_navigateToLogin.emit`** (`:114`) فيعلق المستخدم على الشاشة الرئيسية. | 🟡 | `try/finally` حول emit. مرتبط بـ A-5 (✅ **مُنجَز في المسار الخامس**). |
+| A-5 | `android/.../core/storage/EncryptedTokenStorage.kt:16–30` | `MasterKey` (`:17`) و`EncryptedSharedPreferences.create` (`:23`) داخل `by lazy` بلا `try/catch` ولا منطق إعادة بناء. | 🟡 | `runCatching` + مسح prefs وإعادة بناء المفتاح عند فشل KeyStore (✅ **مُنجَز في المسار الخامس**). |
+| A-6 | `android/.../data/.../AuthRepositoryImpl.kt:133, :141` | `tokenStorage.getRefreshToken()` و `clearAll()` **خارج** أي `try` (الشبكة محمية في `:125–131, :135–140`). مع A-5: فشل KeyStore يُسقط `logout()` → **A-4 يُفعَّل**. سلسلة فشل موثّقة. | 🟡 | تغليف الاستدعاءين بـ `runCatching` (✅ **مُنجَز في المسار الخامس**). |
 | A-7 | `android/gradle/libs.versions.toml:19` | `androidx.security:security-crypto = 1.1.0-alpha06` — **نسخة pre-release**، والتعليق في `:16` يوثّق انهيارات KeyStore في `1.0.0` على API 29+، و`minSdk = 26` (`build.gradle.kts:20`). | 🟡 | تقييم الترقية لاستقرة ≥1.1.0. |
-| A-8 | `auth/dto/logout.dto.ts:1–2` | ملف re-export بلا أي تصريح. **مستورد من ملفين**: `auth.service.ts:16` و `auth.controller.ts:6–7`. | 🟢 | استيراد مباشر من `@forerun/shared-types` وحذفه (المصدر الحقيقي `shared-types/src/auth.types.ts:75`). |
+| A-8 | `auth/dto/logout.dto.ts:1–2` | ملف re-export بلا أي تصريح. **مستورد من ملفين**: `auth.service.ts:16` و `auth.controller.ts:6–7`. | 🟢 | استيراد مباشر من `@forerun/shared-types` وحذفه (✅ **مُنجَز في المسار الخامس**). |
 | A-9 | `prisma/schema.prisma:297` | `OrderStore.isDeleted` بلا فهرس؛ الفهرس الوحيد `@@index([orderId, status])` (`:303`). | 🟢 | `@@index([orderId, isDeleted])`. |
-| A-10 | `android/.../res/values/strings.xml:92, :96` | `orders_stub_desc` و `account_stub_desc` نصوص "قريباً" **لا يُشيران إليها أي ملف Kotlin ولا layout** — موارد ميتة في الـ APK. | 🟢 | حذفها. |
+| A-10 | `android/.../res/values/strings.xml:92, :96` | `orders_stub_desc` و `account_stub_desc` نصوص "قريباً" **لا يُشيران إليها أي ملف Kotlin ولا layout** — موارد ميتة في الـ APK. | 🟢 | حذفها (✅ **مُنجَز في المسار الخامس**). |
 
 **نقطة قوة موثّقة:** طبقة `apps/android/.../domain` نقية 100% — صفر استيراد من `ui` أو `data`.
 

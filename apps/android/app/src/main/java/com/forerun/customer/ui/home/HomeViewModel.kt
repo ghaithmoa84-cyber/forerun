@@ -110,8 +110,11 @@ class HomeViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            logoutUseCase()
-            _navigateToLogin.emit(Unit)
+            try {
+                logoutUseCase()
+            } finally {
+                _navigateToLogin.emit(Unit)
+            }
         }
     }
 }

@@ -17,13 +17,12 @@ import {
 } from '@forerun/shared-types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { RatingsService } from './ratings.service.js';
 
 @Controller()
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 export class RatingsController {
   constructor(private readonly ratingsService: RatingsService) {}
 

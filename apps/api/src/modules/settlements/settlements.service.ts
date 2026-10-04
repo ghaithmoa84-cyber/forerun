@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Cron } from '@nestjs/schedule';
@@ -62,6 +63,23 @@ export class SettlementsService {
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async resolveRunner(userId: string) {
+    const runner = await this.prisma.runner.findUnique({
+      where: { userId },
+      include: { user: true },
+    });
+
+    if (!runner) {
+      throw new NotFoundException('Runner profile not found');
+    }
+
+    if (runner.user.status !== 'VERIFIED') {
+      throw new ForbiddenException('Runner account is not verified');
+    }
+
+    return runner;
+  }
 
   /**
    * Fetches delivered orders for the operational date and groups them by runner.

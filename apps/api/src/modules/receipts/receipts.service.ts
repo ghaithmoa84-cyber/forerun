@@ -53,6 +53,31 @@ export class ReceiptsService {
     private readonly r2Service: R2Service,
   ) {}
 
+  async resolveOrderStore(
+    orderId: string,
+    storeId: string,
+    runnerUserId: string,
+  ) {
+    const runner = await this.prisma.runner.findUnique({
+      where: { userId: runnerUserId },
+    });
+    if (!runner) {
+      return { order: null, orderStore: null };
+    }
+
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, runnerId: runner.id },
+    });
+    if (!order) {
+      return { order: null, orderStore: null };
+    }
+
+    const orderStore = await this.prisma.orderStore.findFirst({
+      where: { id: storeId, orderId: order.id },
+    });
+    return { order, orderStore };
+  }
+
   async generatePresignedUrl(
     orderId: string,
     orderStoreId: string,

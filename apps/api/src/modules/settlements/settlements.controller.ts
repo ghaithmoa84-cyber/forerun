@@ -4,7 +4,6 @@ import {
   Controller,
   ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Post,
   Put,
@@ -25,36 +24,16 @@ import {
 } from '@forerun/shared-types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { PrismaService } from '../../database/prisma.service.js';
 import { SettlementsService } from './settlements.service.js';
 
 @Controller()
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 export class SettlementsController {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly settlementsService: SettlementsService,
   ) {}
-
-  private async resolveRunner(userId: string) {
-    const runner = await this.prisma.runner.findUnique({
-      where: { userId },
-      include: { user: true },
-    });
-
-    if (!runner) {
-      throw new NotFoundException('Runner profile not found');
-    }
-
-    if (runner.user.status !== 'VERIFIED') {
-      throw new ForbiddenException('Runner account is not verified');
-    }
-
-    return runner;
-  }
 
   @Get('runner/settlements')
   @Roles('RUNNER')
@@ -64,7 +43,7 @@ export class SettlementsController {
     query: RunnerSettlementsQuery,
     @CurrentUser() user: { userId: string; role: string; status: string },
   ) {
-    const runner = await this.resolveRunner(user.userId);
+    const runner = await this.settlementsService.resolveRunner(user.userId);
 
     return this.settlementsService.listRunnerSettlements(
       runner.id,
@@ -79,7 +58,7 @@ export class SettlementsController {
   async getCurrentSettlement(
     @CurrentUser() user: { userId: string; role: string; status: string },
   ) {
-    const runner = await this.resolveRunner(user.userId);
+    const runner = await this.settlementsService.resolveRunner(user.userId);
 
     return this.settlementsService.getCurrentSettlement(runner.id);
   }

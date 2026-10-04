@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Post, Put, Param, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { RunnersService } from './runners.service.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
@@ -22,7 +21,7 @@ import {
 } from '@forerun/shared-types';
 
 @Controller('admin/runners')
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 @Roles('ADMIN')
 export class RunnersController {
   constructor(private readonly runnersService: RunnersService) {}
@@ -76,7 +75,7 @@ export class RunnersController {
 }
 
 @Controller('runner')
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 @Roles('RUNNER')
 export class RunnerController {
   constructor(private readonly runnersService: RunnersService) {}

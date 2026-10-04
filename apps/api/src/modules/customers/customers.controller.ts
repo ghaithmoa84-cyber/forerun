@@ -12,13 +12,11 @@ import type {
 } from '@forerun/shared-types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { CustomersService } from './customers.service.js';
 
 @Controller()
-@UseGuards(RolesGuard)
 @Roles('CUSTOMER')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}

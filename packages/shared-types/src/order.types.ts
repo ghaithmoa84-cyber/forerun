@@ -490,3 +490,18 @@ export const DeleteReceiptResponseSchema = z.object({
 export type DeleteReceiptResponse = z.infer<
   typeof DeleteReceiptResponseSchema
 >;
+
+// ─────────────────────────────────────────────────────────────
+// Admin Order Actions (Cancel order)
+// ─────────────────────────────────────────────────────────────
+
+export const CancelOrderSchema = z.object({
+  cancelReason: z
+    .string()
+    .min(1, 'Cancel reason must be at least 1 character')
+    .optional(),
+});
+
+export type CancelOrderRequest = z.infer<typeof CancelOrderSchema>;
+
+

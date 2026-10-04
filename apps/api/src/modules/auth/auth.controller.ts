@@ -1,10 +1,8 @@
 import { Body, Controller, Post, Headers, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
-import { RegisterSchema, LoginSchema, RefreshSchema } from '@forerun/shared-types';
-import type { RegisterRequest, LoginRequest, RefreshRequest } from '@forerun/shared-types';
-import { LogoutSchema } from './dto/logout.dto.js';
-import type { LogoutDto } from './dto/logout.dto.js';
+import { RegisterSchema, LoginSchema, RefreshSchema, LogoutSchema } from '@forerun/shared-types';
+import type { RegisterRequest, LoginRequest, RefreshRequest, LogoutDto } from '@forerun/shared-types';
 import { Public } from '../../common/decorators/public.decorator.js';
 import { Throttle } from '@nestjs/throttler';
 

@@ -89,11 +89,9 @@
 
     <!-- Orders Tab Stub -->
     <string name="orders_title">طلباتي</string>
-    <string name="orders_stub_desc">قائمة طلباتك ومتابعتها مباشرة ستتوفر هنا قريباً.</string>
 
     <!-- Account Screen -->
     <string name="account_title">حسابي</string>
-    <string name="account_stub_desc">تفاصيل الحساب وعنوان التوصيل ستتوفر هنا قريباً.</string>
     <string name="account_address_button">عنوان التوصيل</string>
     <string name="account_verified_badge">عميل موثّق ✓</string>
     <string name="account_section_profile">المعلومات الشخصية</string>

@@ -11,12 +11,11 @@ import {
 } from '@forerun/shared-types';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { LedgerService } from './ledger.service.js';
 
 @Controller()
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 export class LedgerController {
   constructor(private readonly ledgerService: LedgerService) {}
 

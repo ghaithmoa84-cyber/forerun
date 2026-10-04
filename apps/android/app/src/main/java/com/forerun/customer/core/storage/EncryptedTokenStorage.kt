@@ -14,16 +14,36 @@ class EncryptedTokenStorage @Inject constructor(
 ) : TokenStorage {
 
     private val masterKey: MasterKey by lazy {
-        MasterKey.Builder(context)
+        runCatching {
+            createMasterKey()
+        }.getOrElse {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().clear().apply()
+            createMasterKey()
+        }
+    }
+
+    private fun createMasterKey(): MasterKey {
+        return MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
     }
 
     private val sharedPreferences: SharedPreferences by lazy {
-        EncryptedSharedPreferences.create(
+        runCatching {
+            createEncryptedPrefs(masterKey)
+        }.getOrElse {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().clear().apply()
+            createEncryptedPrefs(masterKey)
+        }
+    }
+
+    private fun createEncryptedPrefs(key: MasterKey): SharedPreferences {
+        return EncryptedSharedPreferences.create(
             context,
             PREFS_NAME,
-            masterKey,
+            key,
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )

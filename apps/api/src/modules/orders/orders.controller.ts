@@ -1,5 +1,4 @@
 import { Throttle } from '@nestjs/throttler';
-import { z } from 'zod';
 import {
   Body,
   Controller,
@@ -12,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  AssignRunnerSchema,
+  CancelOrderSchema,
   CreateRunnerOrderItemSchema,
   CreateOrderStoreSchema,
   AdminOrdersQuerySchema,
@@ -27,6 +28,8 @@ import {
   StartOrderReviewSchema,
 } from '@forerun/shared-types';
 import type {
+  AssignRunnerRequest,
+  CancelOrderRequest,
   CreateRunnerOrderItemRequest,
   CreateRunnerOrderItemResponse,
   CreateOrderStoreRequest,
@@ -46,7 +49,6 @@ import type {
 } from '@forerun/shared-types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { CustomerOrdersService } from './services/customer-orders.service.js';
@@ -54,19 +56,8 @@ import { AdminOrderQueryService } from './services/admin-order-query.service.js'
 import { AdminOrderCommandService } from './services/admin-order-command.service.js';
 import { RunnerOrdersService } from './services/runner-orders.service.js';
 
-const AssignRunnerSchema = z.object({
-  runnerId: z.string().min(1, 'Runner ID is required'),
-});
-
-const CancelOrderSchema = z.object({
-  cancelReason: z.string().min(1, 'Cancel reason must be at least 1 character').optional(),
-});
-
-type AssignRunnerRequest = z.infer<typeof AssignRunnerSchema>;
-type CancelOrderRequest = z.infer<typeof CancelOrderSchema>;
-
 @Controller()
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 export class OrdersController {
   constructor(
     private readonly customerOrdersService: CustomerOrdersService,
