@@ -47,7 +47,13 @@
 | T-3 | **اختبارات وحدة لـ PricingService** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم إنشاء `test/pricing/pricing.service.spec.ts` بـ 12 اختباراً تغطي سيناريوهات الرسوم، الحالات الحدية، معادلات الحصص، ومنع إعادة التسعير لطلب DELIVERED. |
 | T-4 | **اختبارات وحدة لـ SettlementsService** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم إنشاء `test/settlements/settlements.service.spec.ts` بـ 11 اختباراً تغطي إغلاق اليوم وعملية markSettled واحتساب الحصص والتقريب وidempotency. |
 | T-5 | **اختبارات وحدة لـ AdminOrderCommandService** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم إنشاء `test/orders/admin-order-command.service.spec.ts` بـ 16 اختباراً تغطي approveOrder وrejectOrder وassignRunner (مع BUG-017) وcancelOrderAdmin. |
-| H-1 | سلسلة فشل الجلسة في الأندرويد | 🟡 متوسطة | ⏳ مفتوح | @feature-dev | `EncryptedTokenStorage.kt:16–30` (تهيئة `by lazy` بلا `try/catch`) ← `AuthRepositoryImpl.kt:133,141` (خارج `try`) ← `HomeViewModel.kt:111–116` (لا يُطلق `_navigateToLogin` عند الفشل). + `libs.versions.toml:19` `security-crypto` نسخة pre-release. |
+| A-1 | **نقل resolveOrderStore لـ ReceiptsService** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم نقل الدالة من `receipts.controller.ts` إلى `ReceiptsService` وسحب `PrismaService` من المتحكم. |
+| A-2 | **نقل resolveRunner لـ SettlementsService** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم نقل الدالة مع فحص VERIFIED من `settlements.controller.ts` إلى `SettlementsService` وسحب `PrismaService` من المتحكم. |
+| A-3 | **إزالة RolesGuard المكرر من المتحكمات** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم حذف `RolesGuard` غير الضروري من جميع المتحكمات الـ 8 لتسجيله كحارس عام (`APP_GUARD`) في `app.module.ts`. |
+| A-8 | **حذف ملف logout.dto.ts الوسيط** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم حذف `apps/api/src/modules/auth/dto/logout.dto.ts` والاستيراد المباشر من `@forerun/shared-types`. |
+| NEW-02 | **نقل مخططات التعيين والإلغاء إلى shared-types** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم نقل `AssignRunnerSchema` و `CancelOrderSchema` وتصديرهما من `@forerun/shared-types` وحذف تعريف `z.object` المحلي في `orders.controller.ts`. |
+| NEW-05 | **تضمين customer في استعلام assignRunner** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم إضافة `customer: true` في `include` لضمان إرسال إشعارات العميل وتوفر `customerUserId`. |
+| H-1 | **سلسلة فشل الجلسة في الأندرويد (A-4/5/6/10)** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم تغليف KeyStore وPrefs بـ `runCatching` وإعادة البناء التلقائي عند التلف، وتأمين استدعاءات `tokenStorage` في `AuthRepositoryImpl` بـ `runCatching`، وضمان إطلاق `_navigateToLogin` بـ `try/finally` في `HomeViewModel`، وحذف النصوص الميتة من `strings.xml`. |
 | P-1 | قرار منتج: الرسم الأساسي 60 ل.س أم 5,000 ل.س؟ | 🟡 متوسطة | ❓ **يحتاج قرار بشري** | المستخدم | `strings.xml:361` يقول للعميل 5,000 ل.س بينما `shared-constants/src/pricing.ts:2` = 60 ل.س والمواصفة تؤكّد 60. **لا يُنفَّذ أي تغيير عشوائي.** |
 
 ---
