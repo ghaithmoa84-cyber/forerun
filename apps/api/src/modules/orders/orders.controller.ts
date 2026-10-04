@@ -1,5 +1,4 @@
 import { Throttle } from '@nestjs/throttler';
-import { z } from 'zod';
 import {
   Body,
   Controller,
@@ -12,6 +11,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  AssignRunnerSchema,
+  CancelOrderSchema,
   CreateRunnerOrderItemSchema,
   CreateOrderStoreSchema,
   AdminOrdersQuerySchema,
@@ -27,6 +28,8 @@ import {
   StartOrderReviewSchema,
 } from '@forerun/shared-types';
 import type {
+  AssignRunnerRequest,
+  CancelOrderRequest,
   CreateRunnerOrderItemRequest,
   CreateRunnerOrderItemResponse,
   CreateOrderStoreRequest,
@@ -52,17 +55,6 @@ import { CustomerOrdersService } from './services/customer-orders.service.js';
 import { AdminOrderQueryService } from './services/admin-order-query.service.js';
 import { AdminOrderCommandService } from './services/admin-order-command.service.js';
 import { RunnerOrdersService } from './services/runner-orders.service.js';
-
-const AssignRunnerSchema = z.object({
-  runnerId: z.string().min(1, 'Runner ID is required'),
-});
-
-const CancelOrderSchema = z.object({
-  cancelReason: z.string().min(1, 'Cancel reason must be at least 1 character').optional(),
-});
-
-type AssignRunnerRequest = z.infer<typeof AssignRunnerSchema>;
-type CancelOrderRequest = z.infer<typeof CancelOrderSchema>;
 
 @Controller()
 @UseGuards(VerifiedUserGuard)
