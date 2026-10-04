@@ -99,6 +99,7 @@ export class SettlementsController {
 
   @Put('admin/settlements/:id/mark-settled')
   @Roles('ADMIN')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async markSettled(
     @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
     @CurrentUser() user: { userId: string; adminId?: string | null; role: string; status: string },
@@ -111,6 +112,7 @@ export class SettlementsController {
 
   @Get('admin/settlements')
   @Roles('ADMIN')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async listAdmin(
     @Query(new ZodValidationPipe(SettlementAdminQuerySchema))
     query: SettlementAdminQuery,
@@ -120,6 +122,7 @@ export class SettlementsController {
 
   @Get('admin/settlements/pending')
   @Roles('ADMIN')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async getPendingSettlements(
     @Query(new ZodValidationPipe(PendingSettlementsQuerySchema))
     query: PendingSettlementsQuery,

@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Post, Put, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   DeviceTokenSchema,
   UpdateCustomerAddressSchema,
@@ -65,6 +66,7 @@ export class CustomersController {
   }
 
   @Post('customer/me/device-token')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async registerDeviceToken(
     @CurrentUser() user: { userId: string; role: string; status: string },
     @Body(new ZodValidationPipe(DeviceTokenSchema)) dto: DeviceTokenRequest,
@@ -73,6 +75,7 @@ export class CustomersController {
   }
 
   @Delete('customer/me/device-token')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async unregisterDeviceToken(
     @CurrentUser() user: { userId: string; role: string; status: string },
     @Body(new ZodValidationPipe(DeviceTokenSchema)) dto: DeviceTokenRequest,
