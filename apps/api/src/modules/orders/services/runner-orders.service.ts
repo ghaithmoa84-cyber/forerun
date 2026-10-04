@@ -260,9 +260,6 @@ export class RunnerOrdersService {
         const updatedStore = await tx.orderStore.findUniqueOrThrow({
           where: { id: store.id },
         });
-        if (!updatedOrder || !updatedStore) {
-          throw new NotFoundException('Order store not found');
-        }
 
         await this.auditService.log(
           {
