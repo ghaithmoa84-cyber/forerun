@@ -312,7 +312,7 @@ export class SettlementsService {
       },
     );
 
-    this.notificationsService.emitToAdmin('settlement:closed', {
+    await this.notificationsService.emitToAdmin('settlement:closed', {
       date: operationalDate,
       runnerCount: result.runnerCount,
     });
@@ -583,7 +583,7 @@ export class SettlementsService {
     const today = getOperationalDate();
     const pendingRunnerCount = await this.checkPendingOrders(today);
     if (pendingRunnerCount > 0) {
-      this.notificationsService.emitToAdmin('settlement:reminder', {
+      await this.notificationsService.emitToAdmin('settlement:reminder', {
         date: today,
         pendingRunnerCount,
         message: 'لديك تسوية معلقة لم تُغلق بعد',

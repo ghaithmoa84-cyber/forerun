@@ -66,7 +66,7 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
     };
 
     notificationsService = {
-      emitToAdmin: vi.fn(),
+      emitToAdmin: vi.fn().mockResolvedValue(undefined),
     };
 
     service = new SettlementsService(

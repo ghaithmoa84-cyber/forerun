@@ -301,6 +301,7 @@ model OrderStore {
   receipts Receipt[]
 
   @@index([orderId, status])
+  @@index([orderId, isDeleted])
 }
 
 // ─────────────────────────────────────────

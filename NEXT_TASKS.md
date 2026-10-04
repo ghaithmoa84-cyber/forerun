@@ -54,6 +54,10 @@
 | NEW-02 | **نقل مخططات التعيين والإلغاء إلى shared-types** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم نقل `AssignRunnerSchema` و `CancelOrderSchema` وتصديرهما من `@forerun/shared-types` وحذف تعريف `z.object` المحلي في `orders.controller.ts`. |
 | NEW-05 | **تضمين customer في استعلام assignRunner** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم إضافة `customer: true` في `include` لضمان إرسال إشعارات العميل وتوفر `customerUserId`. |
 | H-1 | **سلسلة فشل الجلسة في الأندرويد (A-4/5/6/10)** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم تغليف KeyStore وPrefs بـ `runCatching` وإعادة البناء التلقائي عند التلف، وتأمين استدعاءات `tokenStorage` في `AuthRepositoryImpl` بـ `runCatching`، وضمان إطلاق `_navigateToLogin` بـ `try/finally` في `HomeViewModel`، وحذف النصوص الميتة من `strings.xml`. |
+| I-1/2/3 | **إعادة بناء Dockerfile متعدد المراحل (FIX-23)** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم إعادة بناء `Dockerfile` على مرحلتين (builder و runtime) مع `--frozen-lockfile` وتشغيل الحاوية بحساب `node` الآمن (non-root) وحفظ طبقات التثبيت المثلى. |
+| NEW-03 | **تحويل دوال الإشعارات إلى async و await لـ FCM** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم تحويل `emitToCustomer` و `emitToRunner` و `emitToAdmin` إلى `async Promise<void>` مع انتظار FCM push الحقيقي ومعالجة الأخطاء وإضافة اختبارات وحدة شاملة. |
+| I-7 | **معالجة TODO لحدث order:needs_attention (FIX-26)** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم تنفيذ دالة المجدول `@Cron` باسم `checkStaleOrders` للبحث عن الطلبات العالقة في انتظار مندوب لأكثر من 10 دقائق وبث حدث `order:needs_attention` للإدارة مع اختبارات وحدة كاملة. |
+| A-9 | **فهرس OrderStore(orderId, isDeleted) (FIX-21)** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم إضافة `@@index([orderId, isDeleted])` في `schema.prisma` وإنشاء migration نظيف وترقية Prisma client بنجاح. |
 | P-1 | قرار منتج: الرسم الأساسي 60 ل.س أم 5,000 ل.س؟ | 🟡 متوسطة | ❓ **يحتاج قرار بشري** | المستخدم | `strings.xml:361` يقول للعميل 5,000 ل.س بينما `shared-constants/src/pricing.ts:2` = 60 ل.س والمواصفة تؤكّد 60. **لا يُنفَّذ أي تغيير عشوائي.** |
 
 ---
