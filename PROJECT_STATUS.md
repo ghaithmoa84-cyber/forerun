@@ -317,6 +317,9 @@ fawrun/
 | 2026-10-01 | `b6acfaf` — `merge(android)`: سبرنت 8E — نقل طبقة WebSocket إلى Domain Layer وتفعيل `AccountVerified` |
 | 2026-10-01 | `6d7ef78` — إطلاق إشعارات Telegram في الـ backend (`TelegramService`) للطلبات الجديدة وتسجيل الحسابات بنجاح على Railway |
 | 2026-10-01 | `090d261` — إنجاز **Sprint 8F**: ربط مشروع Firebase الحقيقي (`forerun-c819d`)، إنشاء جدول `DeviceToken` وتطبيق الهجرة `20261001160600_add_device_token` في الإنتاج، وبرمجة `FcmService` لإرسال Push Notifications لهواتف العملاء عند تحديثات الطلبات |
+| 2026-10-03 | `26df1cb` — `fix(review)`: دفعة إصلاحات من مراجعة الكود (ابتلاع الأخطاء الصامت، N+1، النصوص الصلبة، `console.log`، الأرقام السحرية) — **مُغلقت 11 بنداً من `docs/SECURITY-AND-CODE-REVIEW.md`** |
+| 2026-10-04 | `f78fe50` — `refactor(api)`: تفكيك الدوال الطويلة في الخدمات إلى دوال فرعية (`deliverOrder` 88 سطراً · `approveOrder` 73 · `closeDay` 58) |
+| 2026-10-04 | `744bf23` — **إعادة هيكلة `docs/SECURITY-AND-CODE-REVIEW.md` (الإصدار 2)**: كل بند موثّق بـ`ملف:سطر` على `744bf23` · **33 بنداً مفتوحاً** (1 🔴 · 24 🟡 · 8 🟢) · **12 مُغلقاً** · **5 مرفوضة بالدليل** (أهمها: نسبة `RUNNER_SHARE = 0.75` **صحيحة** والمواصفة تنص على 75/25 — لا تغيير). 🔴 الوحيد: `runner-orders.service.ts:1096–1102` (حاجز يُبطل Idempotency التسليم) |
 
 ---
 

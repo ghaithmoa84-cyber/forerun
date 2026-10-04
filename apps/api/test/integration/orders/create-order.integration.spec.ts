@@ -75,7 +75,7 @@ describe('POST /api/v1/customer/orders', () => {
         },
       });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const body = res.body;
 
     const order = await prisma.order.findUnique({

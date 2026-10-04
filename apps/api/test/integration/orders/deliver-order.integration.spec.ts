@@ -76,7 +76,8 @@ describe('deliverOrder — Integration', () => {
 
     const reviewRes = await request
       .put(`/api/v1/admin/orders/${orderId}/start-review`)
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
     expect(reviewRes.status).toBe(200);
 
     const approveRes = await request
@@ -168,7 +169,7 @@ describe('deliverOrder — Integration', () => {
     expect(audit).not.toBeNull();
   });
 
-  it('should return 409 on duplicate deliver', async () => {
+  it('should handle idempotent retry with same key and return 409 on key mismatch', async () => {
     await prepareOrderForDelivery();
     const idempotencyKey = randomUUID();
 
@@ -177,12 +178,22 @@ describe('deliverOrder — Integration', () => {
       .set('Authorization', `Bearer ${runnerToken}`)
       .send({ idempotencyKey });
     expect(firstDeliverRes.status).toBe(200);
+    expect(firstDeliverRes.body.idempotent).toBe(false);
 
+    // Idempotent retry: same key should return 200 with idempotent: true and no duplicate ledger entries
     const duplicateDeliverRes = await request
       .put(`/api/v1/runner/orders/${orderId}/deliver`)
       .set('Authorization', `Bearer ${runnerToken}`)
       .send({ idempotencyKey });
-    expect(duplicateDeliverRes.status).toBe(409);
+    expect(duplicateDeliverRes.status).toBe(200);
+    expect(duplicateDeliverRes.body.idempotent).toBe(true);
+
+    // Mismatched idempotency key on delivered order should return 409 Conflict
+    const mismatchRes = await request
+      .put(`/api/v1/runner/orders/${orderId}/deliver`)
+      .set('Authorization', `Bearer ${runnerToken}`)
+      .send({ idempotencyKey: randomUUID() });
+    expect(mismatchRes.status).toBe(409);
 
     const entries = await prisma.ledgerEntry.findMany({ where: { orderId } });
     expect(entries).toHaveLength(3);

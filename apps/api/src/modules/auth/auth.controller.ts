@@ -21,6 +21,7 @@ export class AuthController {
 
   @Post('login')
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Throttle({ login: { limit: 10, ttl: 900000 } })
   login(
     @Body(new ZodValidationPipe(LoginSchema)) dto: LoginRequest,
@@ -39,6 +40,7 @@ export class AuthController {
 
   @Post('logout')
   @Public()
+  @HttpCode(HttpStatus.OK)
   logout(@Body(new ZodValidationPipe(LogoutSchema)) dto: LogoutDto) {
     return this.authService.logout(dto);
   }
