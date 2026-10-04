@@ -1,184 +1,209 @@
-# تقرير المراجعة الشاملة — كود وأمان FORERUN
+# تقرير مراجعة الكود والأمان — FORERUN
 
-**التاريخ:** 2026-10-03  
-**المراجع:** كبير مهندسي البرمجيات ومراجع الكود المستقل  
-**النطاق:** Backend (NestJS + Prisma) + Android (Kotlin + Compose + Hilt) + Web Clients + البنية التحتية  
-
----
-
-## ملخص تنفيذي
-
-مشروع **FORERUN** يتمتع بأساس معماري متين تم تنفيذه بعناية غير معتادة للمشاريع المطورة بالذكاء الاصطناعي، ويظهر ذلك جلياً في الفصل النظيف لطبقة الـ Domain في الأندرويد، وتطبيق نمط آلة الحالة (State Machine) لضبط مسار الطلبات، وقاعدة البيانات الموثقة بـ Schema صارمة مع خلو كامل من ثغرات الحقن (Zero Raw SQL Queries) والالتزام الصارم بعدم استخدام `any` في الواجهات البرمجية. ومع ذلك، تكشف المراجعة الفاحصة عن "أعراض كلاسيكية لكود الذكاء الاصطناعي التراكمي": وجود ثغرة حرجة تُبطل آلية الـ Idempotency في تسليم الطلبات بسبب فحص سطحي استباقي كسر منطق الأمان التزامني، وابتلاع أخطاء بصمت عبر `catch { void 0; }`، وترك استعلامات N+1 في حلقات التكرار المالية، وتضمين مئات النصوص العربية الصلبة (Hardcoded Strings) في كود الأندرويد، وتسريب توكنات FCM في سجلات Logcat غير المحمية، واستثناء كامل لاختبارات التكامل من مشغّل الاختبارات الرئيسي. المشروع جاهز وظيفياً بنسبة 90%، لكنه بحاجة إلى إغلاق هذه الثغرات الحرجة لضمان استقرار العمليات الإنتاجية والأمان المالي.
+| | |
+|---|---|
+| **الحالة** | مُعاد هيكلته — الإصدار 2 |
+| **قاعدة المراجعة** | `744bf23` (نظيفة، بلا تعديلات معلّقة) |
+| **تاريخ التحقق** | 2026-10-04 |
+| **النطاق** | Backend (NestJS + Prisma) · Android (Kotlin + Compose) · Web Clients · البنية التحتية |
+| **ملف يملكه** | هذا الملف فقط. حالة التنفيذ ومالك كل بند: [NEXT_TASKS.md](../NEXT_TASKS.md) |
 
 ---
 
-## نتائج المراجعة
+## كيف تقرأ هذا التقرير
+
+**كل سطر في هذا التقرير مُتحقَّق منه آلياً على `744bf23`.** أي بند لا يحوي `ملف:سطر` قابل للحلّ ليس بنداً.
+
+| الرمز | المعنى |
+|---|---|
+| 🔴 | حرج — يفترض **منع الإطلاق الميداني** حتى الإغلاق |
+| 🟡 | متوسط — يُجدول في سبرنت، لا يوقف التشغيل |
+| 🟢 | منخفض — تحسين/تنظيف |
+| **مفتوح** | لم يُعالَج بعد |
+| **مُغلق** | حُلّ في كوميت — لا يُنفَّذ مجدداً |
+| **مرفوض** | ثبت خطأه بالدليل — **لا يُنفَّذ أبداً** |
+
+> **تصحيح منهجي:** الإصدار 1 من هذا التقرير (2026-10-03) كُتب على شجرة أقدم من `26df1cb` و`f78fe50`، وتضمّن بنوداً **خاطئة** وأرقام أسطر **لا تُحلّ**. أُغلقت ومرفوضة في الأقسام A وB أدناه. سبب التغيير موثَّق في [PROJECT_STATUS.md §9](../PROJECT_STATUS.md).
 
 ---
 
-### 1 — جودة الكود ونظافته (Code Quality & Cleanliness)
+## الملخص التنفيذي
 
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 1.1 | `apps/api/src/modules/orders/services/runner-orders.service.ts` | 743–1014 | تعقيد دوال مفرط: دالة `deliverOrder` تمتد على 271 سطراً وتحتوي على فحوصات أمان، استعلامات قاعدة بيانات، تحديثات Ledger، وآلة حالة، وإشعارات. | 🟡 | تفكيك الدالة إلى دوال فرعية مستقلة (validation, ledger processing, state transition). |
-| 1.2 | `apps/api/src/modules/orders/services/customer-orders.service.ts` | 49–275 | دالة `createOrder` تمتد على 226 سطراً وتجمع بين إنشاء السجلات، وتكرار المتاجر، والتسعير، والإشعارات وتيليغرام. | 🟡 | نقل منطق إنشاء السلاسل الزمنية والمتاجر لخدمة مساعدة وتخليص الدالة من التضخم. |
-| 1.3 | `apps/api/src/modules/orders/services/admin-order-command.service.ts` | 35–226 | دالة `approveOrder` تمتد على 191 سطراً بداخلها تفرعات معقدة لمعالجة المندوب المفضل وتحديثات الحالة. | 🟡 | تقسيم الدالة وتبسيط الفروع المنطقية. |
-| 1.4 | `apps/api/src/modules/settlements/settlements.service.ts` | 68–226 | دالة `closeDay` تمتد على 158 سطراً وتحتوي على حسابات مالية وحلقات تكرار متداخلة داخل المعاملة. | 🟡 | عزل عمليات احتساب الحصص (shares calculation) في دوال رياضية نقية (pure functions). |
-| 1.5 | `apps/runner-pwa/src/pages/AvailablePage.tsx` | 141 | بقاء `console.log` في بيئة الإنتاج: `console.log('[AUDIO] Playing new order chime via Web Audio API');`. | 🟢 | استبداله بموجّه صوتي صامت أو حذفه لتفادي تسريب تفاصيل للأدوات المساعدة في المتصفح. |
-| 1.6 | `apps/api/src/modules/orders/services/customer-orders.service.ts` | 320 | أرقام سحرية (Magic Number): `24 * 60 * 60 * 1000` لحساب مهلة التقييم مكتوبة نصياً دون ثابت معبر. | 🟢 | نقله إلى `packages/shared-constants` تحت اسم `RATING_EXPIRY_MS`. |
-| 1.7 | `apps/api/src/modules/orders/services/runner-orders.service.ts` | 293, 743, 975 | أرقام سحرية: مهلة المعاملة `{ timeout: 15000 }` مكررة في أكثر من 4 خدمات دون ثابت مركزي. | 🟢 | توحيد مهلة المعاملات في ثابت موحد `TRANSACTION_TIMEOUT_MS`. |
-| 1.8 | `apps/api/src/modules/auth/dto/logout.dto.ts` | 1–2 | طبقة إعادة تصدير غير ضرورية (Dead Indirection): الملف لا يقوم بشيء سوى إعادة تصدير ما هو موجود بالفعل في `@forerun/shared-types`. | 🟢 | استيراد `LogoutDto` و `LogoutSchema` مباشرة من الحزمة المشتركة وحذف الملف الوسيط. |
+البنية المعمارية سليمة ولا تحتاج إعادة بناء: الفصل نظيف، وآلة الحالة مفروضة على كل انتقالات الحالة، ولا يوجد SQL خام، ولا `any` في الواجهات البرمجية. **المخاطر الحقيقية محصورة في بندين.**
 
----
+**الخطر الأول فعلي وخطير:** حاجز `preCheckOrder` خارج المعاملة في `deliverOrder` يحوّل أي إعادة محاولة آمنة إلى خطأ `409`، ويُبطل عقد الـ Idempotency المصمَّم في نفس الملف. هذا يُعطِّل الضمانة التي تحمي تكرار قيد الـ Ledger.
 
-### 2 — الأخطاء البرمجية (Bugs & Defects)
+**الخطر الثاني هو غياب الحاجز:** اختبارات التكامل مكتوبة وتعمل محلياً، لكنها مستثناة من `pnpm test` **ومعطَّلة في CI بـ `if: false`** — أي أن مسار التسليم المالي بلا بوابة تراجع آلياً إطلاقاً.
 
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 2.1 | `apps/api/src/modules/orders/services/runner-orders.service.ts` | 755–760 | **إبطال آلية الـ Idempotency بحاجز استباقي خاطئ:** الكود يفحص خارج المعاملة `if (preCheckOrder?.status === 'DELIVERED') throw new ConflictException('ORDER_ALREADY_DELIVERED');` مما يمنع وصول الطلب إلى فحص الـ `idempotencyKey` داخل المعاملة (السطور 780–796)، ويجعل أي محاولة إعادة إرسال آمنة لطلب سُلّم بالفعل تفشل بخطأ 409 بدلاً من الاستجابة السليمة. | 🔴 | إزالة الفحص الاستباقي خارج المعاملة بالكامل والاعتماد على فحص الـ Idempotency داخل الـ Transaction كما صُممت في الأصل. |
-| 2.2 | `apps/api/src/modules/pricing/pricing.service.ts` | 57 | رمي استثناء أمني خاطئ: رمي `ForbiddenException` (HTTP 403) عند تمرير عدد متاجر غير صحيح أو سالب بدلاً من `BadRequestException` (HTTP 400). | 🟡 | تصحيح نوع الاستثناء ليكون `BadRequestException` احتراماً للمعايير الدلالية لـ HTTP. |
-| 2.3 | `apps/api/src/modules/orders/services/admin-order-command.service.ts` | 254–256, 351–353, 441–443, 650–652, 778–780 | **ابتلاع صامت للأخطاء (Silent Error Swallowing):** استخدام `catch { void 0; }` في 5 مواضع عند إرسال الإشعارات وتحديث الرسوم دون تسجيل الخطأ في الـ Logger إطلاقاً. | 🔴 | استبدال `void 0;` بـ `this.logger.warn('Notification failed', { error, orderId })` لتوثيق أي فشل. |
-| 2.4 | `apps/android/app/src/main/java/com/forerun/customer/core/storage/EncryptedTokenStorage.kt` | 22–30 | احتمالية انهيار التطبيق عند تهيئة التشفير (KeyStore Crash): تهيئة `EncryptedSharedPreferences.create` داخل `by lazy` بدون `try/catch`؛ في حال تلف مفتاح الأمان بنظام أندرويد سينهار التطبيق عند الإقلاع بلا رجعة. | 🟡 | إحاطة التهيئة بحماية برمجية مع مسح الملف القديم وإعادة بنائه تلقائياً عند حدوث `KeyStoreException`. |
-| 2.5 | `apps/android/app/src/main/java/com/forerun/customer/ui/home/HomeViewModel.kt` | 106–111 | خطر استثناء Coroutine غير ممسوك: دالة `logout()` تستدعي `logoutUseCase()` داخل `viewModelScope.launch` بدون معالجة أخطاء، فإذا فشلت العملية لن يتم الانتقال لشاشة الدخول وقد يتوقف التدفق. | 🟡 | إحاطة الاستدعاء بـ `try/finally` لضمان إطلاق حدث `_navigateToLogin.emit(Unit)` دوماً. |
-| 2.6 | `apps/api/src/modules/orders/services/customer-orders.service.ts` | 500–502 | تضارب رسائل الأخطاء عند الإلغاء: فحص `order.runnerId` يعيد `RUNNER_NOT_AVAILABLE` كخطأ 422 بينما الإجراء المطلوب كان إعادة المندوب متاحاً بعد إلغاء الطلب. | 🟢 | تحسين رسالة الخطأ لتكون `CONCURRENT_RUNNER_STATE_CHANGE`. |
+ما عدا ذلك بنود متوسطة ومنخفضة، معظمها تجميد معماري أو فجوات تغطية، ولا يُنتج أيٌّ منها خطراً مباشراً.
+
+**الخلاصة:** لا حاجة لحالة طوارئ. سبرنت تنظيف مركّز (يومان) يكفي لإغلاق الـ 🔴 والـ 🟡 ذات الأثر.
 
 ---
 
-### 3 — الأخطاء المعمارية (Architectural & Design Flaws)
+## القسم A — بنود مُغلقة (لا تُنفَّذ مجدداً)
 
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 3.1 | `apps/api/src/modules/receipts/receipts.controller.ts` | 42–65 | منطق تجاري واستعلامات DB مباشرة في الـ Controller: دالة `resolveOrderStore` تستعلم من `this.prisma` وتتحقق من شروط المندوب داخل المتحكم مباشرة. | 🟡 | نقل الدالة إلى `ReceiptsService` وحذف حقن `PrismaService` من الـ Controller. |
-| 3.2 | `apps/api/src/modules/settlements/settlements.controller.ts` | 42–57 | منطق تجاري واستعلامات DB مباشرة في الـ Controller: دالة `resolveRunner` تفحص حالة توثيق المندوب وتستعلم من قاعدة البيانات في المتحكم. | 🟡 | نقل منطق جلب وتحقق المندوب إلى `SettlementsService` أو `RunnersService`. |
-| 3.3 | `apps/api/src/modules/orders/orders.controller.ts` | 69 | تكرار تنفيذ الـ Guards: تطبيق `@UseGuards(VerifiedUserGuard, RolesGuard)` على المتحكم بالرغم من أن `RolesGuard` مسجل عالمياً في `app.module.ts:143`. | 🟢 | الاكتفاء بـ `@UseGuards(VerifiedUserGuard)` على مستوى المتحكم أو النقاط المطلوبة. |
-| 3.4 | `apps/android/app/src/main/java/com/forerun/customer/domain` | — | فحص طبقة الدومين (Domain Layer Purity): تم فحص الحزمة بالكامل وتبيّن أنها نقية 100% ولا تستورد أي كلاس من `ui` أو `data`. | 🟢 | لا توجد مخالفة — توثيق كفاءة معمارية ونقطة قوة للتطبيق. |
+حُلّت في `26df1cb` (fix: review batch-1) و`f78fe50` (refactor: extract long functions):
 
----
-
-### 4 — الأخطاء الأمنية (Security Findings)
-
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 4.1 | `apps/api/src/websocket/gateways/orders.gateway.ts` | 58–74 | **تسريب أحداث التتبع الفوري للحسابات الموقوفة:** بوابة الـ WebSocket تفحص `isDeleted` فقط ولكنها تتجاهل التحقق من `user.status === 'SUSPENDED'`، مما يسمح للمستخدمين الموقوفين باستمرار استقبال أحداث الطلبات والغرف المخصصة. | 🔴 | إضافة شرط فحص الحساب الموقوف وفصل الاتصال فوراً: `if (user.status === 'SUSPENDED') { client.disconnect(true); return; }`. |
-| 4.2 | `apps/android/app/src/main/java/com/forerun/customer/core/notification/ForerunFirebaseMessagingService.kt` | 28 | **تسريب توكن FCM في سجلات Logcat بنسخ الإنتاج:** استدعاء `Log.d(TAG, "Refreshed FCM token received: $token")` يتم تنفيذه في النسخ النهائية لأن ملف ProGuard لا يحذف سجلات Log. | 🟡 | إضافة قاعدة إزالة دوال Log في `proguard-rules.pro` أو حصر الطباعة بشرط `if (BuildConfig.DEBUG)`. |
-| 4.3 | `apps/android/app/proguard-rules.pro` | 1–76 | غياب قواعد تنظيف السجلات (Log Stripping Rules): لا توجد قاعدة `-assumenosideeffects class android.util.Log { *; }` لحذف سجلات التصحيح من حزم الإصدار النهائي الموقعة. | 🟡 | إضافة القاعدة في ملف ProGuard لحماية بيانات الشبكة والجلسات من الظهور في Logcat الأجهزة. |
-| 4.4 | `apps/api/src/modules/auth/auth.controller.ts` | 33–44 | غياب تحديد المعدل (Rate Limiting) على تجديد وتسجيل خروج الجلسة: نقطتا `POST /auth/refresh` و `POST /auth/logout` عامتان (`@Public`) وتفتقران لمحدد طلبات خاص `@Throttle`. | 🟡 | إضافة `@Throttle({ default: { limit: 30, ttl: 60000 } })` لمنع إغراق الخادم بطلبات التجديد. |
-| 4.5 | `apps/api/src/modules/users/users.controller.ts` | 21–65 | غياب محدد الطلبات في متحكم المستخدمين: جميع نقاط لوحة التحكم الخاصة بالمستخدمين تخلو من `@Throttle` وتعتمد على السقف العام الواسع. | 🟢 | تقييد معدل طلبات التعديل والتجميد الإداري لحماية النظام. |
-| 4.6 | `apps/api/src/modules/customers/customers.controller.ts` | 67–81 | غياب تقييد المعدل على تسجيل توكنات الإشعارات: نقطة `customer/me/device-token` تقبل الطلبات دون `@Throttle` خاص. | 🟢 | إضافة محدد معدل لحماية جدول `DeviceToken` من الحشو العشوائي. |
-| 4.7 | `apps/android/app/src/main/java/com/forerun/customer/core/di/NetworkModule.kt` | 60–68 | غياب تثبيت الشهادات (Missing SSL Pinning): عميل OkHttp يتصل بالـ API عبر HTTPS العادي دون تفعيل `CertificatePinner`. | 🟢 | تفعيل Certificate Pinning في تحديثات الأمان المستقبلية لصد هجمات Man-in-the-Middle. |
+| البند القديم | الحالة | الدليل على الإغلاق |
+|---|---|---|
+| `catch { void 0; }` في 5 مواضع | ✅ **مُغلق** | لا `void 0` في أي ملف مصدر. الخمسة تسجّل الآن: `admin-order-command.service.ts:360, :522, :615, :882, :1074` |
+| `console.log` في Runner PWA | ✅ **مُغلق** | العدد **0** في `apps/runner-pwa/src` (بقي `console.error` واحد مقصود في `useWebSocket.ts:39`) |
+| مئات النصوص العربية الصلبة في الأندرويد | ✅ **مُغلق** | المتبقي **6 نصوص فقط** كلها في `core/network/ApiCall.kt:41,46,79,84,111,121`. صفر في `ui/**`، و351 مدخلاً في `strings.xml` |
+| `deliverOrder` 271 سطراً | ✅ **مُغلق** | `runner-orders.service.ts:1084–1171` (88 سطراً) |
+| `approveOrder` 191 سطراً | ✅ **مُغلق** | `admin-order-command.service.ts:367–439` (73 سطراً) |
+| `closeDay` 158 سطراً | ✅ **مُغلق** | `settlements.service.ts:246–303` (58 سطراً) |
+| مهلة معاملة `{ timeout: 15000 }` مكرّرة | ✅ **مُغلق** | صفر مطابقة في `apps/api/src` — كلها `CONFIG.TRANSACTION_TIMEOUT_MS` |
+| الرقم السحري `24*60*60*1000` | ✅ **مُغلق** | الثابت موجود: `shared-constants/src/config.ts:9` (`RATING_EDIT_WINDOW_MS`)، مستهلك في `customer-orders.service.ts:430` |
+| `settlementItem.create` في حلقة (N+1 مالي) | ✅ **مُغلق** | `settlements.service.ts:204` يستخدم `createMany` |
+| `orderItem.create` في حلقة مزدوجة | ✅ **مُغلق** | `customer-orders.service.ts:232` يستخدم `createMany` |
+| `findUnique` لكل مندوب في `closeDay` | ✅ **مُغلق** | `settlements.service.ts:103` — استعلام واحد `findMany({ runnerId: { in: runnerIds } })` |
+| `createOrder` 226 سطراً | ❌ **لم يكن خطأً** | `customer-orders.service.ts:326–367` (42 سطراً) |
 
 ---
 
-### 5 — جودة الاختبارات (Testing Quality & Coverage)
+## القسم B — بنود مرفوضة (ثبت خطأها — لا تُنفَّذ أبداً)
 
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 5.1 | `apps/api/vitest.config.ts` | 21 | **تعطيل كامل لاختبارات التكامل في المشغل الرئيسي:** ملف الإعداد يستثني صراحة `exclude: ['test/integration/**/*.spec.ts']`؛ هذا يعني أن مسارات تسليم الطلب، وإنشائه، واختبارات المصادقة التكاملية لا تُنفذ عند تشغيل `pnpm test`. | 🔴 | إزالة الاستثناء أو إنشاء أمر تشغيل مخصص `pnpm test:integration` وتوثيقه في خط الأنابيب (CI). |
-| 5.2 | `apps/api/src/modules/pricing/pricing.service.ts` | — | **انعدام تام لاختبارات وحدة التسعير:** وحدة التسعير المسؤولة عن احتساب المبالغ، والمناطق الطرفية، والمتاجر الإضافية، وحصص المندوبين تملك 0 اختبارات وحدة. | 🔴 | كتابة ملف `pricing.service.spec.ts` شامل لجميع السيناريوهات والحالات الحدية (Edge Cases). |
-| 5.3 | `apps/api/src/modules/settlements/settlements.service.ts` | 70–226 | نقص اختبارات العمليات المالية: اختبارات التسويات تغطي فقط تذكير الـ Cron، بينما العمليات المالية الحساسة (`closeDay`, `confirmSettlement`) لا تملك اختبارات تغطي المعاملات. | 🔴 | كتابة اختبارات مخصصة لـ `closeDay` والتحقق من صحة قيود الـ Ledger ومنع الازدواجية. |
-| 5.4 | `apps/android/app/src` | — | **انعدام كامل لاختبارات واجهة المستخدم (UI Tests):** لا يوجد مجلد `androidTest` على الإطلاق، ونسبة إنجاز البند 18.3 في مواصفة الأندرويد (تغطية 5–10 مسارات رئيسية عبر Compose Test) هي 0%. | 🟡 | إنشاء مجموعة اختبارات Compose على الأقل لمسار تسجيل الدخول وتفاصيل الطلب. |
-| 5.5 | `apps/api/src/modules/orders/services/admin-order-command.service.ts` | — | غياب اختبارات أوامر الإدارة: دوال اعتماد الطلب، رفضه، وتعيين المندوب تفتقر لاختبارات وحدة معزولة. | 🟡 | إضافة تغطية لاختبارات قبول ورفض وتعيين الطلبات. |
-
----
-
-### 6 — الأداء وقابلية التوسع (Performance & Scalability)
-
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 6.1 | `apps/api/src/modules/settlements/settlements.service.ts` | 155–165 | **مشكلة N+1 في عمليات الإدخال المالي:** حلقة تكرار تقوم بإنشاء بنود التسوية `await tx.settlementItem.create(...)` بشكل فردي لكل طلب بدلاً من استخدام الإدخال المجمع. | 🟡 | استبدالها بـ `await tx.settlementItem.createMany({ data: items })` لاختصار زمن المعاملة وقفل الجدول. |
-| 6.2 | `apps/api/src/modules/orders/services/customer-orders.service.ts` | 160–172 | **مشكلة N+1 عند إنشاء مواد الطلب:** إدخال المواد يتم عبر `await tx.orderItem.create(...)` داخل حلقتي تكرار متداخلتين للمتاجر والمواد. | 🟡 | تجميع المواد في مصفوفة وتنفيذ `createMany` لكل متجر لتقليل مدة المعاملة التي اضطرت الفريق لرفع الـ Timeout إلى 15 ثانية. |
-| 6.3 | `apps/api/prisma/schema.prisma` | 303 | **نقص فهرسة قاعدة البيانات (Missing Index):** نموذج `OrderStore` يحتوي فقط على `@@index([orderId, status])`، بينما استعلامات جلب تفاصيل الطلب تعتمد دائماً على `where: { orderId, isDeleted: false }`. | 🟡 | إضافة فهرس مركب `@@index([orderId, isDeleted])` لتحسين أداء استعلامات الطلبات الثقيلة. |
-| 6.4 | `apps/api/src/modules/settlements/settlements.service.ts` | 106–116 | استعلامات متكررة في الذاكرة: حلقة تكرار المندوبين تستعلم عن التسوية الفردية `findUnique` داخل الـ Loop لكل مندوب. | 🟢 | استعلام كل التسويات القائمة للمندوبين بدفعة واحدة عبر `findMany` مع معيار `in`. |
+| البند القديم | الحكم | الدليل |
+|---|---|---|
+| **`RUNNER_SHARE` يجب أن يكون 0.80 بدل 0.75** | ❌ **خطأ جوهري** | المواصفة نفسها `MVP Technical Specification.txt:643–644` تنص على **75/25**، وكذلك `PROJECT_BRIEF.md:157–158` · `schema.prisma:55–56` · `docs/04-module-status.md:13` · Sprint 1/3/4. لا وجود لـ `0.80/0.20` في المستودع كله. **تطبيق هذا "الإصلاح" يكسر حسابيّات الـ Ledger ويخالف Sprint 4.** |
+| **حاجز الفحص المسبق — وُصف كـ«حماية زائدة»** | ⚠️ **التشخيص خاطئ، والخطر صحيح** | الوصف أخطأ في تفسير المشكلة، لكن الخطر **حقيقي ويستوجب الحذف** — انظر `R-1`. الفحص المسبق ليس حماية زائدة، بل مسار موازٍ يجعل الاسترجاع الآمن مستحيلاً. |
+| `orders.gateway.ts:58–74` | ⚠️ **الموقع خاطئ، والخطورة مبالغ فيها** | الفعلي `:61–69` — والخطورة **🟡 لا 🔴**، لأن HTTP محمي بـ `jwt-auth.guard.ts:69`، والـ Refresh يُلغى عند الإيقاف (`users.service.ts:215`)، والسوكيت استقبال فقط بلا أوامر. |
+| `admin-order-command.service.ts:254` يحمل `catch { void 0; }` | ❌ **غير موجود** | السطر 254 داخل `meta` لAudit Log. الخمسة catches في `:359, :521, :614, :881, :1073` وكلها `logger.warn`. |
+| بنود مُدرجة في `NEXT_TASKS.md` ولم يُشر إليها التقرير | ⚠️ **ازدواج ملكية** | `S1` (اختبار تسعير تكاملي) و`S4` (Sentry) مملوكة أصلاً لـ `@feature-dev` في `NEXT_TASKS.md:34, :37` — التقرير تكرار لا اكتشاف. |
 
 ---
 
-### 7 — تجربة المستخدم والواجهة (UX/UI & Localization)
+## القسم 1 — الأخطاء البرمجية والمالية (Bugs — Financial Path)
 
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 7.1 | `apps/android/app/src/main/java/com/forerun/customer/ui/order/detail/OrderDetailScreen.kt` | 1099–1108 | **نصوص عربية صلبة في حالات الطلب:** تسميات الحالات ("مسودة"، "قيد المراجعة"، "تم تعيين كابتن"، "ملغي"...) مكتوبة حرفياً داخل الكود بدلاً من استخدام `stringResource(R.string.status_*)`. | 🟡 | نقل كافة مسميات الحالات إلى `strings.xml` لتوحيد المصطلحات وتسهيل صيانتها. |
-| 7.2 | `apps/android/app/src/main/java/com/forerun/customer/ui/support/SupportViewModel.kt` | 38–67 | نصوص الأسئلة الشائعة صلبة في الـ ViewModel: كافة الأسئلة وإجابات الدعم الفني مكتوبة كنصوص صلبة داخل كود Kotlin. | 🟡 | نقل الأسئلة الشائعة إما إلى موارد النصوص أو جلبها كبيانات مهيأة من الـ API. |
-| 7.3 | `apps/android/app/src/main/java/com/forerun/customer/ui/home/HomeScreen.kt` | 270, 284, 348, 371, 380 | نصوص ترحيبية ووصفية صلبة: نصوص مثل ("صباح الخير، ..."، "القنجرة ومحيطها"، "شو محتاج اليوم؟") مكتوبة مباشرة داخل الـ Composables. | 🟡 | ترحيل جميع النصوص إلى `strings.xml`. |
-| 7.4 | `apps/android/app/src/main/java/com/forerun/customer/ui/order/create/CreateOrderViewModel.kt` | 223–268 | نصوص أخطاء التحقق صلبة: رسائل "يرجى تحديد عنوان التوصيل"، "يرجى كتابة اسم المادة" مكتوبة في الـ ViewModel. | 🟡 | استخدام معرّفات الموارد (`@StringRes`) داخل الـ State بدلاً من النصوص المباشرة. |
-| 7.5 | `apps/android/app/src/main/res/values/strings.xml` | 92, 96 | بقاء نصوص وهمية (Stub Descriptions) في الموارد: عبارات مثل "ستتوفر هنا قريباً" ما زالت موجودة في ملف الموارد المعتمد للنسخ الإنتاجية. | 🟢 | مراجعة الموارد وحذف أي نصوص لم تعد مستخدمة بعد اكتمال الشاشات. |
+| # | الملف:السطر | المشكلة | الخطورة | الإجراء |
+|---|---|---|---|---|
+| **R-1** | `orders/services/runner-orders.service.ts:1096–1102` | **حاجز يُبطل الـ Idempotency:** فحص `if (preCheckOrder?.status === 'DELIVERED') throw new ConflictException('ORDER_ALREADY_DELIVERED')` يتم **قبل** `$transaction`، فيصطدم أولاً مع `processIdempotentDelivery` (`:794–861`) ويُرجع 409 بدلاً من الاستجابة السليمة على إعادة المحاولة. النتيجة: عقد الـ Idempotency (`:810–826`) ومعه الاسترجاع الآمن (`:1162–1170`) **غير قابل للوصول**. | 🔴 | **حذف `1096–1102` كاملاً.** الاستعلام الذرّي `updateMany` في `:832–839` داخل المعاملة كافٍ ويمنع التسابق. |
+| R-2 | `pricing/pricing.service.ts:53–59` | `ForbiddenException` (403) على تحقّق مُدخل (`purchasedStoreCount` غير صحيح/سالب) — خطأ دلالي في رمز الحالة. | 🟡 | `BadRequestException` (غير مُستورد أصلاً في الملف). |
+| R-3 | `pricing/pricing.service.ts:99–103` | تعارض حالة (طلب مُسلَّم) يُرفع كـ 403 Forbidden؛ يُستدعى من `runner-orders.service.ts:256, :881`. | 🟡 | `ConflictException` (409). |
+| R-4 | `customer-orders.service.ts:626–632` | فشل الإفراج عن المندوب سببه **تغيّر متزامن** (`updateMany.count === 0`) لكنه يُرفع كـ 422 `RUNNER_NOT_AVAILABLE` — مربك تشخيصياً. | 🟢 | `ConflictException` + كود `CONCURRENT_RUNNER_STATE_CHANGE`. |
 
----
-
-### 8 — البنية التحتية والنشر (Infrastructure & Operations)
-
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 8.1 | `Dockerfile` | 9–11 | **كسر كفاءة الـ Cache في Docker:** نسخ مجلدات `packages/` و `apps/api/` يتم بالكامل قبل أمر `pnpm install`، مما يبطل التخزين المؤقت للطبقات ويعيد تحميل كل الحزم مع كل تغيير برمجي. | 🟡 | نسخ ملفات تعريف الحزم فقط (`package.json` و `pnpm-lock.yaml`) قبل التثبيت، ثم نسخ الكود لاحقاً. |
-| 8.2 | `Dockerfile` | 11 | استخدام خيار خطير في تثبيت الحزم: استخدام `pnpm install --no-frozen-lockfile` قد يؤدي إلى تثبيت إصدارات مختلفة في الإنتاج عن البيئة المحلية. | 🟡 | استبداله بـ `pnpm install --frozen-lockfile`. |
-| 8.3 | `Dockerfile` | 17–18 | تشغيل الحاوية بصلاحيات Root وانعدام الـ Multi-Stage: الصورة النهائية تحتوي على أدوات البناء وتعمل كمستخدم جذر، وتفتقر لأمر تنفيذ الهجرات التلقائي. | 🟡 | اعتماد Multi-stage Dockerfile مع مستخدم `USER node` وتوثيق أمر الهجرة التلقائي قبل الإقلاع. |
-| 8.4 | `apps/api/src/main.ts` | 32–39 | تعطل أداة رصد الأخطاء Sentry في الإنتاج: إعدادات Sentry موجودة برمجياً لكن `SENTRY_DSN` غير مضبوط في بيئة إنتاج Railway (مدرج كبند S4 معلق). | 🟡 | ضبط المتغير `SENTRY_DSN` في Railway لتلقي تقارير الأعطال البرمجية فور حدوثها. |
-| 8.5 | `apps/android/app/build.gradle.kts` | — | انعدام نظام تتبع الأعطال في الأندرويد: تطبيق العميل يخلو من Crashlytics أو Sentry، مما يعمي الفريق عن أعطال المستخدمين في الميدان. | 🟡 | ربط Firebase Crashlytics بالتطبيق للاستفادة من مشروع Firebase القائم. |
+**لماذا R-1 وحده 🔴:** لا يوقف طلباً من التنفيذ — يوقف **الضمانة** التي تمنع تكرار قيد الـ Ledger. قابلية الاكتشاف منخفضة (تظهر عند إعادة المحاولة فقط) وأثرها مالي مباشر. أما R-2 وR-3 فهي أخطاء دلالية في رمز الحالة، والعمليات نفسها تسير بشكل صحيح.
 
 ---
 
-### 9 — التوثيق والصيانة (Documentation & Consistency)
+## القسم 2 — الأمان (Security)
 
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 9.1 | `NEXT_TASKS.md` | 36 | **ملف موثق غير موجود فعلياً:** الملف يشير إلى `docs/performance-baseline.md` كبند Sprint 6، لكن الملف غير موجود إطلاقاً في المستودع. | 🟡 | إنشاء الملف المرجعي للأداء أو توثيق إلغائه رسمياً في سجل القرارات. |
-| 9.2 | `packages/shared-constants/src/pricing.ts` | 2 | **تناقض صارخ في قيم الرسوم الأساسية:** ملف الثوابت يحدد `BASE_FEE: 60` (قيمة تجريبية قديمة)، بينما شاشة المساعدة في الأندرويد تذكر أن الرسم الأساسي 5,000 ل.س. | 🟡 | تحديث ثوابت التسعير في الحزمة المشتركة لتعكس الأسعار الحقيقية المعتمدة بالليرة السورية. |
-| 9.3 | `docs/sprints/Sprint 6 Brief.md` | — | ملفات السبرنتات القديمة تسبب تشتتاً لعدم تمييز أنها وثائق تاريخية غير تفاعلية. | 🟢 | تم إيضاح ذلك في `PROJECT_STATUS.md §11` ويجب الحفاظ على هذا التنبيه دائماً. |
+| # | الملف:السطر | المشكلة | الخطورة | الإجراء |
+|---|---|---|---|---|
+| S-1 | `websocket/gateways/orders.gateway.ts:61–69` | البوابة تقرأ `status` (`:63`) ولا تفحصه: تُفصل فقط عند `!user \|\| user.isDeleted`. حساب `SUSPENDED` يبقى يستقبل أحداث الطلبات. | 🟡 | `if (user.status === 'SUSPENDED') { client.disconnect(true); return; }` — أو kick عبر `notificationsService` عند الإيقاف. |
+| S-2 | `android/.../core/notification/ForerunFirebaseMessagingService.kt:28` | `Log.d(TAG, "Refreshed FCM token received: $token")` يطبع التوكن كاملاً بلا شرط `BuildConfig.DEBUG`، وملف ProGuard **لا يحذف** سجلات Log (انظر `S-3`). | 🟡 | طبقتان: احصر الاستدعاء بـ `if (BuildConfig.DEBUG)` **و** أضف قاعدة الإزالة في `S-3` — لا تعتمد على إحداهما وحدها. |
+| S-3 | `android/app/proguard-rules.pro` (75 سطراً) | لا قاعدة `-assumenosideeffects class android.util.Log { *; }`. القاعدة الحالية تغطي Moshi/Retrofit/Socket.IO/OkHttp/MapLibre فقط (`:12–75`). **ولا حماية** لـ `EncryptedTokenStorage`/`MasterKey`. | 🟡 | إضافة قاعدة Log + قواعد `-keep` لفئات `core/storage`. |
+| S-4 | `auth/auth.controller.ts:36, :42` | `POST /auth/refresh` و `POST /auth/logout` بلا `@Throttle` خاص؛ `register` (`:17`) و `login` (`:24`) محددان. السقف العام 300/دقيقة (`app.module.ts:31–48`). | 🟡 | `@Throttle` بـ 30/دقيقة على `refresh` — يقلّل إغراق الخادم بتجديدات متكررة. |
+| S-5 | `customers/customers.controller.ts:67–81` · `users/users.controller.ts` (كامل) | `customer/me/device-token` وواجهات الإدارة بلا `@Throttle`. **استثناء**: مسارات `settlements.controller.ts:100–131` الإدارية بلا حدّ بينما كل مسارات المندوب محدّدة (`:97, :109, :118, :127`). | 🟡 | تقييد نقاط النهاية الحسّاسة للإداريين تحديداً، و`device-token`. |
+| S-6 | `android/.../core/di/NetworkModule.kt:60–69` | `OkHttpClient` بلا `CertificatePinner`؛ الـ `BASE_URL` مثبَّت في `:24`. العميل الثاني `:93–101` مكشوف أيضاً. | 🟢 | تقييم تفعيل SSL Pinning في تحديث أمني قادم — كلفته مرتفعة لأن كل تدوير للمفتاح يكسر التطبيق عند المستخدمين. |
 
----
-
-### 10 — مشاكل خاصة بكود الذكاء الاصطناعي (AI Code Idiosyncrasies)
-
-| # | الملف | السطر | المشكلة | الخطورة | التوصية |
-|---|---|---|---|---|---|
-| 10.1 | `apps/api/src/modules/orders/services/admin-order-command.service.ts` | 792–798 | **بقاء تعليق TODO وحدث مهمل في الإنتاج:** حدث `order:needs_attention` معرف في الأنواع والـ WebSocket والمواصفة، لكنه متروك في الكود الإنتاجي كتعليق `// TODO`. | 🟡 | تنفيذ الـ Cron الخاص بالحدث أو شطبه رسمياً من قائمة أحداث الـ WebSocket لتفادي تضليل المطورين. |
-| 10.2 | `packages/shared-constants/src/pricing.ts` | 5–6 | **تناقض مع المواصفة الفنية في حصص الأرباح:** الكود يحدد `RUNNER_SHARE: 0.75` (75%) بينما المواصفة ووثائق المشروع تنص على 80% للمندوب و20% للمنصة. | 🟡 | مطابقة النسبة في الكود مع القرار التجاري المعتمد (0.80 مقابل 0.20). |
-| 10.3 | `apps/api/src/modules/orders/services/runner-orders.service.ts` | 755 | **Over-Engineering دفاعي أدى إلى تخريب الوظيفة:** إضافة فحص مسبق استباقي لمنع الحالات المكررة خارج المعاملة أدى إلى شل حركة المعاملة التزامنية الأصلية وكسر الـ Idempotency. | 🔴 | إزالة الأنماط الدفاعية الزائدة خارج المعاملات والاعتماد على الذرّية (Atomicity). |
+**ما لا يشمله هذا القسم:** لا SQL خام، ولا أسرار مُشفَّرة في المصدر، ولا `any` في الواجهات البرمجية. منطق المصادقة والتفويض سليم — الفجوات أعلاه كلها على مستوى **حدود المعدّل** و**نقل الاتصال** لا مستوى **التحقق من الصلاحية**.
 
 ---
 
-## تصنيف الأولويات
+## القسم 3 — بنية الاختبارات (Test Safety Net)
 
-### 🔴 حرج — يجب إصلاحه فوراً قبل الإطلاق الميداني
-1. **إصلاح حاجز الـ Idempotency في تسليم الطلبات** (`runner-orders.service.ts:755–760`): إزالة الفحص المسبق خارج المعاملة لتمكين عمليات إعادة المحاولة دون أخطاء 409.
-2. **سد ثغرة الـ WebSocket للحسابات الموقوفة** (`orders.gateway.ts:58–74`): طرد المستخدمين ذوي الحالة `SUSPENDED` فوراً من الاتصال المباشر.
-3. **منع الابتلاع الصامت للأخطاء** (`admin-order-command.service.ts:254`): استبدال `catch { void 0; }` بتسجيل واضح في الـ Logger.
-4. **تفعيل اختبارات التكامل واستكمال اختبارات التسعير والتسويات** (`vitest.config.ts`, `pricing.service.ts`, `settlements.service.ts`): إدخال اختبارات التكامل للخدمة وتغطية العمليات الحسابية والمالية بنسبة 100%.
+| # | الملف:السطر | المشكلة | الخطورة | الإجراء |
+|---|---|---|---|---|
+| T-1 | `.github/workflows/integration-tests.yml:9` | **`if: false`** — job التكامل معطَّل كلياً. اختبارات `deliver-order` / `create-order` / `auth` موجودة وتعمل محلياً، لكن **لا بوابة تراجع آلية في CI على مسار التسليم المالي**. | 🟡 | احذف السطر. البنية التحتية جاهزة: Postgres service (`:12–25`)، و`migrate deploy` (`:60`)، وأمر `test:integration` (`apps/api/package.json:24`). |
+| T-2 | `apps/api/vitest.config.ts:21` | `exclude: ['test/integration/**/*.spec.ts']` يمنع تشغيلها عبر `pnpm test`. | 🟡 | مقبول كتصميم (حفظ سرعة اختبار الوحدة)، بشرط تفعيل `T-1`. |
+| T-3 | `apps/api/test/` (21 ملفاً) | **صفر اختبارات** لـ `pricing.service.ts` — المحرّك الحسابي غير المغطى. | 🟡 | `pricing.service.spec.ts`: سيناريوهات + الحالات الحدية. |
+| T-4 | `apps/api/test/settlements/settlements.cron.spec.ts` فقط | `closeDay` (`:246–303`) و`confirmSettlement` بلا اختبارات معاملات. | 🟡 | اختبارات: صحّة القيود · منع الازدواجية · `floor`/`ceil` عند `settlements.service.ts:140–141`. |
+| T-5 | نفس | **صفر اختبارات** لـ `admin-order-command.service.ts` (`approve` / `reject` / `assignRunner`). | 🟡 | تغطية المسارات الثلاثة. |
+| T-6 | `apps/android/app/src/androidTest/` | **غير موجود** — 0% تغطية UI. | 🟢 | مساران: تسجيل الدخول + تفاصيل الطلب (Compose Test). |
 
-### 🟡 متوسط — يجب إصلاحه قبل Sprint 10
-1. **معالجة N+1 في التسويات وإنشاء الطلبات** (`settlements.service.ts`, `customer-orders.service.ts`): التحول إلى `createMany`.
-2. **ترحيل النصوص العربية الصلبة في الأندرويد** إلى `strings.xml` لتوحيد وتنسيق الواجهات.
-3. **حماية أندرويد من تسريب التوكنات وتلف المفاتيح**: إضافة قواعد إزالة Log في ProGuard، وإحاطة `EncryptedSharedPreferences` بحماية تلقائية.
-4. **تنظيف المتحكمات وتصحيح استثناءات التسعير**: سحب العمليات وقواعد البيانات من `ReceiptsController` و `SettlementsController`، واستبدال 403 بـ 400 في التسعير.
-5. **تحسين Dockerfile وتفعيل Sentry**: تحسين طبقات البناء وتأمين الحاوية وضبط DSN.
-
-### 🟢 منخفض — تحسينات مستقبلية
-1. تنظيم وتوثيق الفهارس الثانوية لقاعدة البيانات (`OrderStore.isDeleted`).
-2. إزالة `console.log` المتبقي في Runner PWA.
-3. إزالة ملفات إعادة التصدير غير الضرورية (`logout.dto.ts`).
-4. دراسة تفعيل SSL Pinning في إصدارات الأندرويد اللاحقة.
+**ملاحظة على T-1:** الإصدار 1 عدّها 🔴. أُعيد تصنيفها إلى 🟡 بقرار صريح: غياب بوابة التراجع **عيب عملية** لا عيب سلوك — لا يُعطِّل طلباً ولا يُفسد قيداً مالياً، لكنه يجعل R-1 قابلاً للعودة في أي مراجعة لاحقة ما لم يُصلَح. البند `S1` في [NEXT_TASKS.md](../NEXT_TASKS.md) يغطي الجذر نفسه (اختبار تكامل التسعير · `T-2` + `T-3`).
 
 ---
 
-## المقاييس الإحصائية
+## القسم 4 — معماري وجودة (Architecture & Quality)
 
-- **إجمالي المشاكل المكتشفة:** 35 مشكلة موثقة بدليل قطعي (الملف والسطر).
-- **تصنيف الخطورة:**
-  - 🔴 **حرجة:** 6 مشاكل
-  - 🟡 **متوسطة:** 20 مشكلة
-  - 🟢 **منخفضة:** 9 مشاكل
-- **الملف الأكثر مشاكل:** `apps/api/src/modules/orders/services/runner-orders.service.ts` و `admin-order-command.service.ts`.
-- **المحور الأكثر مشاكل:** محورا **الأخطاء البرمجية وجودة الاختبارات** في الخلفية، يليهما محور **تجربة المستخدم وتوطين النصوص** في الأندرويد.
+| # | الملف:السطر | المشكلة | الخطورة | الإجراء |
+|---|---|---|---|---|
+| A-1 | `receipts/receipts.controller.ts:37–65` | `PrismaService` محقون في المتحكم؛ `resolveOrderStore` ينفّذ 3 استعلامات متسلسلة (`:47, :54, :61`). | 🟡 | نقلها إلى `ReceiptsService` وإزالة الحقن. |
+| A-2 | `settlements/settlements.controller.ts:37–57` | نفس النمط؛ `resolveRunner` فيه قاعدة تجارية (`:52–53`: المندوب يجب أن يكون VERIFIED). | 🟡 | نقلها إلى `SettlementsService`. |
+| A-3 | `orders/orders.controller.ts:69` + 6 ملفات أخرى | `@UseGuards(VerifiedUserGuard, RolesGuard)` بينما `RolesGuard` مسجَّل عالمياً في `app.module.ts:142–144`. تكرار في `users:16` · `receipts:35` · `ledger:19` · `ratings:26` · `settlements:35` · `runners:25,79`. | 🟢 | حذف `RolesGuard` من الديكورات — 8 مواضع. لا أثر أمني (سلوك مطابق). |
+| A-4 | `android/.../ui/home/HomeViewModel.kt:111–116` | `logout()` ينفّذ `logoutUseCase()` داخل `viewModelScope.launch` بلا `try/catch/finally`؛ عند الفشل **لا يُطلق `_navigateToLogin.emit`** (`:114`) فيعلق المستخدم على الشاشة الرئيسية. | 🟡 | `try/finally` حول emit. مرتبط بـ A-5. |
+| A-5 | `android/.../core/storage/EncryptedTokenStorage.kt:16–30` | `MasterKey` (`:17`) و`EncryptedSharedPreferences.create` (`:23`) داخل `by lazy` بلا `try/catch` ولا منطق إعادة بناء. | 🟡 | `runCatching` + مسح prefs وإعادة بناء المفتاح عند `GeneralSecurityException`. |
+| A-6 | `android/.../data/.../AuthRepositoryImpl.kt:133, :141` | `tokenStorage.getRefreshToken()` و `clearAll()` **خارج** أي `try` (الشبكة محمية في `:125–131, :135–140`). مع A-5: فشل KeyStore يُسقط `logout()` → **A-4 يُفعَّل**. سلسلة فشل موثّقة. | 🟡 | تغليف الاستدعاءين. |
+| A-7 | `android/gradle/libs.versions.toml:19` | `androidx.security:security-crypto = 1.1.0-alpha06` — **نسخة pre-release**، والتعليق في `:16` يوثّق انهيارات KeyStore في `1.0.0` على API 29+، و`minSdk = 26` (`build.gradle.kts:20`). | 🟡 | تقييم الترقية لاستقرة ≥1.1.0. |
+| A-8 | `auth/dto/logout.dto.ts:1–2` | ملف re-export بلا أي تصريح. **مستورد من ملفين**: `auth.service.ts:16` و `auth.controller.ts:6–7`. | 🟢 | استيراد مباشر من `@forerun/shared-types` وحذفه (المصدر الحقيقي `shared-types/src/auth.types.ts:75`). |
+| A-9 | `prisma/schema.prisma:297` | `OrderStore.isDeleted` بلا فهرس؛ الفهرس الوحيد `@@index([orderId, status])` (`:303`). | 🟢 | `@@index([orderId, isDeleted])`. |
+| A-10 | `android/.../res/values/strings.xml:92, :96` | `orders_stub_desc` و `account_stub_desc` نصوص "قريباً" **لا يُشيران إليها أي ملف Kotlin ولا layout** — موارد ميتة في الـ APK. | 🟢 | حذفها. |
+
+**نقطة قوة موثّقة:** طبقة `apps/android/.../domain` نقية 100% — صفر استيراد من `ui` أو `data`.
+
+---
+
+## القسم 5 — البنية التحتية والبيانات (Infra & Data)
+
+| # | الملف:السطر | المشكلة | الخطورة | الإجراء |
+|---|---|---|---|---|
+| I-1 | `Dockerfile:9–11` | نسخ `packages/` و `apps/api/` كاملَين **قبل** `pnpm install` → أي تعديل على `src` يُبطل طبقة التثبيت (`.dockerignore:2` يستثني `dist` فقط). | 🟡 | نسخ `package.json` + `pnpm-lock.yaml` فقط قبل التثبيت، والمصادر بعده. |
+| I-2 | `Dockerfile:11` | `pnpm install --no-frozen-lockfile` → خطر انحراف إصدارات عن المحلي. | 🟡 | `--frozen-lockfile`. |
+| I-3 | `Dockerfile:1, :17` | صورة واحدة بلا Multi-Stage، بلا `USER` → **root**، وتحتوي أدوات بناء (`:2` openssl، `:3` pnpm) وكود المصدر وdevDeps. لا `prisma migrate deploy` قبل الإقلاع، ولا `docker-compose` في المستودع. | 🟡 | Multi-Stage + `USER node` + توثيق أمر الترحيل قبل النشر. |
+| I-4 | `apps/api/src/main.ts:32–39` · `.env.example:10` | Sentry مُهيّأ شرطياً لكن `SENTRY_DSN` فارغ في `.env.example` و`.env` وCI (`integration-tests.yml:35`). | 🟡 | ضبطه في Railway. **مملوك بالفعل**: `NEXT_TASKS.md:37` (S4). |
+| I-5 | `apps/android/app/build.gradle.kts:140–142` | لا Crashlytics ولا Sentry (grep على المشروع = صفر). أخطاء المستخدم تصل نصاً عربياً فقط عبر `ApiCall.kt`. | 🟡 | Crashlytics — مشروع Firebase **جاهز** (`NEXT_TASKS.md:25`). |
+| I-6 | `strings.xml:361` | نصٌّ موجَّه للعميل يقول «رسوم التوصيل … تبدأ من الرسم الأساسي (**5,000 ل.س**)» بينما الكود `shared-constants/src/pricing.ts:2` = **60 ل.س** (والمواصفة `MVP Technical Specification.txt:640` تؤكّد 60). | 🟡 | **قرار منتج مطلوب**: إمّا تصحيح النص إلى 60 ل.س، أو تحديث `BASE_FEE` — ولا يُنفَّذ أيٌّ منهما بلا قرار. أخطر بند في هذا القسم لأنه معلومات مالية خاطئة تصل للعميل مباشرة. |
+| I-7 | `admin-order-command.service.ts:1090–1095` | `order:needs_attention` معرَّف في الأنواع (`shared-types/src/websocket.events.ts:32`) والمواصفة، باقٍ كـ TODO بلا emit site. | 🟢 | تنفيذ Cron أو شطبه من قائمة الأحداث. **مُتتبَّع مسبقاً**: `CHANGELOG.md:136` · `Sprint 3 Brief:497`. |
 
 ---
 
-## توصية عامة
+## خطة التنفيذ
 
-يمتلك مشروع **FORERUN** هيكلية نظيفة وقوية تفوق كثيراً المعدل المعتاد في المشاريع البرمجية المولدة آلياً؛ ولا توجد ديون معمارية كبرى تتطلب إعادة بناء (No major refactoring needed). إن الخطر الحقيقي يكمن في "التفاصيل الصغيرة المتراكمة": فحص استباقي واحد كسر وظيفة أمان مالي حرجة (Idempotency)، وابتلاع أخطاء خفي يحجب فشل الإشعارات، وغياب اختبارات الوحدة عن محرك التسعير، ومئات النصوص الصلبة في تطبيق الموبايل.
+### المسار الأول — يوم واحد (يغلق آخر 🔴)
 
-**خطة العمل المقترحة:**
-1. تخصيص سبرنت تنظيف فني مركّز ومدته يومان (Sprint Technical Hardening) يُخصص بالكامل لمعالجة البنود الـ 6 الحرجة.
-2. تفعيل اختبارات التكامل في الـ CI لضمان عدم حدوث تراجعات في العمليات المالية ومسار الـ State Machine.
-3. بدء إطلاق تجريبي ميداني محدود فور إغلاق البنود الحرجة.
+1. **حذف `runner-orders.service.ts:1096–1102`** — 7 أسطر، يغلق 🔴 R-1.
+2. **حذف `integration-tests.yml:9`** — سطر واحد، يفتح بوابة التراجع على المسار المالي (`T-1`).
+
+### المسار الثاني — سبرنت واحد (🟡 ذات أثر)
+
+3. اختبارات وحدة التسعير (`T-3`) واختبارات `closeDay` (`T-4`).
+4. ProGuard: قاعدة Log + `EncryptedSharedPreferences` fallback + `try/finally` في `logout` (`S-2`, `S-3`, `A-4`, `A-5`, `A-6`).
+5. WebSocket + الحساب الموقوف (`S-1`) — 3 أسطر.
+6. تصحيح استثناءات التسعير + سحب Prisma من المتحكمين (`R-2`, `R-3`, `A-1`, `A-2`).
+7. حدود المعدّل على `refresh` و`device-token` والإدارة (`S-4`, `S-5`).
+
+### المسار الثالث — تنظيف (🟢)
+
+8. `S-6`, `A-3`, `A-7`, `A-8`, `A-9`, `A-10`, `R-4`, `I-1`, `I-2`, `I-3`, `I-4`, `I-5`, `I-7`.
+
+### خارج نطاق الوكيل — يحتاج قراراً بشرياً
+
+- **`I-6`** / `NEXT_TASKS.md:P-1`: الرسم الأساسي 60 ل.س أم 5,000 ل.س؟ لا يُنفَّذ أيٌّ من الرقمين بلا قرار — الرقمان موجودان في نظامين مختلفين، وتغيير أحدهما يترتّب عليه تعديل Ledger وواجهات الدفع.
 
 ---
-**نهاية تقرير المراجعة.**
+
+## الإحصاء
+
+| | مفتوح | مُغلق | مرفوض |
+|---|---|---|---|
+| 🔴 حرج | **1** | — | — |
+| 🟡 متوسط | **24** | — | — |
+| 🟢 منخفض | **8** | — | — |
+| **المجموع** | **33** | **12** | **5** |
+
+**تركّز الأخطار:** المسار المالي (`R-*`) بند حرج واحد حقيقي · بنية الاختبارات (`T-*`) أعلى كثافة · الأندرويد (`A-*`) ثلث البنود لكن أثره على المستخدم فقط.
+
+**المقارنة بالإصدار 1:** ادّعى الإصدار 1 **35 بنداً**. التحقق على `744bf23` أنتج **33 بنداً مفتوحاً** مُتحقَّقاً · **12** منها كانت مُغلقة أصلاً (بندان منها لم يكونا خطأين أصلاً) · **5 مرفوضة** بالدليل. المجموع يتجاوز 35 لأن بعض الادعاءات تكرّرت (البند `2.1` و `10.3` وصفا عيباً واحداً) وبعضها تفرّع إلى بنود مستقلّة عند التحقق.
+
+---
+
+## كيف تتحقّق من هذا التقرير بنفسك
+
+```bash
+# R-1 (يجب أن يطبع 7 أسطر)
+git show 744bf23:apps/api/src/modules/orders/services/runner-orders.service.ts | sed -n '1096,1102p'
+
+# T-1 (يجب أن يطبع false)
+git show 744bf23:.github/workflows/integration-tests.yml | sed -n '9p'
+
+# القسم B — لا وجود لـ 0.80/0.20 في أي مكان
+grep -rn "0\.80\|0\.20" --include='*.ts' --include='*.prisma' --include='*.md' . | grep -v node_modules
+```
+
+**قاعدة الصيانة:** أي مراجعة جديدة تُلزم نفس المعيار — رقم سطر يحلّ، أو ليست بنداً. البنود المُغلقة تُنقل إلى القسم A مع رقم الكوميت، والمرفوضة إلى القسم B مع دليل رفضها.
+
+---
+**نهاية التقرير.**
