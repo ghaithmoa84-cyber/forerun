@@ -69,6 +69,18 @@ UPDATE "PlatformPricing" SET "baseFee"=60, "extraStoreFee"=20, "peripheralFee"=4
 ```
 **المدة:** < 5 دقائق · **ال impact:** لا يمسّ `LedgerEntry` إطلاقاً (append-only).
 
+### 3.1.1 تراجع Migration `20261005011000_add_platform_pricing` (المرحلة 1)
+حذف جدول `PlatformPricing` آمن تماماً في هذه المرحلة لأن الكود الإنتاجي لا يقرأ منه بعد (يقرأ من `PRICING` الثابت كـfallback):
+```sql
+-- مسار التراجع اليدوي على DB:
+DROP TABLE IF EXISTS "PlatformPricing" CASCADE;
+DELETE FROM _prisma_migrations WHERE migration_name = '20261005011000_add_platform_pricing';
+```
+```bash
+# أو عبر prisma migrate:
+npx prisma migrate resolve --rolled-back 20261005011000_add_platform_pricing
+```
+
 ### 3.2 التراجع العميق — بعد Delivery (أيام)
 ```bash
 # R4: إيقاف كل traffic على endpoints التسعير

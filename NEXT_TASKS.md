@@ -15,8 +15,9 @@
 |---|---|---|---|---|
 | 6A-S1 | **اختبارات تكامل تثبّت سلوك التسعير الحالي** (Order / Approve / Deliver / Settlement / Invariants / Recalculate) | ✅ **مُنجَز** | @feature-dev + @test-engineer | البند S1 — تم تجميد السلوك الحالي باختبارات تكامل شاملة مع عزل B2 وتوثيق عيب التقريب |
 | 6A-1 | **جرد `order.create`** للتأكد من تمرير `baseFee` و `totalFee` صراحةً | ✅ **مُنجَز** | @feature-dev | موضع وحيد في `customer-orders.service.ts:162` يمررهما صراحة، وحذف defaults من schema آمن |
-| 6A-2 | **Migration لجدول `PlatformPricing` وحقل `customFee` وعلاقة `User`** | ⏳ مخططة | @feature-dev | القرار D11 — مع إدراج صف seed افتراضي آمن |
-| 6A-3 | **تحديث `shared-types`** بمخططات وأنواع التسعير و `customFee` | ⏳ مخططة | @feature-dev | DTOs و Zod schemas للتحقق المشترك (القرار D11) |
+| 6A-2 | **Migration لجدول `PlatformPricing` وعلاقة `User`** | ✅ **مُنجَز** | @feature-dev | القرار D11 — ملف migration مع إدراج صف seed افتراضي آمن 60/20/40 (فُصل customFee لخطوة لاحقة) |
+| 6A-3.1 | **نوع `PricingConfig` وثابت `DEFAULT_PRICING_CONFIG` ودالة `getPricingConfig`** | ✅ **مُنجَز** | @feature-dev | القرار D11 — إضافة النوع والثابت في shared packages، وإضافة getPricingConfig مع كاش 30ث دون ربطها بالمسارات الإنتاجية |
+| 6A-3 | **تحديث `shared-types`** بمخططات وأنواع إدارة التسعير و `customFee` | ⏳ مخططة | @feature-dev | DTOs و Zod schemas للتحقق المشترك ونقاط نهاية الأدمن (القرار D11) |
 | 6A-3.2 | **تحديث `PricingService` وحفظ لقطة الطلب (B2)** | ⏳ مخططة | @feature-dev | قراءة الأسعار من DB مع إبقاء `calculateFee` نقية، وحفظ `baseFee/peripheralFee` عند `recalculateFee`. **شرط الإنجاز:** إزالة `it.skip` وتفعيل الـ assertion المستهدفة في نفس commit الإصلاح. |
 | 6A-3.3 | **توحيد مصدر الحصص في `SettlementsService` (B1)** | ⏳ مخططة | @feature-dev | القرار D12 — اعتماد `RUNNER_SHARE_BP = 7500` ومطابقة Ledger تماماً ومعالجة عيب التقريب. **شرط الإنجاز:** إزالة `it.skip` وتفعيل الـ assertion المستهدفة في نفس commit الإصلاح. |
 | 6A-6 | **حارس الإنتاج `MAX_CUSTOM_FEE = 0`** في `shared-constants` | ⏳ مخططة | @feature-dev | القرار D14 — حارس إنتاج يمنع فرض رسوم إضافية حتى اكتمال 6B |
