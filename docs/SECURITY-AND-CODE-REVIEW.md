@@ -78,10 +78,10 @@
 
 | # | الملف:السطر | المشكلة | الخطورة | الإجراء |
 |---|---|---|---|---|
-| **R-1** | `orders/services/runner-orders.service.ts:1096–1102` | **حاجز يُبطل الـ Idempotency:** فحص `if (preCheckOrder?.status === 'DELIVERED') throw new ConflictException('ORDER_ALREADY_DELIVERED')` يتم **قبل** `$transaction`، فيصطدم أولاً مع `processIdempotentDelivery` (`:794–861`) ويُرجع 409 بدلاً من الاستجابة السليمة على إعادة المحاولة. النتيجة: عقد الـ Idempotency (`:810–826`) ومعه الاسترجاع الآمن (`:1162–1170`) **غير قابل للوصول**. | 🔴 | **حذف `1096–1102` كاملاً.** الاستعلام الذرّي `updateMany` في `:832–839` داخل المعاملة كافٍ ويمنع التسابق. |
-| R-2 | `pricing/pricing.service.ts:53–59` | `ForbiddenException` (403) على تحقّق مُدخل (`purchasedStoreCount` غير صحيح/سالب) — خطأ دلالي في رمز الحالة. | 🟡 | `BadRequestException` (غير مُستورد أصلاً في الملف). |
-| R-3 | `pricing/pricing.service.ts:99–103` | تعارض حالة (طلب مُسلَّم) يُرفع كـ 403 Forbidden؛ يُستدعى من `runner-orders.service.ts:256, :881`. | 🟡 | `ConflictException` (409). |
-| R-4 | `customer-orders.service.ts:626–632` | فشل الإفراج عن المندوب سببه **تغيّر متزامن** (`updateMany.count === 0`) لكنه يُرفع كـ 422 `RUNNER_NOT_AVAILABLE` — مربك تشخيصياً. | 🟢 | `ConflictException` + كود `CONCURRENT_RUNNER_STATE_CHANGE`. |
+| **R-1** | `orders/services/runner-orders.service.ts:1096–1102` | **حاجز يُبطل الـ Idempotency:** فحص `if (preCheckOrder?.status === 'DELIVERED') throw new ConflictException('ORDER_ALREADY_DELIVERED')` يتم **قبل** `$transaction`، فيصطدم أولاً مع `processIdempotentDelivery` (`:794–861`) ويُرجع 409 بدلاً من الاستجابة السليمة على إعادة المحاولة. النتيجة: عقد الـ Idempotency (`:810–826`) ومعه الاسترجاع الآمن (`:1162–1170`) **غير قابل للوصول**. | 🔴 | **حذف `1096–1102` كاملاً.** الاستعلام الذرّي `updateMany` في `:832–839` داخل المعاملة كافٍ ويمنع التسابق. (✅ **مُنجَز في المسار الأول** `bff27a1`). |
+| R-2 | `pricing/pricing.service.ts:53–59` | `ForbiddenException` (403) على تحقّق مُدخل (`purchasedStoreCount` غير صحيح/سالب) — خطأ دلالي في رمز الحالة. | 🟡 | `BadRequestException` (✅ **مُنجَز في المسار الثاني**). |
+| R-3 | `pricing/pricing.service.ts:99–103` | تعارض حالة (طلب مُسلَّم) يُرفع كـ 403 Forbidden؛ يُستدعى من `runner-orders.service.ts:256, :881`. | 🟡 | `ConflictException` (409) (✅ **مُنجَز في المسار الثاني**). |
+| R-4 | `customer-orders.service.ts:626–632` | فشل الإفراج عن المندوب سببه **تغيّر متزامن** (`updateMany.count === 0`) لكنه يُرفع كـ 422 `RUNNER_NOT_AVAILABLE` — مربك تشخيصياً. | 🟢 | `ConflictException` + كود `CONCURRENT_RUNNER_STATE_CHANGE` (✅ **مُنجَز في المواضع الثلاثة**). |
 
 **لماذا R-1 وحده 🔴:** لا يوقف طلباً من التنفيذ — يوقف **الضمانة** التي تمنع تكرار قيد الـ Ledger. قابلية الاكتشاف منخفضة (تظهر عند إعادة المحاولة فقط) وأثرها مالي مباشر. أما R-2 وR-3 فهي أخطاء دلالية في رمز الحالة، والعمليات نفسها تسير بشكل صحيح.
 
