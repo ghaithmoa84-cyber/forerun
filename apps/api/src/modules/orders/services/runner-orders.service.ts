@@ -260,9 +260,6 @@ export class RunnerOrdersService {
         const updatedStore = await tx.orderStore.findUniqueOrThrow({
           where: { id: store.id },
         });
-        if (!updatedOrder || !updatedStore) {
-          throw new NotFoundException('Order store not found');
-        }
 
         await this.auditService.log(
           {
@@ -907,7 +904,7 @@ export class RunnerOrdersService {
       data: { status: 'AVAILABLE' },
     });
     if (runnerUpdated.count === 0) {
-      throw new UnprocessableEntityException('RUNNER_NOT_AVAILABLE');
+      throw new ConflictException('CONCURRENT_RUNNER_STATE_CHANGE');
     }
 
     await tx.customer.update({

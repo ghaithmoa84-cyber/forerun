@@ -1010,7 +1010,7 @@ export class AdminOrderCommandService {
             data: { status: 'AVAILABLE' },
           });
           if (runnerUpdated.count === 0) {
-            throw new UnprocessableEntityException('RUNNER_NOT_AVAILABLE');
+            throw new ConflictException('CONCURRENT_RUNNER_STATE_CHANGE');
           }
         }
 
