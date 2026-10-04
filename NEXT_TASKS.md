@@ -40,8 +40,11 @@
 | R-3 | **تصحيح استثناء الطلب المسلّم** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم استبدال `ForbiddenException` بـ `ConflictException` (409) في `recalculateFee` وإزالة الاستيراد غير المستخدم. |
 | R-4 | **استثناء الإفراج المتزامن عن المندوب** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم توحيد الاستثناء إلى `ConflictException('CONCURRENT_RUNNER_STATE_CHANGE')` في `customer-orders.service.ts` و `runner-orders.service.ts` و `admin-order-command.service.ts`. |
 | NEW-01 | **حذف فحص null الميت بعد findUniqueOrThrow** | 🟢 منخفضة | ✅ **مُنجَز** | @feature-dev | تم حذف الشرط الميت `if (!updatedOrder || !updatedStore)` في `runner-orders.service.ts:263-265`. |
+| S-1 | **فصل الحساب الموقوف من WebSocket** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم فصل الحسابات الموقوفة (`SUSPENDED`) فوراً عند الاتصال في `orders.gateway.ts` وإضافة اختبار وحدة يغطي الحالة. |
+| S-4 | **تحديد معدل refresh و logout** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم ضبط `@Throttle({ refresh: { limit: 30, ttl: 60000 } })` و `@Throttle({ logout: { limit: 30, ttl: 60000 } })` في `auth.controller.ts`. |
+| S-5 | **تحديد معدل device-token والمسارات الإدارية** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم تقييد نقاط `device-token` في `customers.controller.ts` والمسارات الإدارية في `settlements.controller.ts` بـ `@Throttle`. |
+| H-2 | **ProGuard: Log + توكن FCM (S-2 + S-3)** | 🟡 متوسطة | ✅ **مُنجَز** | @feature-dev | تم حصر طباعة توكن FCM بـ `if (BuildConfig.DEBUG)` في `ForerunFirebaseMessagingService.kt` وإضافة قواعد ProGuard لإزالة Log وحفظ كلاسات التخزين المشفر في `proguard-rules.pro`. |
 | H-1 | سلسلة فشل الجلسة في الأندرويد | 🟡 متوسطة | ⏳ مفتوح | @feature-dev | `EncryptedTokenStorage.kt:16–30` (تهيئة `by lazy` بلا `try/catch`) ← `AuthRepositoryImpl.kt:133,141` (خارج `try`) ← `HomeViewModel.kt:111–116` (لا يُطلق `_navigateToLogin` عند الفشل). + `libs.versions.toml:19` `security-crypto` نسخة pre-release. |
-| H-2 | ProGuard: Log + توكن FCM | 🟡 متوسطة | ⏳ مفتوح | @feature-dev | `ForerunFirebaseMessagingService.kt:28` يطبع توكن FCM · `proguard-rules.pro` بلا `-assumenosideeffects class android.util.Log`. |
 | P-1 | قرار منتج: الرسم الأساسي 60 ل.س أم 5,000 ل.س؟ | 🟡 متوسطة | ❓ **يحتاج قرار بشري** | المستخدم | `strings.xml:361` يقول للعميل 5,000 ل.س بينما `shared-constants/src/pricing.ts:2` = 60 ل.س والمواصفة تؤكّد 60. **لا يُنفَّذ أي تغيير عشوائي.** |
 
 ---

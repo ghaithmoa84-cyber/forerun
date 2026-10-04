@@ -34,6 +34,7 @@ export class AuthController {
   @Post('refresh')
   @Public()
   @HttpCode(HttpStatus.OK)
+  @Throttle({ refresh: { limit: 30, ttl: 60000 } })
   refresh(@Body(new ZodValidationPipe(RefreshSchema)) dto: RefreshRequest) {
     return this.authService.refresh(dto);
   }
@@ -41,6 +42,7 @@ export class AuthController {
   @Post('logout')
   @Public()
   @HttpCode(HttpStatus.OK)
+  @Throttle({ logout: { limit: 30, ttl: 60000 } })
   logout(@Body(new ZodValidationPipe(LogoutSchema)) dto: LogoutDto) {
     return this.authService.logout(dto);
   }

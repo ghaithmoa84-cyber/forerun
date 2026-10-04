@@ -1,6 +1,7 @@
 package com.forerun.customer.core.notification
 
 import android.util.Log
+import com.forerun.customer.BuildConfig
 import com.forerun.customer.core.storage.TokenStorage
 import com.forerun.customer.domain.repository.DeviceTokenRepository
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -25,7 +26,9 @@ class ForerunFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "Refreshed FCM token received: $token")
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "Refreshed FCM token received: $token")
+        }
         tokenStorage.setDeviceToken(token)
 
         if (tokenStorage.hasValidAccessToken()) {
