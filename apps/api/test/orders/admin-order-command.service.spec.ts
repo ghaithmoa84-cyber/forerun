@@ -30,6 +30,9 @@ describe('AdminOrderCommandService', () => {
   };
   let prisma: {
     $transaction: ReturnType<typeof vi.fn>;
+    order: {
+      findMany: ReturnType<typeof vi.fn>;
+    };
   };
   let auditService: {
     log: ReturnType<typeof vi.fn>;
@@ -61,6 +64,9 @@ describe('AdminOrderCommandService', () => {
 
     prisma = {
       $transaction: vi.fn().mockImplementation((callback) => callback(txClient)),
+      order: {
+        findMany: vi.fn(),
+      },
     };
 
     auditService = {
@@ -693,6 +699,57 @@ describe('AdminOrderCommandService', () => {
 
       await expect(service.cancelOrderAdmin('non-existent', adminId)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('checkStaleOrders', () => {
+    it('returns 0 and does not emit notification when no stale orders exist', async () => {
+      prisma.order.findMany.mockResolvedValue([]);
+
+      const result = await service.checkStaleOrders(10);
+
+      expect(result).toEqual({ notifiedCount: 0 });
+      expect(notificationsService.emitToAdmin).not.toHaveBeenCalled();
+    });
+
+    it('emits order:needs_attention for orders awaiting runner > 10 minutes', async () => {
+      const staleOrders = [
+        {
+          id: 'order-1',
+          orderNumber: 'FW-000001',
+          status: 'AWAITING_RUNNER',
+          updatedAt: new Date(Date.now() - 15 * 60 * 1000),
+        },
+        {
+          id: 'order-2',
+          orderNumber: 'FW-000002',
+          status: 'AWAITING_PREFERRED_RUNNER',
+          updatedAt: new Date(Date.now() - 20 * 60 * 1000),
+        },
+      ];
+
+      prisma.order.findMany.mockResolvedValue(staleOrders);
+
+      const result = await service.checkStaleOrders(10);
+
+      expect(result).toEqual({ notifiedCount: 2 });
+      expect(notificationsService.emitToAdmin).toHaveBeenCalledTimes(2);
+      expect(notificationsService.emitToAdmin).toHaveBeenCalledWith(
+        'order:needs_attention',
+        {
+          orderId: 'order-1',
+          reason: expect.stringContaining('FW-000001'),
+        },
+        'urgent',
+      );
+      expect(notificationsService.emitToAdmin).toHaveBeenCalledWith(
+        'order:needs_attention',
+        {
+          orderId: 'order-2',
+          reason: expect.stringContaining('FW-000002'),
+        },
+        'urgent',
       );
     });
   });

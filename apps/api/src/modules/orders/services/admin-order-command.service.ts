@@ -5,6 +5,7 @@ import {
   ConflictException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import type { OrderStatus } from '@forerun/shared-constants';
 import { CONFIG } from '@forerun/shared-constants';
 import {
@@ -1087,10 +1088,44 @@ export class AdminOrderCommandService {
     };
   }
 
-  // TODO: order:needs_attention — emit to admin when an order stays in
-  // AWAITING_RUNNER (or AWAITING_PREFERRED_RUNNER) for more than 10 minutes,
-  // or when any state requires manual intervention (e.g. pricing dispute,
-  // runner no-show).  Not yet implemented in MVP — needs a scheduled cron job
-  // (e.g. @nestjs/schedule @Cron) that queries stale orders and calls
-  // notificationsService.emitToAdmin('order:needs_attention', { orderId, reason }, 'urgent').
+  /**
+   * Scans for orders stuck in awaiting runner state for more than thresholdMinutes (default: 10m)
+   * and notifies admins with an urgent alert.
+   */
+  @Cron('*/5 * * * *')
+  async checkStaleOrders(thresholdMinutes = 10): Promise<{ notifiedCount: number }> {
+    const thresholdDate = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+    const staleOrders = await this.prisma.order.findMany({
+      where: {
+        status: {
+          in: ['AWAITING_RUNNER', 'AWAITING_PREFERRED_RUNNER'],
+        },
+        updatedAt: {
+          lte: thresholdDate,
+        },
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        updatedAt: true,
+      },
+    });
+
+    for (const order of staleOrders) {
+      this.logger.warn(
+        `Order ${order.orderNumber || order.id} has been in ${order.status} for >${thresholdMinutes} minutes`,
+      );
+      await this.notificationsService.emitToAdmin(
+        'order:needs_attention',
+        {
+          orderId: order.id,
+          reason: `الطلب ${order.orderNumber || order.id} بانتظار مندوب منذ أكثر من ${thresholdMinutes} دقائق (${order.status})`,
+        },
+        'urgent',
+      );
+    }
+
+    return { notifiedCount: staleOrders.length };
+  }
 }
