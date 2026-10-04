@@ -26,43 +26,15 @@ import type {
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
-import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
-import { PrismaService } from '../../database/prisma.service.js';
 import { ReceiptsService } from './receipts.service.js';
 
 @Controller()
-@UseGuards(VerifiedUserGuard, RolesGuard)
+@UseGuards(VerifiedUserGuard)
 export class ReceiptsController {
   constructor(
-    private readonly prisma: PrismaService,
     private readonly receiptsService: ReceiptsService,
   ) {}
-
-  private async resolveOrderStore(
-    orderId: string,
-    storeId: string,
-    runnerUserId: string,
-  ) {
-    const runner = await this.prisma.runner.findUnique({
-      where: { userId: runnerUserId },
-    });
-    if (!runner) {
-      return { order: null, orderStore: null };
-    }
-
-    const order = await this.prisma.order.findFirst({
-      where: { id: orderId, runnerId: runner.id },
-    });
-    if (!order) {
-      return { order: null, orderStore: null };
-    }
-
-    const orderStore = await this.prisma.orderStore.findFirst({
-      where: { id: storeId, orderId: order.id },
-    });
-    return { order, orderStore };
-  }
 
   @Post('runner/orders/:id/stores/:storeId/receipts/presigned-url')
   @Roles('RUNNER')
@@ -74,7 +46,7 @@ export class ReceiptsController {
     dto: PresignedUrlRequest,
     @CurrentUser() user: { userId: string; role: string; status: string },
   ): Promise<PresignedUrlResponse> {
-    const { orderStore } = await this.resolveOrderStore(
+    const { orderStore } = await this.receiptsService.resolveOrderStore(
       params.id,
       params.storeId,
       user.userId,
@@ -99,7 +71,7 @@ export class ReceiptsController {
     dto: CreateReceiptRequest,
     @CurrentUser() user: { userId: string; role: string; status: string },
   ): Promise<CreateReceiptResponse> {
-    const { orderStore } = await this.resolveOrderStore(
+    const { orderStore } = await this.receiptsService.resolveOrderStore(
       params.id,
       params.storeId,
       user.userId,
@@ -118,7 +90,7 @@ export class ReceiptsController {
     params: RunnerReceiptParamRequest,
     @CurrentUser() user: { userId: string; role: string; status: string },
   ): Promise<DeleteReceiptResponse> {
-    const { orderStore } = await this.resolveOrderStore(
+    const { orderStore } = await this.receiptsService.resolveOrderStore(
       params.id,
       params.storeId,
       user.userId,
