@@ -895,7 +895,7 @@ export class AdminOrderCommandService {
       async (tx) => {
         const order = await tx.order.findUnique({
           where: { id: orderId },
-          include: { runner: true },
+          include: { runner: true, customer: true },
         });
 
         if (!order) {
