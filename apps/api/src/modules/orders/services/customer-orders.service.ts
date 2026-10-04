@@ -7,7 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { OrderStatus } from '@forerun/shared-constants';
-import { CONFIG } from '@forerun/shared-constants';
+import { CONFIG, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
 import { CreateOrderRequest } from '@forerun/shared-types';
 import type {
   CreateOrderResponse,
@@ -111,10 +111,14 @@ export class CustomerOrdersService {
    * Calculates estimated fee for a new order based on store count.
    */
   private calculateOrderFee(storeCount: number): FeeResult {
-    return this.pricingService.calculateFee({
-      isPeripheral: false,
-      purchasedStoreCount: storeCount,
-    });
+    // TODO(6A-3.1b): replace with await pricingService.getPricingConfig(tx)
+    return this.pricingService.calculateFee(
+      {
+        isPeripheral: false,
+        purchasedStoreCount: storeCount,
+      },
+      DEFAULT_PRICING_CONFIG,
+    );
   }
 
   /**

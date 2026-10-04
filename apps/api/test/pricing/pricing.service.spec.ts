@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { PRICING } from '@forerun/shared-constants';
+import { PRICING, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
 import { PricingService } from '../../src/modules/pricing/pricing.service.js';
 import type { PrismaService } from '../../src/database/prisma.service.js';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
@@ -46,10 +46,13 @@ describe('PricingService', () => {
 
   describe('calculateFee', () => {
     it('calculates fee for single store, non-peripheral (baseFee only)', () => {
-      const result = service.calculateFee({
-        isPeripheral: false,
-        purchasedStoreCount: 1,
-      });
+      const result = service.calculateFee(
+        {
+          isPeripheral: false,
+          purchasedStoreCount: 1,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
 
       expect(result).toEqual({
         baseFee: PRICING.BASE_FEE,
@@ -66,10 +69,13 @@ describe('PricingService', () => {
     });
 
     it('calculates fee for single store, peripheral (baseFee + peripheralFee)', () => {
-      const result = service.calculateFee({
-        isPeripheral: true,
-        purchasedStoreCount: 1,
-      });
+      const result = service.calculateFee(
+        {
+          isPeripheral: true,
+          purchasedStoreCount: 1,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
 
       expect(result).toEqual({
         baseFee: PRICING.BASE_FEE,
@@ -86,10 +92,13 @@ describe('PricingService', () => {
     });
 
     it('calculates fee for 3 stores (baseFee + extraStoresFee * 2)', () => {
-      const result = service.calculateFee({
-        isPeripheral: false,
-        purchasedStoreCount: 3,
-      });
+      const result = service.calculateFee(
+        {
+          isPeripheral: false,
+          purchasedStoreCount: 3,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
 
       const expectedExtraStoresFee = 2 * PRICING.EXTRA_STORE_FEE;
       const expectedTotalFee = PRICING.BASE_FEE + expectedExtraStoresFee;
@@ -109,10 +118,13 @@ describe('PricingService', () => {
     });
 
     it('calculates fee for 0 stores (baseFee only, extraStoresFee = 0)', () => {
-      const result = service.calculateFee({
-        isPeripheral: false,
-        purchasedStoreCount: 0,
-      });
+      const result = service.calculateFee(
+        {
+          isPeripheral: false,
+          purchasedStoreCount: 0,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
 
       expect(result).toEqual({
         baseFee: PRICING.BASE_FEE,
@@ -128,33 +140,45 @@ describe('PricingService', () => {
 
     it('throws BadRequestException when purchasedStoreCount is negative', () => {
       expect(() =>
-        service.calculateFee({
-          isPeripheral: false,
-          purchasedStoreCount: -1,
-        }),
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: -1,
+          },
+          DEFAULT_PRICING_CONFIG,
+        ),
       ).toThrow(BadRequestException);
 
       expect(() =>
-        service.calculateFee({
-          isPeripheral: false,
-          purchasedStoreCount: -5,
-        }),
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: -5,
+          },
+          DEFAULT_PRICING_CONFIG,
+        ),
       ).toThrow('purchasedStoreCount must be a non-negative integer');
     });
 
     it('throws BadRequestException when purchasedStoreCount is fractional', () => {
       expect(() =>
-        service.calculateFee({
-          isPeripheral: false,
-          purchasedStoreCount: 1.5,
-        }),
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: 1.5,
+          },
+          DEFAULT_PRICING_CONFIG,
+        ),
       ).toThrow(BadRequestException);
 
       expect(() =>
-        service.calculateFee({
-          isPeripheral: false,
-          purchasedStoreCount: 0.1,
-        }),
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: 0.1,
+          },
+          DEFAULT_PRICING_CONFIG,
+        ),
       ).toThrow('purchasedStoreCount must be a non-negative integer');
     });
 
@@ -372,11 +396,14 @@ describe('PricingService', () => {
       expect(result.platformShare).toBe(Math.ceil(210 * PRICING.PLATFORM_SHARE));
     });
 
-    it('defaults to 60/40/20 when config is omitted', () => {
-      const result = service.calculateFee({
-        isPeripheral: true,
-        purchasedStoreCount: 2,
-      });
+    it('calculates 60/40/20 when DEFAULT_PRICING_CONFIG is provided', () => {
+      const result = service.calculateFee(
+        {
+          isPeripheral: true,
+          purchasedStoreCount: 2,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
 
       // base: 60, peripheral: 40, extraStores: (2-1)*20 = 20 -> total: 120
       expect(result.baseFee).toBe(60);

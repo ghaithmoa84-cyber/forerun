@@ -83,7 +83,7 @@ export class PricingService {
       isPeripheral: boolean;
       purchasedStoreCount: number;
     },
-    config: PricingConfig = DEFAULT_PRICING_CONFIG,
+    config: PricingConfig,
   ): FeeResult {
     if (
       !Number.isInteger(params.purchasedStoreCount) ||
@@ -189,10 +189,14 @@ export class PricingService {
     }
 
     const purchasedStoreCount = order.orderStores.length;
-    const newFee = this.calculateFee({
-      isPeripheral: order.isPeripheral,
-      purchasedStoreCount,
-    });
+    // TODO(6A-3.1b): replace with await pricingService.getPricingConfig(tx)
+    const newFee = this.calculateFee(
+      {
+        isPeripheral: order.isPeripheral,
+        purchasedStoreCount,
+      },
+      DEFAULT_PRICING_CONFIG,
+    );
 
     const oldFee = {
       baseFee: order.baseFee,

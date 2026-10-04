@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { OrderStatus } from '@forerun/shared-constants';
-import { CONFIG } from '@forerun/shared-constants';
+import { CONFIG, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
 import {
   ApproveOrderRequest,
   RejectOrderRequest,
@@ -161,10 +161,14 @@ export class AdminOrderCommandService {
     };
     newFee: FeeResult;
   }> {
-    const newFee = this.pricingService.calculateFee({
-      isPeripheral: dto.isPeripheral,
-      purchasedStoreCount: order.orderStores.length,
-    });
+    // TODO(6A-3.1b): replace with await pricingService.getPricingConfig(tx)
+    const newFee = this.pricingService.calculateFee(
+      {
+        isPeripheral: dto.isPeripheral,
+        purchasedStoreCount: order.orderStores.length,
+      },
+      DEFAULT_PRICING_CONFIG,
+    );
     const oldFee = {
       baseFee: order.baseFee,
       peripheralFee: order.peripheralFee,
