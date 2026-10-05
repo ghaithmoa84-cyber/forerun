@@ -27,7 +27,8 @@ export interface FeeResult {
   baseFee: number;
   peripheralFee: number;
   extraStoresFee: number;
-  customFee?: number;
+  customFee: number;
+  customFeeReason?: string | null;
   totalFee: number;
   runnerShare: number;
   platformShare: number;
@@ -172,6 +173,7 @@ export class PricingService {
         isPeripheral: effectiveIsPeripheral,
         purchasedStoreCount: order.orderStores.length,
         customFee,
+        customFeeReason: dto.customFeeReason ?? null,
       },
       { ...pricingConfig, baseFee: effectiveBaseFee },
     );
@@ -181,6 +183,7 @@ export class PricingService {
       peripheralFee: feeResult.peripheralFee,
       extraStoresFee: feeResult.extraStoresFee,
       customFee,
+      customFeeReason: dto.customFeeReason ?? null,
       totalFee: feeResult.totalFee,
       runnerShare: feeResult.runnerShare,
       platformShare: feeResult.platformShare,
@@ -364,6 +367,7 @@ export class PricingService {
       isPeripheral: boolean;
       purchasedStoreCount: number;
       customFee?: number;
+      customFeeReason?: string | null;
     },
     config: PricingConfig,
   ): FeeResult {
@@ -394,10 +398,11 @@ export class PricingService {
       baseFee,
       peripheralFee,
       extraStoresFee,
+      customFee,
+      customFeeReason: params.customFeeReason ?? null,
       totalFee,
       runnerShare,
       platformShare,
-      ...(params.customFee !== undefined ? { customFee: params.customFee } : {}),
     };
   }
 
@@ -499,33 +504,32 @@ export class PricingService {
     const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
     const { runnerShare, platformShare } = splitShares(totalFee);
 
-    const hasOrderCustomFee =
-      (order as { customFee?: number }).customFee !== undefined &&
-      (order as { customFee?: number }).customFee !== null;
-
     const newFee: FeeResult = {
       baseFee,
       peripheralFee,
       extraStoresFee,
+      customFee,
+      customFeeReason: (order as { customFeeReason?: string | null }).customFeeReason ?? null,
       totalFee,
       runnerShare,
       platformShare,
-      ...(hasOrderCustomFee ? { customFee } : {}),
     };
 
     const oldFee = {
       baseFee: order.baseFee,
       peripheralFee: order.peripheralFee,
       extraStoresFee: order.extraStoresFee,
+      customFee: (order as { customFee?: number }).customFee ?? 0,
+      customFeeReason: (order as { customFeeReason?: string | null }).customFeeReason ?? null,
       totalFee: order.totalFee,
-      ...(hasOrderCustomFee ? { customFee: (order as { customFee?: number }).customFee } : {}),
     };
 
     const feeChanged =
       oldFee.baseFee !== newFee.baseFee ||
       oldFee.peripheralFee !== newFee.peripheralFee ||
       oldFee.extraStoresFee !== newFee.extraStoresFee ||
-      oldFee.totalFee !== newFee.totalFee;
+      oldFee.totalFee !== newFee.totalFee ||
+      oldFee.customFee !== newFee.customFee;
 
     // Write back ONLY extraStoresFee and totalFee (DO NOT overwrite baseFee, peripheralFee, or customFee)
     await client.order.update({

@@ -931,6 +931,8 @@ export class AdminOrderCommandService {
           baseFee: order.baseFee,
           peripheralFee: order.peripheralFee,
           extraStoresFee: order.extraStoresFee,
+          customFee: order.customFee ?? 0,
+          customFeeReason: order.customFeeReason ?? null,
           totalFee: order.totalFee,
           note: 'الرسم النهائي يُحدد بعد المراجعة',
         },

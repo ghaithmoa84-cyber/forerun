@@ -213,6 +213,8 @@ export class RunnersService {
         baseFee: activeOrder.baseFee,
         peripheralFee: activeOrder.peripheralFee,
         extraStoresFee: activeOrder.extraStoresFee,
+        customFee: activeOrder.customFee ?? 0,
+        customFeeReason: activeOrder.customFeeReason ?? null,
         totalFee: activeOrder.totalFee,
       },
       isPeripheral: activeOrder.isPeripheral,
