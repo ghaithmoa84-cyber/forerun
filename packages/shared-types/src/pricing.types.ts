@@ -132,6 +132,7 @@ export const FeePreviewResponseSchema = z.object({
   peripheralFee: z.number().int(),
   extraStoresFee: z.number().int(),
   customFee: z.number().int(),
+  customFeeReason: z.string().nullable().optional(),
   totalFee: z.number().int(),
   runnerShare: z.number().int(),
   platformShare: z.number().int(),

@@ -38,6 +38,8 @@ export const EstimatedFeeSchema = z.object({
   baseFee: z.number(),
   peripheralFee: z.number(),
   extraStoresFee: z.number(),
+  customFee: z.number().optional().default(0),
+  customFeeReason: z.string().nullable().optional(),
   totalFee: z.number(),
   note: z.string(),
 });
@@ -225,6 +227,7 @@ export type AdminOrderApprovalResult = {
     peripheralFee: number;
     extraStoresFee: number;
     customFee?: number | null;
+    customFeeReason?: string | null;
     totalFee: number;
   };
   newFee: {
@@ -232,6 +235,7 @@ export type AdminOrderApprovalResult = {
     peripheralFee: number;
     extraStoresFee: number;
     customFee?: number | null;
+    customFeeReason?: string | null;
     totalFee: number;
     runnerShare?: number;
     platformShare?: number;
@@ -349,6 +353,8 @@ export const PurchaseStoreResponseSchema = z.object({
     baseFee: z.number(),
     peripheralFee: z.number(),
     extraStoresFee: z.number(),
+    customFee: z.number().optional().default(0),
+    customFeeReason: z.string().nullable().optional(),
     totalFee: z.number(),
     runnerShare: z.number(),
     platformShare: z.number(),

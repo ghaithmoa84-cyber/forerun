@@ -13,10 +13,10 @@ export const DEFAULT_PRICING_CONFIG = {
 } as const;
 
 /**
- * حارس إنتاج في سبرنت 6A: يمنع قبول أي customFee > 0 حتى اكتمال أسطح الزبون والمندوب.
- * يُرفع إلى CUSTOM_FEE_CAP في سبرنت 6B بعد اكتمال واجهات العرض.
+ * سقف الرسم الإضافي للطلب بعد اكتمال أسطح العميل والمندوب (سبرنت 6B).
+ * يُستخدم في createApproveOrderSchema و FeePreviewRequestSchema.
  */
-export const MAX_CUSTOM_FEE = 0;
+export const MAX_CUSTOM_FEE = 500;
 
 /**
  * القيمة المستهدفة لسقف الرسم الإضافي للطلب (القرار D14).

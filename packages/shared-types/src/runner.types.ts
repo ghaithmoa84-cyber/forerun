@@ -41,6 +41,8 @@ export const ActiveOrderPricingSchema = z.object({
   baseFee: z.number(),
   peripheralFee: z.number(),
   extraStoresFee: z.number(),
+  customFee: z.number().optional().default(0),
+  customFeeReason: z.string().nullable().optional(),
   totalFee: z.number(),
 });
 
@@ -135,6 +137,8 @@ export type PurchaseResponse = {
   updatedFee: {
     extraStoresFee: number;
     totalFee: number;
+    customFee?: number;
+    customFeeReason?: string | null;
   };
   customerNotified: boolean;
 };

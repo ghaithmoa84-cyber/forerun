@@ -160,6 +160,8 @@ export type OrderPricing = {
   baseFee: number;
   peripheralFee: number;
   extraStoresFee: number;
+  customFee?: number;
+  customFeeReason?: string | null;
   totalFee: number;
 };
 
@@ -184,6 +186,8 @@ export type CustomerOrderDetails = {
   baseFee: number;
   peripheralFee: number;
   extraStoresFee: number;
+  customFee?: number | null;
+  customFeeReason?: string | null;
   totalFee: number;
   pricing: OrderPricing;
   deliveryLat: number;

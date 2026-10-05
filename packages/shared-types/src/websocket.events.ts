@@ -107,6 +107,8 @@ export type OrderAssignedPayload = {
     baseFee: number;
     peripheralFee: number;
     extraStoresFee: number;
+    customFee: number;
+    customFeeReason: string | null;
     totalFee: number;
     note: string;
   };
