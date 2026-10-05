@@ -219,6 +219,7 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 7 | استبدال قيم R2 الوهمية بقيم حقيقية | ⏔ **مؤجَّل بقرار — ما بعد MVP** | `PROJECT_STATUS.md` §3.1 يعرض `R2_* = <dummy-for-now>`. **لم يُتحقَّق من Railway Variables بعد** ولا تدّعى هنا قيمة ولا وهم. أُرجئت **ميزة رفع الإيصالات** بالكامل بقرار المستخدم في **2026-09-30** — انظر [§12 القرار D5](#12-سجل-القرارات). |
 | 8 | Vercel Agent Skill plugin | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
 
+| 9 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid) — إضافة customFee/customFeeReason إلى الـ frontends و raise MAX_CUSTOM_FEE إلى 500** | ✅ مكتملة ومختبرة | 4 commits: 4fe7cb · aaf2d8 · 86ac39a · 7b4ae2. pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
 ---
 
 ## 6. حالة أول Admin (بيانات اختبار)
@@ -323,6 +324,7 @@ fawrun/
 | 2026-10-05 | `69555ea`..`de8eda8` — **سبرنت 6A (التسعير الديناميكي) 6A-1 → 6A-8** على الفرع `feature/sprint-6a-dynamic-pricing-backend` (34 commit عن `master`): جدول `PlatformPricing` + صف seed 60/20/40، `PricingConfig`/`getPricingConfig` مع كاش 30ث، توحيد حصص التسويات لكل طلب (`splitShares`)، أعمدة `customFee` مع قيد CHECK، مسارات `GET/PUT /admin/pricing` و`fee-preview`، وشاشتا الأدمن. |
 | 2026-10-05 | **6A-3.1b (الخطوة الأخيرة)** — ربط `getPricingConfig` بمسارات الإنتاج الأربعة `createOrder` · `approveOrder` · `recalculateFee` · `previewFee` (القرارات **D21/D22/D23**). +9 اختبارات وحدة و+6 اختبارات تكامل (S2) ⇒ **355 وحدة + 44 تكامل ناجح**. `cleanDatabase` في `test/integration/setup.ts` يعيد صف الأسعار إلى خط الأساس. **تحذير D20 أصبح محققاً: تعديل الأسعار مؤثّر فعلي الآن.** لا الدمج ولا النشر بعد — المالك فقط (`prisma migrate deploy` قبل تشغيل الـ API الجديد). |
 
+| 2026-10-05 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid)** — رفع MAX_CUSTOM_FEE إلى 500، إضافة customFee/customFeeReason لـ customer-web (OrderDetail) و runner-pwa (ActiveOrder) و Android (DTO + PricingCard + strings.xml)، وحمولة order:assigned WebSocket carrying customFee. 4 semantic commits: 4fe7cb (shared types) · aaf2d8 (backend) · 86ac39a (frontends) · 7b4ae2 (tests). pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
 ---
 
 ## 10. نصائح لتسريع التشخيص مستقبلًا

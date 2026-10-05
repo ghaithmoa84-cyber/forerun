@@ -30,16 +30,16 @@
 > 1. **حذف `@default(60)` من `baseFee` و`totalFee`:** يُنفَّذ كـ migration مستقل لاحق لتفادي خلط التعديلات (القرار D19).
 > 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500`:** حساب صحيح لحماية الحصص وتفادي انحرافات الفواصل (القرار D12).
 
-### سبرنت 6B (أسطح الزبون والمندوب وAndroid)
+### سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid) — ✅ مُكتمل
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
 |---|---|---|---|---|---|
-| 6B-1 | رفع `MAX_CUSTOM_FEE` إلى 500 + إظهار customFee/customFeeReason في customer-web (OrderDetail) | عالية | ⏳ مخططة | @feature-dev | بعد اكتمال أسطح العرض للزبون والمندوب (القرار D14) |
-| 6B-2 | إضافة customFee/customFeeReason + estimatedFee الكاملة في runner-pwa (ActiveOrder) | عالية | ⏳ مخططة | @feature-dev | شاشة الطلب النشط والتفاصيل |
-| 6B-3 | إضافة customFee/customFeeReason في Android OrderDetailDtos.kt + واجهة العرض | عالية | ⏳ مخططة | @feature-dev | تحديث DTOs وشاشات الطلبات |
-| 6B-4 | تعديل نص strings.xml:359 («ثابتة» + «60 ل.س» → مرن) | متوسطة | ⏳ مخططة | @feature-dev | النص الحالي يفرض رسومًا ثابتة؛ يجب أن يعكس الديناميكية |
-| 6B-5 | إضافة estimatedFee.customFee في حمولة order:assigned للمندوب | متوسطة | ⏳ مخططة | @feature-dev | WebSocket event payload للـ runner |
-| 6B-6 | اختبارات وحدة مخصصة لـ DeviceToken | منخفضة | ⏳ مخططة | @test-engineer | تغطية CRUD DeviceToken و FCM integration |
-| 6B-7 | حقن TTL في PricingService بدل دوال *ForTesting | منخفضة | ⏳ مخططة | @feature-dev | تحسين قابلية الاختبار وإزالة دوال الاختبار الخاصة |
+| 6B-1 | رفع MAX_CUSTOM_FEE إلى 500 + إظهر customFee/customFeeReason في customer-web (OrderDetail) | عالية | ✅ **مُنجَز** | @feature-dev | مدمج في 86ac39a + 4fe7cb — الرسم الإضافي يظهر في تفاصيل الطلب عند وجوده |
+| 6B-2 | إضافة customFee/customFeeReason + estimatedFee الكاملة في runner-pwa (ActiveOrder) | عالية | ✅ **مُنجَز** | @feature-dev | مدمج في 86ac39a — شاشة الطلب النشطعرض الرسم الإضافي والسبب |
+| 6B-3 | إضافة customFee/customFeeReason في Android OrderDetailDtos.kt + واجهة العرض | عالية | ✅ **مُنجَز** | @feature-dev | مدمج في 86ac39a — DTO + domain model + mapper + PricingCard + strings.xml |
+| 6B-4 | تعديل نص strings.xml:359 («ثابتة» + «60 ل.س» → مرن) | متوسطة | ✅ **مُنجَز** | @feature-dev | مدمج في 86ac39a — النص يصف التسعير الديناميكي |
+| 6B-5 | إضافة estimatedFee.customFee في حمولة order:assigned للمندوب | متوسطة | ✅ **مُنجَز** | @feature-dev | مدمج في aaf2d8 — WebSocket payload يحمل customFee/customFeeReason |
+| 6B-6 | اختبارات وحدة مخصصة لـ DeviceToken | منخفضة | ⏸️ مؤجل | @test-engineer | لم يُنفَّذ — تغطية CRUD DeviceToken و FCM integration |
+| 6B-7 |,rightن TTL في PricingService بدل دوال *ForTesting | منخفضة | ⏸️ مؤجل | @feature-dev | لم يُنفَّذ — تحسين قابلية الاختبار وإزالة دوال الاختبار الخاصة |
 
 ---
 
