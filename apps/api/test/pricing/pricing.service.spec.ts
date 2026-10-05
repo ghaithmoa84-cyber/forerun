@@ -1231,6 +1231,7 @@ describe('PricingService', () => {
           extraStoreFee: 30,
           peripheralFee: 50,
           updatedByUserId: 'usr-admin-1',
+          updatedAt: expect.any(Date),
         },
       });
 

@@ -299,6 +299,7 @@ export class PricingService {
             extraStoreFee: dto.extraStoreFee,
             peripheralFee: dto.peripheralFee,
             updatedByUserId: userId,
+            updatedAt: new Date(),
           },
         });
 
