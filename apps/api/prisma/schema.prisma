@@ -209,6 +209,8 @@ model Order {
   baseFee             Int     @default(60)
   peripheralFee       Int     @default(0)
   extraStoresFee      Int     @default(0)
+  customFee           Int     @default(0)
+  customFeeReason     String?
   totalFee            Int     @default(60)
 
   // المندوب المفضل — ربط رسمي بجدول Runner
