@@ -18,6 +18,7 @@ import { LedgerModule } from './modules/ledger/ledger.module.js';
 import { ReceiptsModule } from './modules/receipts/receipts.module.js';
 import { SettlementsModule } from './modules/settlements/settlements.module.js';
 import { RatingsModule } from './modules/ratings/ratings.module.js';
+import { PricingModule } from './modules/pricing/pricing.module.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { jwtConfig } from './config/jwt.config.js';
@@ -128,6 +129,7 @@ import { jwtConfig } from './config/jwt.config.js';
     ReceiptsModule,
      SettlementsModule,
      RatingsModule,
+     PricingModule,
    ],
   providers: [
     {

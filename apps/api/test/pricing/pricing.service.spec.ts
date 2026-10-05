@@ -16,7 +16,12 @@ describe('PricingService', () => {
     };
     platformPricing: {
       findUnique: ReturnType<typeof vi.fn>;
+      findUniqueOrThrow: ReturnType<typeof vi.fn>;
+      updateMany: ReturnType<typeof vi.fn>;
+      create: ReturnType<typeof vi.fn>;
+      upsert: ReturnType<typeof vi.fn>;
     };
+    $transaction: ReturnType<typeof vi.fn>;
   };
   let auditService: {
     log: ReturnType<typeof vi.fn>;
@@ -31,7 +36,14 @@ describe('PricingService', () => {
       },
       platformPricing: {
         findUnique: vi.fn(),
+        findUniqueOrThrow: vi.fn(),
+        updateMany: vi.fn(),
+        create: vi.fn(),
+        upsert: vi.fn(),
       },
+      $transaction: vi.fn().mockImplementation(async (callback) => {
+        return callback(prisma);
+      }),
     };
     auditService = {
       log: vi.fn().mockResolvedValue(undefined),
@@ -780,5 +792,311 @@ describe('PricingService', () => {
       });
     });
   });
+
+  describe('previewFee (Sprint 6A-7)', () => {
+    it('previews fee for regular order (base=60, peripheral=false, no custom, 2 stores -> extraStores=20)', async () => {
+      const mockOrder = {
+        id: 'ord-prev-1',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }, { id: 's2' }],
+      };
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+
+      const result = await service.previewFee('ord-prev-1', {
+        isPeripheral: false,
+        customFee: 0,
+      });
+
+      expect(result).toEqual({
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 20,
+        customFee: 0,
+        totalFee: 80,
+        runnerShare: 60,
+        platformShare: 20,
+      });
+      expect(result.runnerShare + result.platformShare).toBe(result.totalFee);
+      // Verify NO database writes
+      expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('previews fee for peripheral order with customFee=50 (matches splitShares)', async () => {
+      const mockOrder = {
+        id: 'ord-prev-2',
+        isPeripheral: false, // will be overridden by dto
+        baseFee: 60,
+        orderStores: [{ id: 's1' }], // 1 store -> extraStores = 0
+      };
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+
+      const result = await service.previewFee('ord-prev-2', {
+        isPeripheral: true,
+        customFee: 50,
+        customFeeReason: 'طرد ثقيل',
+      });
+
+      // total = base 60 + peripheral 40 + extraStores 0 + custom 50 = 150
+      // splitShares(150): runner = 112 (floor(150*0.75)), platform = 38 (ceil(150*0.25))
+      expect(result).toEqual({
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoresFee: 0,
+        customFee: 50,
+        totalFee: 150,
+        runnerShare: 112,
+        platformShare: 38,
+      });
+      expect(result.runnerShare + result.platformShare).toBe(150);
+      expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when order does not exist', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.previewFee('non-existent-order', {
+          isPeripheral: false,
+          customFee: 0,
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException when customFee > 0 without reason', async () => {
+      const mockOrder = {
+        id: 'ord-prev-3',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }],
+      };
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+
+      await expect(
+        service.previewFee('ord-prev-3', {
+          isPeripheral: false,
+          customFee: 50,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when customFee = 0 with reason', async () => {
+      const mockOrder = {
+        id: 'ord-prev-4',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }],
+      };
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+
+      await expect(
+        service.previewFee('ord-prev-4', {
+          isPeripheral: false,
+          customFee: 0,
+          customFeeReason: 'سبب غير مبرر',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('supports baseFee override within PRICING_LIMITS', async () => {
+      const mockOrder = {
+        id: 'ord-prev-5',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }],
+      };
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+
+      const result = await service.previewFee('ord-prev-5', {
+        isPeripheral: false,
+        baseFee: 80,
+        customFee: 0,
+      });
+
+      expect(result.baseFee).toBe(80);
+      expect(result.totalFee).toBe(80);
+      expect(result.runnerShare).toBe(60);
+      expect(result.platformShare).toBe(20);
+    });
+  });
+
+  describe('getPlatformPricing (Sprint 6A-7)', () => {
+    it('returns DEFAULT_PRICING_CONFIG when default row is absent', async () => {
+      prisma.platformPricing.findUnique.mockResolvedValue(null);
+
+      const result = await service.getPlatformPricing();
+
+      expect(result).toEqual({
+        baseFee: DEFAULT_PRICING_CONFIG.baseFee,
+        extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
+        peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+        updatedAt: null,
+        updatedByUserId: null,
+      });
+    });
+
+    it('returns row values when present in DB', async () => {
+      const now = new Date();
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 75,
+        extraStoreFee: 25,
+        peripheralFee: 50,
+        updatedAt: now,
+        updatedByUserId: 'usr-admin-1',
+      });
+
+      const result = await service.getPlatformPricing();
+
+      expect(result).toEqual({
+        baseFee: 75,
+        extraStoreFee: 25,
+        peripheralFee: 50,
+        updatedAt: now,
+        updatedByUserId: 'usr-admin-1',
+      });
+    });
+  });
+
+  describe('updatePlatformPricing (Sprint 6A-7)', () => {
+    it('upserts new pricing, logs audit event, and clears cache on valid input', async () => {
+      const oldDate = new Date('2026-10-01T10:00:00.000Z');
+      const newDate = new Date('2026-10-05T12:00:00.000Z');
+
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 40,
+        updatedAt: oldDate,
+        updatedByUserId: 'usr-old',
+      });
+
+      prisma.platformPricing.updateMany.mockResolvedValue({ count: 1 });
+      prisma.platformPricing.findUniqueOrThrow.mockResolvedValue({
+        id: 'default',
+        baseFee: 80,
+        extraStoreFee: 30,
+        peripheralFee: 50,
+        updatedAt: newDate,
+        updatedByUserId: 'usr-admin-1',
+      });
+
+      const result = await service.updatePlatformPricing(
+        {
+          baseFee: 80,
+          extraStoreFee: 30,
+          peripheralFee: 50,
+          updatedAt: oldDate,
+        },
+        'usr-admin-1',
+      );
+
+      expect(result).toEqual({
+        baseFee: 80,
+        extraStoreFee: 30,
+        peripheralFee: 50,
+        updatedAt: newDate,
+        updatedByUserId: 'usr-admin-1',
+      });
+
+      expect(prisma.platformPricing.updateMany).toHaveBeenCalledWith({
+        where: { id: 'default', updatedAt: oldDate },
+        data: {
+          baseFee: 80,
+          extraStoreFee: 30,
+          peripheralFee: 50,
+          updatedByUserId: 'usr-admin-1',
+        },
+      });
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: 'usr-admin-1',
+          actorRole: 'ADMIN',
+          event: 'PRICING_UPDATED',
+          meta: {
+            before: {
+              baseFee: 60,
+              extraStoreFee: 20,
+              peripheralFee: 40,
+              updatedAt: oldDate,
+            },
+            after: {
+              baseFee: 80,
+              extraStoreFee: 30,
+              peripheralFee: 50,
+              updatedAt: newDate,
+            },
+          },
+        }),
+        expect.anything(),
+      );
+    });
+
+    it('throws 409 ConflictException when updatedAt does not match DB timestamp', async () => {
+      const dbDate = new Date('2026-10-05T12:00:00.000Z');
+      const clientStaleDate = new Date('2026-10-05T11:00:00.000Z');
+
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 40,
+        updatedAt: dbDate,
+        updatedByUserId: 'usr-old',
+      });
+
+      await expect(
+        service.updatePlatformPricing(
+          {
+            baseFee: 80,
+            extraStoreFee: 30,
+            peripheralFee: 50,
+            updatedAt: clientStaleDate,
+          },
+          'usr-admin-1',
+        ),
+      ).rejects.toThrow(ConflictException);
+
+      expect(prisma.platformPricing.upsert).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException on baseFee = 0 or negative values', async () => {
+      await expect(
+        service.updatePlatformPricing(
+          {
+            baseFee: 0,
+            extraStoreFee: 20,
+            peripheralFee: 40,
+          },
+          'usr-admin-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.updatePlatformPricing(
+          {
+            baseFee: 60,
+            extraStoreFee: -5,
+            peripheralFee: 40,
+          },
+          'usr-admin-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.updatePlatformPricing(
+          {
+            baseFee: 60,
+            extraStoreFee: 20,
+            peripheralFee: -10,
+          },
+          'usr-admin-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 });
+
 
