@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   MAX_CUSTOM_FEE,
   CUSTOM_FEE_REASON_MAX_LENGTH,
+  PRICING_LIMITS,
 } from "@forerun/shared-constants";
 import { passwordSchema, SyrianPhoneSchema } from "./auth.types.js";
 
@@ -147,6 +148,18 @@ export function createApproveOrderSchema({
     .object({
       isPeripheral: z.boolean(),
       notes: z.string().nullable().optional(),
+      baseFee: z
+        .number({ invalid_type_error: "يجب أن يكون الرسم الأساسي رقماً" })
+        .int("يجب أن يكون الرسم الأساسي عدداً صحيحاً")
+        .min(
+          PRICING_LIMITS.baseFee.min,
+          `الرسم الأساسي يجب ألا يقل عن ${PRICING_LIMITS.baseFee.min}`,
+        )
+        .max(
+          PRICING_LIMITS.baseFee.max,
+          `الرسم الأساسي يجب ألا يتجاوز ${PRICING_LIMITS.baseFee.max}`,
+        )
+        .optional(),
       customFee: z.number().int().min(0).max(maxCustomFee).optional().default(0),
       customFeeReason: z
         .string()

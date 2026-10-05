@@ -154,6 +154,53 @@ describe('Pricing & CustomFee Schemas (Sprint 6A-4)', () => {
         expect(issue?.message).toBe('القيمة طويلة جدًا');
       }
     });
+
+    it('accepts baseFee when valid and within limits', () => {
+      const parsed = schema.parse({
+        isPeripheral: false,
+        baseFee: 80,
+      });
+      expect(parsed.baseFee).toBe(80);
+    });
+
+    it('allows baseFee to be omitted (optional)', () => {
+      const parsed = schema.parse({
+        isPeripheral: false,
+      });
+      expect(parsed.baseFee).toBeUndefined();
+    });
+
+    it('accepts baseFee at boundaries (min: 1, max: 1000)', () => {
+      const atMin = schema.parse({ isPeripheral: false, baseFee: 1 });
+      expect(atMin.baseFee).toBe(1);
+
+      const atMax = schema.parse({ isPeripheral: false, baseFee: 1000 });
+      expect(atMax.baseFee).toBe(1000);
+    });
+
+    it('rejects baseFee < 1 (0 or negative) with Arabic error message', () => {
+      const parsedZero = schema.safeParse({ isPeripheral: false, baseFee: 0 });
+      expect(parsedZero.success).toBe(false);
+      if (!parsedZero.success) {
+        expect(parsedZero.error.issues[0]?.message).toContain('الرسم الأساسي يجب ألا يقل عن 1');
+      }
+
+      const parsedNeg = schema.safeParse({ isPeripheral: false, baseFee: -10 });
+      expect(parsedNeg.success).toBe(false);
+    });
+
+    it('rejects baseFee > 1000 with Arabic error message', () => {
+      const parsed = schema.safeParse({ isPeripheral: false, baseFee: 1001 });
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) {
+        expect(parsed.error.issues[0]?.message).toContain('الرسم الأساسي يجب ألا يتجاوز 1000');
+      }
+    });
+
+    it('rejects decimal baseFee (80.5)', () => {
+      const parsed = schema.safeParse({ isPeripheral: false, baseFee: 80.5 });
+      expect(parsed.success).toBe(false);
+    });
   });
 
   describe('Production ApproveOrderSchema (maxCustomFee = MAX_CUSTOM_FEE = 0)', () => {

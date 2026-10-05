@@ -148,6 +148,8 @@ export type AdminOrderDetails = {
   baseFee: number;
   peripheralFee: number;
   extraStoresFee: number;
+  customFee?: number | null;
+  customFeeReason?: string | null;
   totalFee: number;
   deliveryLat: number;
   deliveryLng: number;
