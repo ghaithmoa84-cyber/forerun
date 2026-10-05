@@ -372,6 +372,9 @@ importers:
 
   packages/shared-types:
     dependencies:
+      '@forerun/shared-constants':
+        specifier: workspace:*
+        version: link:../shared-constants
       zod:
         specifier: ^3.23.8
         version: 3.25.76
