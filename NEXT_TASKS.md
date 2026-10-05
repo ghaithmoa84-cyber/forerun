@@ -17,12 +17,17 @@
 | 6A-1 | **جرد `order.create`** للتأكد من تمرير `baseFee` و `totalFee` صراحةً | ✅ **مُنجَز** | @feature-dev | موضع وحيد في `customer-orders.service.ts:162` يمررهما صراحة، وحذف defaults من schema آمن |
 | 6A-2 | **Migration لجدول `PlatformPricing` وعلاقة `User`** | ✅ **مُنجَز** | @feature-dev | القرار D11 — ملف migration مع إدراج صف seed افتراضي آمن 60/20/40 (فُصل customFee لخطوة لاحقة) |
 | 6A-3.1 | **نوع `PricingConfig` وثابت `DEFAULT_PRICING_CONFIG` ودالة `getPricingConfig`** | ✅ **مُنجَز** | @feature-dev | القرار D11 — إضافة النوع والثابت في shared packages، وإضافة getPricingConfig مع كاش 30ث دون ربطها بالمسارات الإنتاجية |
-| 6A-3 | **تحديث `shared-types`** بمخططات وأنواع إدارة التسعير و `customFee` | ⏳ مخططة | @feature-dev | DTOs و Zod schemas للتحقق المشترك ونقاط نهاية الأدمن (القرار D11) |
 | 6A-3.2 | **تحديث `PricingService` وحفظ لقطة الطلب (B2)** | ✅ **مُنجَز في `f26e2e0`** | @feature-dev | قراءة الأسعار مع جعل config إلزاميًا في `calculateFee` (`c3cc60d`)، وحفظ لقطة الطلب `baseFee/peripheralFee` في `recalculateFee` وتحديث `extraStoresFee/totalFee` فقط (`f26e2e0`). تم تفعيل اختبار 6.2 واختبارات الوحدة والتكامل. |
 | 6A-3.3 | **توحيد مصدر الحصص في `SettlementsService` (B1)** | ✅ **مُنجَز في `78b4400`** | @feature-dev | استخراج دالة نقية `splitShares` (`646f9d4`) وتوحيد حساب الحصص لكل طلب في `getCurrentSettlement` ومطابقة `closeDay` والـ Ledger (0 drift). تم تفعيل اختبار 5.2 وتحويل 5.1 لحارس انحدار وإضافة 5.3 واختبارات الوحدة (`78b4400`). |
-| 6A-6 | **حارس الإنتاج `MAX_CUSTOM_FEE = 0`** في `shared-constants` | ⏳ مخططة | @feature-dev | القرار D14 — حارس إنتاج يمنع فرض رسوم إضافية حتى اكتمال 6B |
+| 6A-4 | **ثوابت ومخططات `customFee` و `UpdatePlatformPricing` في shared packages** | ✅ **مُنجَز في `d57a564`** | @feature-dev | إضافة `MAX_CUSTOM_FEE = 0` و `CUSTOM_FEE_CAP = 500` و `PRICING_LIMITS` ومخططات Zod (`createApproveOrderSchema` و `UpdatePlatformPricingSchema`) مع تعريب كامل لرسائل الأخطاء وتغطية 21 اختبار وحدة. |
+| 6A-5 | **Migration لعمودي `customFee` و `customFeeReason` في جدول `Order` مع قيد CHECK** | ✅ **مُنجَز في `77a1e59`** | @feature-dev | إضافة عمودي `customFee` (default 0) و `customFeeReason` وقيد `Order_customFee_nonneg_check` في `20261005110000_add_order_custom_fee` بنجاح واختبار تكامل يثبت الحالات الافتراضية والقيد. |
+| 6A-6 | **ربط `baseFee` و `customFee` في خدمة `approveOrder` والتحقق الإنتاجي** | ⏳ مخططة | @feature-dev | ربط التمرير في الخدمات مع حارس الإنتاج `MAX_CUSTOM_FEE = 0` (القرار D14) |
 | 6A-7 | **مسارات الأدمن للتحكم بالتسعير وتعديل رسم الطلب** (`PATCH /admin/orders/:id/fee`) | ⏳ مخططة | @feature-dev | القرار D13 — إشعار + AuditLog دون اشتراط موافقة العميل |
 | 6A-8 | **شاشات لوحة تحكم الأدمن** لإدارة الأسعار وبطاقة مراجعة وتعديل رسم الطلب | ⏳ مخططة | @feature-dev | أسطح الإدارة في `admin-web` (القرار D15) مع عرض تنبيه إرشادي بتغيير الأسعار حين لا توجد طلبات IN_PROGRESS لأن extraStoreFee بلا لقطة (القرار D16). |
+
+> **ديون فنية مؤجلة بقرارات معتمدة:**
+> 1. **حذف `@default(60)` من `baseFee` و`totalFee`:** يُنفَّذ كـ migration مستقل لاحق لتفادي خلط التعديلات (القرار D19).
+> 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500`:** حساب صحيح لحماية الحصص وتفادي انحرافات الفواصل (القرار D12).
 
 ### سبرنت 6B (أسطح الزبون والمندوب وAndroid)
 | # | المهمة | الحالة | المسؤول | ملاحظات |

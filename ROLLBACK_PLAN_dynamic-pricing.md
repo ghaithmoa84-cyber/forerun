@@ -93,6 +93,20 @@ npx prisma migrate resolve --rolled-back 20261005011000_add_platform_pricing
 - التراجع عنه يتم عبر `git revert 78b4400 646f9d4` بأمان تام.
 - لا يمس أي قيود تاريخية في `LedgerEntry` (append-only).
 
+### 3.1.4 تراجع Migration `20261005110000_add_order_custom_fee` (الخطوة 6A-5)
+إسقاط القيد ثم العمودين `customFee` و `customFeeReason` آمن تماماً في هذه المرحلة لأن لا كود إنتاجي يقرأهما أو يكتبهما بعد (قيمتهما الافتراضية 0 و null):
+```sql
+-- مسار التراجع اليدوي على DB:
+ALTER TABLE "Order" DROP CONSTRAINT IF EXISTS "Order_customFee_nonneg_check";
+ALTER TABLE "Order" DROP COLUMN IF EXISTS "customFeeReason";
+ALTER TABLE "Order" DROP COLUMN IF EXISTS "customFee";
+DELETE FROM _prisma_migrations WHERE migration_name = '20261005110000_add_order_custom_fee';
+```
+```bash
+# أو عبر prisma migrate:
+npx prisma migrate resolve --rolled-back 20261005110000_add_order_custom_fee
+```
+
 ### 3.2 التراجع العميق — بعد Delivery (أيام)
 ```bash
 # R4: إيقاف كل traffic على endpoints التسعير
