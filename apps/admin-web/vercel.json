@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm --filter forerun-admin-web build",
+  "outputDirectory": "out",
+  "nodeVersion": "24.x"
+}
