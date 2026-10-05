@@ -35,3 +35,7 @@ export async function closeTestApp(): Promise<void> {
 export function getRequest() {
   return supertest(app.getHttpServer());
 }
+
+export function getTestApp(): INestApplication {
+  return app;
+}

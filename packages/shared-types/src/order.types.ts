@@ -224,13 +224,17 @@ export type AdminOrderApprovalResult = {
     baseFee: number;
     peripheralFee: number;
     extraStoresFee: number;
+    customFee?: number | null;
     totalFee: number;
   };
   newFee: {
     baseFee: number;
     peripheralFee: number;
     extraStoresFee: number;
+    customFee?: number | null;
     totalFee: number;
+    runnerShare?: number;
+    platformShare?: number;
   };
 };
 

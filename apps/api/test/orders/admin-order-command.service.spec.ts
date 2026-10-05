@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   NotFoundException,
   ConflictException,
+  BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AdminOrderCommandService } from '../../src/modules/orders/services/admin-order-command.service.js';
@@ -80,15 +81,17 @@ describe('AdminOrderCommandService', () => {
     };
 
     pricingService = {
-      calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount }) => {
-        const baseFee = 60;
+      calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount, customFee }, config) => {
+        const baseFee = config?.baseFee ?? 60;
         const peripheralFee = isPeripheral ? 40 : 0;
         const extraStoresFee = Math.max(0, (purchasedStoreCount || 0) - 1) * 20;
-        const totalFee = baseFee + peripheralFee + extraStoresFee;
+        const effectiveCustomFee = customFee ?? 0;
+        const totalFee = baseFee + peripheralFee + extraStoresFee + effectiveCustomFee;
         return {
           baseFee,
           peripheralFee,
           extraStoresFee,
+          customFee: effectiveCustomFee,
           totalFee,
           runnerShare: Math.floor(totalFee * 0.75),
           platformShare: Math.ceil(totalFee * 0.25),
@@ -328,6 +331,274 @@ describe('AdminOrderCommandService', () => {
         }),
         'status_update',
       );
+    });
+
+    describe('Sprint 6A-6: customFee and baseFee features', () => {
+      const baseMockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-6A6',
+        status: 'PENDING_REVIEW',
+        customerId: 'cust-1',
+        customer: { userId: 'usr-cust-1' },
+        preferredRunnerId: null,
+        waitForPreferred: false,
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        customFee: 0,
+        customFeeReason: null,
+        totalFee: 60,
+        orderStores: [{ id: 'st-1' }],
+      };
+
+      it('1. approves order without customFee preserving baseline fees (60/0)', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+        });
+
+        expect(result.feeChanged).toBe(false);
+        expect(result.newFee.totalFee).toBe(60);
+        expect(result.newFee.customFee).toBe(0);
+        expect(txClient.order.updateMany).toHaveBeenCalledWith({
+          where: { id: orderId, status: 'PENDING_REVIEW' },
+          data: expect.objectContaining({
+            baseFee: 60,
+            peripheralFee: 0,
+            extraStoresFee: 0,
+            customFee: 0,
+            customFeeReason: null,
+            totalFee: 60,
+          }),
+        });
+      });
+
+      it('2. approves order with customFee = 50 and reason with test cap 500', async () => {
+        service.setMaxCustomFeeForTesting(500);
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          customFee: 50,
+          customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+          totalFee: 110,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+          customFee: 50,
+          customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+        });
+
+        expect(result.feeChanged).toBe(true);
+        expect(result.newFee.totalFee).toBe(110);
+        expect(result.newFee.customFee).toBe(50);
+        expect(result.newFee.runnerShare).toBe(82);
+        expect(result.newFee.platformShare).toBe(28);
+
+        expect(txClient.order.updateMany).toHaveBeenCalledWith({
+          where: { id: orderId, status: 'PENDING_REVIEW' },
+          data: expect.objectContaining({
+            baseFee: 60,
+            customFee: 50,
+            customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+            totalFee: 110,
+          }),
+        });
+
+        expect(auditService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: 'ORDER_FEE_UPDATED',
+            meta: expect.objectContaining({
+              reason: 'ADMIN_APPROVAL',
+              customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+              feeOverride: false,
+              oldFee: expect.objectContaining({ totalFee: 60 }),
+              newFee: expect.objectContaining({ totalFee: 110, customFee: 50 }),
+            }),
+          }),
+          txClient,
+        );
+        service.resetMaxCustomFeeForTesting();
+      });
+
+      it('3. rejects invalid customFee: positive without reason, zero with reason, negative, fraction, over cap', async () => {
+        service.setMaxCustomFeeForTesting(500);
+
+        // positive customFee without reason
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 50,
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // zero customFee with reason
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 0,
+            customFeeReason: 'سبب غير مبرر',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // negative customFee
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: -10,
+            customFeeReason: 'سالب',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // decimal customFee
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 15.5,
+            customFeeReason: 'كسر',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // over cap (501 > 500)
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 501,
+            customFeeReason: 'فوق السقف',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        service.resetMaxCustomFeeForTesting();
+      });
+
+      it('4. production guard: rejects customFee = 1 with default limit 0', async () => {
+        // default limit is MAX_CUSTOM_FEE = 0
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 1,
+            customFeeReason: 'محاولة في 6A',
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('5. baseFee override: replaces snapshot and sets feeOverride in audit, rejects out of range', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          baseFee: 80,
+          totalFee: 80,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+          baseFee: 80,
+        });
+
+        expect(result.feeChanged).toBe(true);
+        expect(result.newFee.baseFee).toBe(80);
+        expect(result.newFee.totalFee).toBe(80);
+
+        expect(auditService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: 'ORDER_FEE_UPDATED',
+            meta: expect.objectContaining({
+              feeOverride: true,
+              oldFee: expect.objectContaining({ baseFee: 60 }),
+              newFee: expect.objectContaining({ baseFee: 80 }),
+            }),
+          }),
+          txClient,
+        );
+
+        // Rejects baseFee = 0 or < min
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            baseFee: 0,
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // Rejects baseFee > max (1001)
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            baseFee: 1001,
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('6. updateMany count = 0 throws ConflictException and suppresses WebSocket', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: true,
+          }),
+        ).rejects.toThrow(ConflictException);
+
+        expect(notificationsService.emitToCustomer).not.toHaveBeenCalled();
+        expect(notificationsService.emitToAdmin).not.toHaveBeenCalled();
+      });
+
+      it('7. WebSocket emits only when totalFee changes, failure is logged and does not abort approval', async () => {
+        // Case A: totalFee did not change -> no order:fee_updated emitted
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+        });
+
+        expect(notificationsService.emitToCustomer).toHaveBeenCalledWith(
+          'usr-cust-1',
+          'order:status_changed',
+          expect.anything(),
+          'status_update',
+        );
+        expect(notificationsService.emitToCustomer).not.toHaveBeenCalledWith(
+          'usr-cust-1',
+          'order:fee_updated',
+          expect.anything(),
+          'status_update',
+        );
+
+        // Case B: totalFee changed + notification failure is caught and does not throw
+        vi.clearAllMocks();
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          isPeripheral: true,
+          peripheralFee: 40,
+          totalFee: 100,
+          status: 'AWAITING_RUNNER',
+        });
+        notificationsService.emitToCustomer.mockRejectedValueOnce(new Error('Network offline'));
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: true,
+        });
+
+        expect(result.order.status).toBe('AWAITING_RUNNER');
+        expect(result.feeChanged).toBe(true);
+      });
     });
   });
 
