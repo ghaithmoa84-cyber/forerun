@@ -11,7 +11,6 @@ import { Cron } from '@nestjs/schedule';
 import type { OrderStatus } from '@forerun/shared-constants';
 import {
   CONFIG,
-  DEFAULT_PRICING_CONFIG,
   PRICING_LIMITS,
 } from '@forerun/shared-constants';
 import {
@@ -27,6 +26,7 @@ import { PrismaService } from '../../../database/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
 import { PricingService, type FeeResult } from '../../pricing/pricing.service.js';
+import type { PricingConfig } from '@forerun/shared-types';
 import { OrderStateMachine } from '../../../state-machine/order-state-machine.js';
 import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.js';
 import type { Prisma } from '@prisma/client';
@@ -179,9 +179,10 @@ export class AdminOrderCommandService {
       effectiveCustomFee > 0 ? (dto.customFeeReason?.trim() ?? null) : null;
     const feeOverride = dto.baseFee !== undefined;
 
-    // TODO(6A-3.1b): replace with await pricingService.getPricingConfig(tx)
-    const pricingConfig = {
-      ...DEFAULT_PRICING_CONFIG,
+    // 6A-3.1b: تُقرأ رسوم peripheralFee/extraStoreFee من صف PlatformPricing داخل نفس
+    // الـ transaction، مع إبقاء baseFee كلقطة الطلب ما لم يحدّد الأدمن قيمة (D21).
+    const pricingConfig: PricingConfig = {
+      ...(await this.pricingService.getPricingConfig(tx)),
       baseFee: effectiveBaseFee,
     };
     const newFee = this.pricingService.calculateFee(

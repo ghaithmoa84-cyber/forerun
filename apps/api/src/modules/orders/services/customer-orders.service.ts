@@ -7,7 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { OrderStatus } from '@forerun/shared-constants';
-import { CONFIG, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
+import { CONFIG } from '@forerun/shared-constants';
 import { CreateOrderRequest } from '@forerun/shared-types';
 import type {
   CreateOrderResponse,
@@ -109,15 +109,19 @@ export class CustomerOrdersService {
 
   /**
    * Calculates estimated fee for a new order based on store count.
+   * 6A-3.1b: تُقرأ الإعدادات من صف PlatformPricing داخل نفس الـ transaction (D22)
+   * حتى تتطابق لقطة الرسوم مع لحظة إيداع الطلب.
    */
-  private calculateOrderFee(storeCount: number): FeeResult {
-    // TODO(6A-3.1b): replace with await pricingService.getPricingConfig(tx)
+  private async calculateOrderFee(
+    tx: Prisma.TransactionClient,
+    storeCount: number,
+  ): Promise<FeeResult> {
     return this.pricingService.calculateFee(
       {
         isPeripheral: false,
         purchasedStoreCount: storeCount,
       },
-      DEFAULT_PRICING_CONFIG,
+      await this.pricingService.getPricingConfig(tx),
     );
   }
 
@@ -335,17 +339,18 @@ export class CustomerOrdersService {
 
     const orderStoresData = this.buildOrderStoresData(dto.items);
 
-    const fee = this.calculateOrderFee(orderStoresData.length);
-
-    const order = await this.prisma.$transaction(
+    // D22: الحساب يتم داخل الـ transaction لتطابق اللقطة مع صف الإعدادات لحظة الإيداع
+    const { order, fee } = await this.prisma.$transaction(
       async (tx) => {
-        return this.createOrderRecord(tx, {
+        const fee = await this.calculateOrderFee(tx, orderStoresData.length);
+        const order = await this.createOrderRecord(tx, {
           customerId: customer.id,
           userId,
           dto,
           fee,
           orderStoresData,
         });
+        return { order, fee };
       },
       { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
     );

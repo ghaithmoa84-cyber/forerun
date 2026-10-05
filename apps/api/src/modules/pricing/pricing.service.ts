@@ -163,11 +163,9 @@ export class PricingService {
     const effectiveIsPeripheral =
       dto.isPeripheral !== undefined ? dto.isPeripheral : order.isPeripheral;
 
-    // TODO(6A-3.1b): replace with await this.getPricingConfig()
-    const pricingConfig: PricingConfig = {
-      ...DEFAULT_PRICING_CONFIG,
-      baseFee: effectiveBaseFee,
-    };
+    // 6A-3.1b: تُقرأ رسوم peripheralFee/extraStoreFee من صف PlatformPricing عبر الكاش (D23).
+    // baseFee يبقى لقطة الطلب ما لم يحدّد الأدمن قيمة (D21).
+    const pricingConfig = await this.getPricingConfig();
 
     const feeResult = this.calculateFee(
       {
@@ -175,7 +173,7 @@ export class PricingService {
         purchasedStoreCount: order.orderStores.length,
         customFee,
       },
-      pricingConfig,
+      { ...pricingConfig, baseFee: effectiveBaseFee },
     );
 
     return {
@@ -456,7 +454,7 @@ export class PricingService {
   async recalculateFee(
     orderId: string,
     tx?: Prisma.TransactionClient,
-    config: PricingConfig = DEFAULT_PRICING_CONFIG,
+    config?: PricingConfig,
   ): Promise<RecalculateFeeResult> {
     const client = tx ?? this.prisma;
 
@@ -484,11 +482,12 @@ export class PricingService {
     const peripheralFee = order.peripheralFee;
     const customFee = (order as { customFee?: number }).customFee ?? 0;
 
-    // Recalculate extraStoresFee only, based on purchased stores count
+    // Recalculate extraStoresFee only, based on purchased stores count (D16)
     const purchasedStoreCount = order.orderStores.length;
-    // TODO(6A-3.1b): replace DEFAULT_PRICING_CONFIG with await this.getPricingConfig(tx)
+    // 6A-3.1b: سعر المتجر الإضافي يأتي من صف PlatformPricing (يُقرأ داخل الـ tx عند توفره)
+    const effectiveConfig = config ?? (await this.getPricingConfig(tx));
     const extraStoresFee =
-      Math.max(0, purchasedStoreCount - 1) * config.extraStoreFee;
+      Math.max(0, purchasedStoreCount - 1) * effectiveConfig.extraStoreFee;
 
     const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
     const { runnerShare, platformShare } = splitShares(totalFee);
