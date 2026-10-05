@@ -35,6 +35,6 @@ import { RunnerOrdersService } from './services/runner-orders.service.js';
     AdminOrderCommandService,
     RunnerOrdersService,
   ],
-  exports: [CUSTOM_FEE_LIMIT, AdminOrderCommandService],
+  exports: [AdminOrderCommandService],
 })
 export class OrdersModule {}

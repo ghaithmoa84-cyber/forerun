@@ -10,10 +10,14 @@ import { OrderStateMachine } from '../../src/state-machine/order-state-machine.j
 import { RunnerStateMachine } from '../../src/state-machine/runner-state-machine.js';
 import { ORDER_TRANSITIONS } from '../../src/state-machine/order-transitions.js';
 import { RUNNER_TRANSITIONS } from '../../src/state-machine/runner-transitions.js';
-import type { PrismaService } from '../../src/database/prisma.service.js';
+import { PrismaService } from '../../src/database/prisma.service.js';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
-import type { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
 import type { PricingService } from '../../src/modules/pricing/pricing.service.js';
+import { ConfigModule } from '@nestjs/config';
+import { MAX_CUSTOM_FEE } from '@forerun/shared-constants';
+import { Test } from '@nestjs/testing';
+import { OrdersModule } from '../../src/modules/orders/orders.module.js';
 
 describe('AdminOrderCommandService', () => {
   let service: AdminOrderCommandService;
@@ -109,6 +113,7 @@ describe('AdminOrderCommandService', () => {
       pricingService as unknown as PricingService,
       orderStateMachine,
       runnerStateMachine,
+      MAX_CUSTOM_FEE,
     );
   });
 
@@ -612,6 +617,101 @@ describe('AdminOrderCommandService', () => {
         expect(result.order.status).toBe('AWAITING_RUNNER');
         expect(result.feeChanged).toBe(true);
       });
+
+      it('8. proves no behavioral change for standard non-peripheral order without customFee (written values match previous snapshot 60/0/extra)', async () => {
+        const standardOrder = {
+          ...baseMockOrder,
+          isPeripheral: false,
+          baseFee: 60,
+          peripheralFee: 0,
+          extraStoresFee: 0,
+          customFee: 0,
+          customFeeReason: null,
+          totalFee: 60,
+          orderStores: [{ id: 'st-1' }],
+        };
+        txClient.order.findUnique.mockResolvedValue(standardOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...standardOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+        });
+
+        expect(result.feeChanged).toBe(false);
+        expect(result.newFee.baseFee).toBe(60);
+        expect(result.newFee.peripheralFee).toBe(0);
+        expect(result.newFee.extraStoresFee).toBe(0);
+        expect(result.newFee.customFee).toBe(0);
+        expect(result.newFee.totalFee).toBe(60);
+
+        // Values written to updateMany are identical to previous snapshot
+        expect(txClient.order.updateMany).toHaveBeenCalledWith({
+          where: { id: orderId, status: 'PENDING_REVIEW' },
+          data: expect.objectContaining({
+            isPeripheral: false,
+            baseFee: 60,
+            peripheralFee: 0,
+            extraStoresFee: 0,
+            customFee: 0,
+            customFeeReason: null,
+            totalFee: 60,
+          }),
+        });
+      });
+
+      it('9. proves ORDER_FEE_UPDATED audit log is emitted only when feeChanged is true', async () => {
+        // Case A: feeChanged is false -> ORDER_FEE_UPDATED is NOT logged
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await service.approveOrder(orderId, adminId, { isPeripheral: false });
+        expect(auditService.log).not.toHaveBeenCalledWith(
+          expect.objectContaining({ event: 'ORDER_FEE_UPDATED' }),
+          expect.anything(),
+        );
+
+        // Case B: feeChanged is true -> ORDER_FEE_UPDATED is logged
+        vi.clearAllMocks();
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          isPeripheral: true,
+          peripheralFee: 40,
+          totalFee: 100,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await service.approveOrder(orderId, adminId, { isPeripheral: true });
+        expect(auditService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: 'ORDER_FEE_UPDATED',
+            meta: expect.objectContaining({
+              reason: 'ADMIN_APPROVAL',
+            }),
+          }),
+          txClient,
+        );
+      });
+
+      it('10. throws ConflictException when order status changed concurrently before approval (e.g. AWAITING_RUNNER)', async () => {
+        txClient.order.findUnique.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await expect(
+          service.approveOrder(orderId, adminId, { isPeripheral: false }),
+        ).rejects.toThrow(ConflictException);
+      });
     });
   });
 
@@ -701,6 +801,48 @@ describe('AdminOrderCommandService', () => {
       await expect(
         service.rejectOrder(orderId, adminId, { cancelReason: 'Cancelled' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects order from UNDER_REVIEW to CANCELLED with cancelReason', async () => {
+      const mockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-200',
+        status: 'UNDER_REVIEW',
+        customerId: 'cust-2',
+        customer: { userId: 'usr-cust-2' },
+      };
+
+      txClient.order.findUnique.mockResolvedValue(mockOrder);
+      txClient.order.updateMany.mockResolvedValue({ count: 1 });
+      txClient.order.findUniqueOrThrow.mockResolvedValue({
+        ...mockOrder,
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelReason: 'Client requested cancellation',
+      });
+
+      const result = await service.rejectOrder(orderId, adminId, {
+        cancelReason: 'Client requested cancellation',
+      });
+
+      expect(result.order.status).toBe('CANCELLED');
+      expect(txClient.order.updateMany).toHaveBeenCalledWith({
+        where: { id: orderId, status: 'UNDER_REVIEW' },
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          cancelledByUserId: adminId,
+          cancelReason: 'Client requested cancellation',
+        }),
+      });
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'ORDER_REJECTED',
+          fromStatus: 'UNDER_REVIEW',
+          toStatus: 'CANCELLED',
+        }),
+        txClient,
+      );
     });
   });
 
@@ -1039,7 +1181,7 @@ describe('AdminOrderCommandService', () => {
   });
 
   describe('Dependency Injection with CUSTOM_FEE_LIMIT', () => {
-    it('injects customFeeLimit via CUSTOM_FEE_LIMIT token and defaults to MAX_CUSTOM_FEE', () => {
+    it('injects customFeeLimit explicitly in unit tests', () => {
       const customService = new AdminOrderCommandService(
         prisma as unknown as PrismaService,
         auditService as unknown as AuditService,
@@ -1058,8 +1200,25 @@ describe('AdminOrderCommandService', () => {
         pricingService as unknown as PricingService,
         orderStateMachine,
         runnerStateMachine,
+        MAX_CUSTOM_FEE,
       );
       expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
+      expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(MAX_CUSTOM_FEE);
+    });
+
+    it('proves that OrdersModule boots without override and the guard is 0', async () => {
+      const moduleRef = await Test.createTestingModule({
+        imports: [ConfigModule.forRoot({ isGlobal: true }), OrdersModule],
+      })
+        .overrideProvider(PrismaService)
+        .useValue(prisma)
+        .overrideProvider(NotificationsService)
+        .useValue(notificationsService)
+        .compile();
+
+      const commandService = moduleRef.get(AdminOrderCommandService);
+      expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
+      expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(MAX_CUSTOM_FEE);
     });
   });
 });

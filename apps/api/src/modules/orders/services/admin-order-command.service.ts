@@ -1,7 +1,6 @@
 import {
   Injectable,
   Inject,
-  Optional,
   Logger,
   NotFoundException,
   ConflictException,
@@ -13,7 +12,6 @@ import type { OrderStatus } from '@forerun/shared-constants';
 import {
   CONFIG,
   DEFAULT_PRICING_CONFIG,
-  MAX_CUSTOM_FEE,
   PRICING_LIMITS,
 } from '@forerun/shared-constants';
 import {
@@ -38,7 +36,6 @@ export const CUSTOM_FEE_LIMIT = 'CUSTOM_FEE_LIMIT';
 @Injectable()
 export class AdminOrderCommandService {
   private readonly logger = new Logger(AdminOrderCommandService.name);
-  private readonly maxCustomFeeLimit: number;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -47,11 +44,8 @@ export class AdminOrderCommandService {
     private readonly pricingService: PricingService,
     private readonly orderStateMachine: OrderStateMachine,
     private readonly runnerStateMachine: RunnerStateMachine,
-    @Optional() @Inject(CUSTOM_FEE_LIMIT) customFeeLimit?: number,
-  ) {
-    this.maxCustomFeeLimit =
-      typeof customFeeLimit === 'number' ? customFeeLimit : MAX_CUSTOM_FEE;
-  }
+    @Inject(CUSTOM_FEE_LIMIT) private readonly maxCustomFeeLimit: number,
+  ) {}
 
   /**
    * Validates order existence and loads relations required for approval.
