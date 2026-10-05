@@ -543,6 +543,17 @@ export function OrderDetailScreen() {
               <span>{order.extraStoresFee} ل.س</span>
             </div>
           )}
+          {order.customFee && order.customFee > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>رسم إضافي:</span>
+              <span>{order.customFee} ل.س</span>
+            </div>
+          )}
+          {order.customFeeReason && (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              السبب: {order.customFeeReason}
+            </div>
+          )}
           <div
             style={{
               display: 'flex',

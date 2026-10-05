@@ -53,6 +53,8 @@ data class CustomerOrderDetail(
     val baseFee: Int = 0,
     val peripheralFee: Int = 0,
     val extraStoresFee: Int = 0,
+    val customFee: Int = 0,
+    val customFeeReason: String? = null,
     val totalFee: Int = 0,
     val deliveryLat: Double? = null,
     val deliveryLng: Double? = null,

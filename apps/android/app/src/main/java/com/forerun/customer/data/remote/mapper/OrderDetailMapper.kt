@@ -42,6 +42,8 @@ object OrderDetailMapper {
             baseFee = baseFee,
             peripheralFee = peripheralFee,
             extraStoresFee = extraStoresFee,
+            customFee = customFee,
+            customFeeReason = customFeeReason,
             totalFee = totalFee,
             deliveryLat = deliveryLat,
             deliveryLng = deliveryLng,

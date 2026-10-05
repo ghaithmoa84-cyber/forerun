@@ -972,6 +972,23 @@ private fun PricingCard(order: CustomerOrderDetail) {
                 )
             }
 
+            if (order.customFee > 0) {
+                Spacer(modifier = Modifier.height(Dimens.Space4))
+                PricingRow(
+                    label = stringResource(R.string.order_detail_custom_fee),
+                    value = order.customFee
+                )
+            }
+
+            if (!order.customFeeReason.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(Dimens.Space4))
+                Text(
+                    text = stringResource(R.string.order_detail_custom_fee_reason, order.customFeeReason),
+                    fontSize = 12.sp,
+                    color = ForerunTextMuted
+                )
+            }
+
             Spacer(modifier = Modifier.height(Dimens.Space8))
             HorizontalDivider(color = ForerunSoftSurface, thickness = 1.dp)
             Spacer(modifier = Modifier.height(Dimens.Space8))

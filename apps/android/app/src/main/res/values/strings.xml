@@ -249,6 +249,8 @@
     <string name="order_detail_base_fee">رسم التوصيل الأساسي</string>
     <string name="order_detail_peripheral_fee">رسم منطقة طرفية</string>
     <string name="order_detail_extra_stores_fee">رسم متاجر إضافية</string>
+    <string name="order_detail_custom_fee">رسم إضافي</string>
+    <string name="order_detail_custom_fee_reason">السبب: %1$s</string>
     <string name="order_detail_total_fee">المجموع النهائي</string>
     <string name="order_detail_currency">ل.س</string>
     <string name="order_detail_cancel_btn">إلغاء الطلب</string>
@@ -356,7 +358,7 @@
     <string name="support_faq_1_question">كيف يعمل تطبيق فَوْراً في القنجرة؟</string>
     <string name="support_faq_1_answer">تطبيق فَوْراً هو منصتك المحلية للطلب السريع في القنجرة. تطلب ما تحتاجه من بقالة أو أغراض، ويتولى الكابتن شراءها من المحلات المتاحة وتوصيلها حتى باب منزلك مع تتبع مباشر لحالة الطلب.</string>
     <string name="support_faq_2_question">كيف يتم احتساب رسوم التوصيل؟</string>
-    <string name="support_faq_2_answer">رسوم التوصيل ثابتة وشفافة تبدأ من الرسم الأساسي (60 ل.س). في حال الشراء من متاجر متعددة يضاف رسم لكل متجر إضافي، كما يضاف رسم للمناطق الطرفية البعيدة، وتظهر لك الرسوم المحتسبة في تفاصيل الطلب.</string>
+    <string name="support_faq_2_answer">رسوم التوصيل شفافة وتعتمد على إعدادات المنصة الحالية: رسم أساسي، ورسم للمناطق الطرية، ورسم لكل متجر إضافي. قد يضاف رسم إضافي للطلب مع سبب مبرر. تظهر لك الرسوم المحتكرة بدقة في تفاصيل الطلب قبل التأكيد.</string>
     <string name="support_faq_3_question">كيف أتواصل مع الكابتن المسؤول عن طلبي؟</string>
     <string name="support_faq_3_answer">بمجرد قبول وتعيين كابتن لطلبك، ستظهر لك بطاقة الكابتن في شاشة تفاصيل الطلب، وبإمكانك التواصل معه مباشرة عبر الواتساب أو الاتصال الهاتفي بضغطة زر واحدة.</string>
     <string name="support_faq_4_question">هل يمكنني تعديل أو إلغاء الطلب بعد إرساله؟</string>

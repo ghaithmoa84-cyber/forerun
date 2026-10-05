@@ -479,12 +479,24 @@ export function ActiveOrderPage() {
                 <span>{order.pricing.peripheralFee} ل.س</span>
               </div>
             )}
-            {order.pricing.extraStoresFee > 0 && (
-              <div className="fee-row">
-                <span>رسم متاجر إضافية:</span>
-                <span>{order.pricing.extraStoresFee} ل.س</span>
-              </div>
-            )}
+{order.pricing.extraStoresFee > 0 && (
+            <div className="fee-row">
+              <span>رسم متجر إضافية:</span>
+              <span>{order.pricing.extraStoresFee} ل.س</span>
+            </div>
+          )}
+          {order.pricing.customFee && order.pricing.customFee > 0 && (
+            <div className="fee-row">
+              <span>رسم إضافي:</span>
+              <span>{order.pricing.customFee} ل.س</span>
+            </div>
+          )}
+          {order.pricing.customFeeReason && (
+            <div className="fee-row" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              <span>السبب:</span>
+              <span>{order.pricing.customFeeReason}</span>
+            </div>
+          )}
             <div className="fee-row fee-row--total">
               <span>إجمالي رسم التوصيل:</span>
               <span className="total-fee">{order.pricing.totalFee} ل.س</span>

@@ -12,6 +12,8 @@ data class OrderDetailResponseDto(
     @Json(name = "baseFee") val baseFee: Int = 0,
     @Json(name = "peripheralFee") val peripheralFee: Int = 0,
     @Json(name = "extraStoresFee") val extraStoresFee: Int = 0,
+    @Json(name = "customFee") val customFee: Int = 0,
+    @Json(name = "customFeeReason") val customFeeReason: String? = null,
     @Json(name = "totalFee") val totalFee: Int = 0,
     @Json(name = "deliveryLat") val deliveryLat: Double? = null,
     @Json(name = "deliveryLng") val deliveryLng: Double? = null,
