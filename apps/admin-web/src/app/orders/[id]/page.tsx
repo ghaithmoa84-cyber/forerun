@@ -580,31 +580,6 @@ export default function OrderDetailPage() {
               <div className="text-xs text-slate-400">جاري إعداد المعاينة...</div>
             )}
           </div>
-
-          {/* Action Buttons in Card */}
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-1">
-            <button
-              onClick={() => setIsRejectOpen(true)}
-              disabled={actionLoading}
-              className="w-full sm:w-auto px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs transition-colors disabled:opacity-50"
-            >
-              رفض الطلب
-            </button>
-            <button
-              onClick={handleApprove}
-              disabled={actionLoading || previewLoading}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md transition-all disabled:opacity-50"
-            >
-              {actionLoading ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>جاري الاعتماد...</span>
-                </>
-              ) : (
-                <span>اعتماد الطلب بالرسوم المعروضة</span>
-              )}
-            </button>
-          </div>
         </div>
       )}
 
