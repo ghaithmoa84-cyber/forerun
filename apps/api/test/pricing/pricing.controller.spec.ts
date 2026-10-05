@@ -168,6 +168,7 @@ describe('PricingController (Sprint 6A-7)', () => {
         peripheralFee: 40,
         extraStoresFee: 20,
         customFee: 50,
+        customFeeReason: 'طرد ثقيل',
         totalFee: 170,
         runnerShare: 127,
         platformShare: 43,

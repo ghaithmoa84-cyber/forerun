@@ -267,7 +267,7 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
     expect(order.status).toBe('AWAITING_RUNNER');
   });
 
-  it('11. Production default guard: HTTP PUT approve with customFee = 50 returns 400 Bad Request via Zod pipe', async () => {
+it('11. Production default guard: HTTP PUT approve with customFee = 501 returns 400 via Zod pipe (6B cap)', async () => {
     const createRes = await createCustomerOrder(['Store Guard']);
     expect(createRes.status).toBe(201);
     const orderId = createRes.body.id;
@@ -277,17 +277,42 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
       .set('Authorization', `Bearer ${adminToken}`)
       .send({});
 
-    // HTTP request with production pipe (MAX_CUSTOM_FEE = 0)
+    // HTTP request with production pipe (MAX_CUSTOM_FEE = 500)
+    const approveRes = await request
+      .put(`/api/v1/admin/orders/${orderId}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        isPeripheral: false,
+        customFee: 501,
+        customFeeReason: 'Spiderman above 6B cap',
+      });
+
+    expect(approveRes.status).toBe(400);
+    expect(JSON.stringify(approveRes.body)).toContain('customFee');
+  });
+
+  it('11b. HTTP PUT approve with customFee = 50 succeeds now that cap is 500 (6B)', async () => {
+    const createRes = await createCustomerOrder(['Store Guard']);
+    expect(createRes.status).toBe(201);
+    const orderId = createRes.body.id;
+
+    await request
+      .put(`/api/v1/admin/orders/${orderId}/start-review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+
     const approveRes = await request
       .put(`/api/v1/admin/orders/${orderId}/approve`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         isPeripheral: false,
         customFee: 50,
-        customFeeReason: 'محاولة إرسال رسم إضافي عبر HTTP في بيئة الإنتاج',
+        customFeeReason: 'Spiderman 6B',
       });
 
-    expect(approveRes.status).toBe(400);
-    expect(JSON.stringify(approveRes.body)).toContain('customFee');
+expect(approveRes.status).toBe(200);
+    expect(approveRes.body.newFee.customFee).toBe(50);
+    expect(approveRes.body.newFee.totalFee).toBe(110);
+    expect(approveRes.body.order.status).toBe('AWAITING_RUNNER');
   });
 });

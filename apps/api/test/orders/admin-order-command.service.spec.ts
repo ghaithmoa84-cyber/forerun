@@ -89,7 +89,7 @@ describe('AdminOrderCommandService', () => {
       getPricingConfig: vi
         .fn()
         .mockResolvedValue({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 }),
-      calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount, customFee }, config) => {
+      calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount, customFee, customFeeReason }, config) => {
         const baseFee = config?.baseFee ?? 60;
         const peripheralFee = isPeripheral ? (config?.peripheralFee ?? 40) : 0;
         const extraStoresFee =
@@ -101,6 +101,7 @@ describe('AdminOrderCommandService', () => {
           peripheralFee,
           extraStoresFee,
           customFee: effectiveCustomFee,
+          customFeeReason: customFeeReason ?? null,
           totalFee,
           runnerShare: Math.floor(totalFee * 0.75),
           platformShare: Math.ceil(totalFee * 0.25),
@@ -503,15 +504,26 @@ describe('AdminOrderCommandService', () => {
         ).rejects.toThrow(BadRequestException);
       });
 
-      it('4. production guard: rejects customFee = 1 with default limit 0', async () => {
-        // default limit is MAX_CUSTOM_FEE = 0
-        await expect(
-          service.approveOrder(orderId, adminId, {
-            isPeripheral: false,
-            customFee: 1,
-            customFeeReason: 'محاولة في 6A',
-          }),
-        ).rejects.toThrow(BadRequestException);
+it('4. production guard: default limit is now 500 (6B) — customFee = 1 is allowed', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          customFee: 1,
+          customFeeReason: 'Sm 6B',
+          totalFee: 61,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+          customFee: 1,
+          customFeeReason: 'Sm 6B',
+        });
+
+        expect(result.feeChanged).toBe(true);
+        expect(result.newFee.customFee).toBe(1);
+        expect(result.newFee.totalFee).toBe(61);
       });
 
       describe('Sprint 6A-3.1b: pricing wired from PlatformPricing row', () => {
@@ -594,18 +606,41 @@ describe('AdminOrderCommandService', () => {
           expect(result.newFee.totalFee).toBe(185);
         });
 
-        it('13. MAX_CUSTOM_FEE = 0 guard stays active and pricing row is never read when customFee is rejected', async () => {
+it('13. MAX_CUSTOM_FEE = 500 guard allows customFee within cap and pricing row is read', async () => {
           pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+          txClient.order.findUnique.mockResolvedValue(twoStoreOrder);
+          txClient.order.updateMany.mockResolvedValue({ count: 1 });
+          txClient.order.findUniqueOrThrow.mockResolvedValue({
+            ...twoStoreOrder,
+            customFee: 1,
+            totalFee: 161,
+            status: 'AWAITING_RUNNER',
+          });
+
+          const result = await service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 1,
+            customFeeReason: 'Sm 6B',
+          });
+
+          expect(MAX_CUSTOM_FEE).toBe(500);
+          expect(pricingService.getPricingConfig).toHaveBeenCalled();
+          expect(pricingService.calculateFee).toHaveBeenCalled();
+          expect(result.newFee.customFee).toBe(1);
+        });
+
+        it('14. MAX_CUSTOM_FEE = 500 rejects customFee above cap', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+          txClient.order.findUnique.mockResolvedValue(twoStoreOrder);
 
           await expect(
             service.approveOrder(orderId, adminId, {
               isPeripheral: false,
-              customFee: 1,
-              customFeeReason: 'محاولة بعد ربط الإعدادات',
+              customFee: 501,
+              customFeeReason: 'super limit',
             }),
           ).rejects.toThrow(BadRequestException);
 
-          expect(MAX_CUSTOM_FEE).toBe(0);
           expect(pricingService.getPricingConfig).not.toHaveBeenCalled();
           expect(pricingService.calculateFee).not.toHaveBeenCalled();
           expect(txClient.order.updateMany).not.toHaveBeenCalled();
@@ -1305,11 +1340,11 @@ describe('AdminOrderCommandService', () => {
         runnerStateMachine,
         MAX_CUSTOM_FEE,
       );
-      expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
+      expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(500);
       expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(MAX_CUSTOM_FEE);
     });
 
-    it('proves that OrdersModule boots without override and the guard is 0', async () => {
+    it('proves that OrdersModule boots without override and the guard is 500', async () => {
       const moduleRef = await Test.createTestingModule({
         imports: [ConfigModule.forRoot({ isGlobal: true }), OrdersModule],
       })
@@ -1320,7 +1355,7 @@ describe('AdminOrderCommandService', () => {
         .compile();
 
       const commandService = moduleRef.get(AdminOrderCommandService);
-      expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
+      expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(500);
       expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(MAX_CUSTOM_FEE);
     });
   });

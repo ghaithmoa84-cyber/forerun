@@ -222,7 +222,7 @@ describe('Sprint 6A-3.1b: Dynamic Pricing Wiring (S2)', () => {
     expect(finalOrder.totalFee).toBe(140);
   });
 
-  it('4. customFee is still rejected on approval by the MAX_CUSTOM_FEE = 0 guard', async () => {
+it('4. customFee within cap (50) is accepted on approval now that MAX_CUSTOM_FEE = 500 (6B)', async () => {
     await updatePricing(80, 30, 50);
 
     const createRes = await createCustomerOrder(['Store Guard']);
@@ -235,8 +235,29 @@ describe('Sprint 6A-3.1b: Dynamic Pricing Wiring (S2)', () => {
       .send({
         isPeripheral: false,
         customFee: 50,
-        customFeeReason: 'محاولة رسم إضافي بعد ربط الإعدادات',
+        customFeeReason: 'Spiderman r 6B',
       });
+
+    expect(approveRes.status).toBe(200);
+    expect(approveRes.body.newFee.customFee).toBe(50);
+    expect(approveRes.body.newFee.totalFee).toBe(130);
+  });
+
+  it('4b. customFee above cap (501) is still rejected by the MAX_CUSTOM_FEE = 500 guard', async () => {
+    await updatePricing(80, 30, 50);
+
+    const createRes = await createCustomerOrder(['Store Guard']);
+    expect(createRes.status).toBe(201);
+    const orderId = createRes.body.id;
+
+    const approveRes = await request
+      .put(`/api/v1/admin/orders/${orderId}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        isPeripheral: false,
+        customFee: 501,
+        customFeeReason: 'Spiderman above cap',
+});
 
     expect(approveRes.status).toBe(400);
     expect(JSON.stringify(approveRes.body)).toContain('customFee');

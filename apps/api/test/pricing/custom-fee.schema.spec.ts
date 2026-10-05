@@ -204,9 +204,9 @@ describe('Pricing & CustomFee Schemas (Sprint 6A-4)', () => {
     });
   });
 
-  describe('Production ApproveOrderSchema (maxCustomFee = MAX_CUSTOM_FEE = 0)', () => {
-    it('verifies MAX_CUSTOM_FEE is 0 and CUSTOM_FEE_CAP is 500', () => {
-      expect(MAX_CUSTOM_FEE).toBe(0);
+  describe('Production ApproveOrderSchema (maxCustomFee = MAX_CUSTOM_FEE = 500)', () => {
+    it('verifies MAX_CUSTOM_FEE is 500 and CUSTOM_FEE_CAP is 500', () => {
+      expect(MAX_CUSTOM_FEE).toBe(500);
       expect(CUSTOM_FEE_CAP).toBe(500);
       expect(CUSTOM_FEE_REASON_MAX_LENGTH).toBe(200);
     });
@@ -219,11 +219,23 @@ describe('Pricing & CustomFee Schemas (Sprint 6A-4)', () => {
       expect(result.customFee).toBe(0);
     });
 
-    it('rejects customFee = 1 due to production guard (MAX_CUSTOM_FEE = 0)', () => {
+    it('accepts customFee = 1 now that production guard is lifted (6B)', () => {
       const parsed = ApproveOrderSchema.safeParse({
         isPeripheral: false,
         customFee: 1,
-        customFeeReason: 'محاولة استخدام customFee في 6A',
+        customFeeReason: 'Sm 6B',
+      });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.customFee).toBe(1);
+      }
+    });
+
+    it('rejects customFee = 501 above the 500 cap', () => {
+      const parsed = ApproveOrderSchema.safeParse({
+        isPeripheral: false,
+        customFee: 501,
+        customFeeReason: 'super limit',
       });
       expect(parsed.success).toBe(false);
       if (!parsed.success) {
@@ -231,7 +243,6 @@ describe('Pricing & CustomFee Schemas (Sprint 6A-4)', () => {
           (i) => i.path.join('.') === 'customFee',
         );
         expect(issue).toBeDefined();
-        expect(issue?.message).toBe('القيمة طويلة جدًا');
       }
     });
 
