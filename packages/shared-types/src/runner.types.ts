@@ -196,7 +196,8 @@ export const ApproveOrderSchema = createApproveOrderSchema({
   maxCustomFee: MAX_CUSTOM_FEE,
 });
 
-export type ApproveOrderRequest = z.infer<typeof ApproveOrderSchema>;
+export type ApproveOrderRequest = z.input<typeof ApproveOrderSchema>;
+export type ApproveOrderDto = z.infer<typeof ApproveOrderSchema>;
 
 export const AssignRunnerSchema = z.object({
   runnerId: z.string().trim().min(1, "runnerId cannot be empty"),

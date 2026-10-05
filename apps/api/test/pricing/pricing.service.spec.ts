@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { PRICING, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
 import { PricingService } from '../../src/modules/pricing/pricing.service.js';
 import type { PrismaService } from '../../src/database/prisma.service.js';
+import type { Prisma } from '@prisma/client';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
 
@@ -355,7 +356,7 @@ describe('PricingService', () => {
         },
       };
 
-      await service.recalculateFee('ord-tx', mockTx as any);
+      await service.recalculateFee('ord-tx', mockTx as unknown as Prisma.TransactionClient);
 
       expect(mockTx.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'ord-tx' },
@@ -688,7 +689,7 @@ describe('PricingService', () => {
         },
       };
 
-      const config = await service.getPricingConfig(mockTx as any);
+      const config = await service.getPricingConfig(mockTx as unknown as Prisma.TransactionClient);
 
       expect(config).toEqual({
         baseFee: 90,
