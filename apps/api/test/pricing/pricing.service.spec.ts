@@ -942,6 +942,208 @@ describe('PricingService', () => {
     });
   });
 
+  describe('pricing wired from PlatformPricing row (Sprint 6A-3.1b)', () => {
+    it('previewFee reads extraStoreFee from the DB row (3 stores, row extraStoreFee=30 -> 60)', async () => {
+      service.disableCacheForTesting();
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 80,
+        peripheralFee: 50,
+        extraStoreFee: 30,
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-wire-1',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }, { id: 's2' }, { id: 's3' }],
+      });
+
+      const result = await service.previewFee('ord-wire-1', {
+        isPeripheral: false,
+        customFee: 0,
+      });
+
+      // extraStoresFee = (3 - 1) * 30 = 60 من الصف، لا 20 من الثابت
+      expect(result.extraStoresFee).toBe(60);
+      expect(result.baseFee).toBe(60);
+      expect(result.totalFee).toBe(120);
+      expect(result.runnerShare).toBe(90);
+      expect(result.platformShare).toBe(30);
+      expect(prisma.platformPricing.findUnique).toHaveBeenCalledWith({
+        where: { id: 'default' },
+      });
+      expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('previewFee keeps the order baseFee snapshot when dto.baseFee is absent, even if the row differs (D21)', async () => {
+      service.disableCacheForTesting();
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 500,
+        peripheralFee: 50,
+        extraStoreFee: 30,
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-wire-2',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }],
+      });
+
+      const result = await service.previewFee('ord-wire-2', {
+        isPeripheral: false,
+        customFee: 0,
+      });
+
+      expect(result.baseFee).toBe(60);
+      expect(result.totalFee).toBe(60);
+    });
+
+    it('previewFee falls back to DEFAULT_PRICING_CONFIG when the row is missing', async () => {
+      prisma.platformPricing.findUnique.mockResolvedValue(null);
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'ord-wire-3',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }, { id: 's2' }],
+      });
+
+      const result = await service.previewFee('ord-wire-3', {
+        isPeripheral: false,
+        customFee: 0,
+      });
+
+      expect(result).toEqual({
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 20,
+        customFee: 0,
+        totalFee: 80,
+        runnerShare: 60,
+        platformShare: 20,
+      });
+    });
+
+    it('recalculateFee without config reads the row and writes only extraStoresFee/totalFee, keeping the baseFee snapshot (D16)', async () => {
+      const mockOrder = {
+        id: 'ord-wire-4',
+        orderNumber: 'ORD-WIRE-004',
+        status: 'IN_PROGRESS',
+        customerId: 'cust-wire-4',
+        isPeripheral: false,
+        baseFee: 80,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        totalFee: 80,
+        orderStores: [{ status: 'PURCHASED' }, { status: 'PURCHASED' }],
+      };
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 30,
+      });
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+      prisma.order.update.mockResolvedValue({
+        ...mockOrder,
+        extraStoresFee: 30,
+        totalFee: 110,
+      });
+
+      const result = await service.recalculateFee('ord-wire-4');
+
+      // (2 - 1) * 30 من الصف
+      expect(result.newFee.extraStoresFee).toBe(30);
+      expect(result.newFee.baseFee).toBe(80);
+      expect(result.newFee.peripheralFee).toBe(0);
+      expect(result.newFee.totalFee).toBe(110);
+      expect(result.feeChanged).toBe(true);
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'ord-wire-4' },
+        data: { extraStoresFee: 30, totalFee: 110 },
+      });
+    });
+
+    it('recalculateFee respects an explicitly passed config and does not query the row (backward compatibility)', async () => {
+      const mockOrder = {
+        id: 'ord-wire-5',
+        orderNumber: 'ORD-WIRE-005',
+        status: 'IN_PROGRESS',
+        customerId: 'cust-wire-5',
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        totalFee: 60,
+        orderStores: [{ status: 'PURCHASED' }, { status: 'PURCHASED' }],
+      };
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 30,
+      });
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+      prisma.order.update.mockResolvedValue({});
+
+      const result = await service.recalculateFee('ord-wire-5', undefined, {
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 15,
+      });
+
+      expect(result.newFee.extraStoresFee).toBe(15);
+      expect(result.newFee.totalFee).toBe(75);
+      expect(prisma.platformPricing.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('recalculateFee reads the row through the provided transaction client', async () => {
+      const mockTx = {
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'ord-wire-6',
+            orderNumber: 'ORD-WIRE-006',
+            status: 'IN_PROGRESS',
+            customerId: 'cust-wire-6',
+            isPeripheral: false,
+            baseFee: 60,
+            peripheralFee: 0,
+            extraStoresFee: 0,
+            totalFee: 60,
+            orderStores: [
+              { status: 'PURCHASED' },
+              { status: 'PURCHASED' },
+              { status: 'PURCHASED' },
+            ],
+          }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        platformPricing: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: 'default',
+            baseFee: 60,
+            peripheralFee: 40,
+            extraStoreFee: 25,
+          }),
+        },
+      };
+
+      const result = await service.recalculateFee(
+        'ord-wire-6',
+        mockTx as unknown as Prisma.TransactionClient,
+      );
+
+      expect(mockTx.platformPricing.findUnique).toHaveBeenCalledWith({
+        where: { id: 'default' },
+      });
+      // (3 - 1) * 25 = 50
+      expect(result.newFee.extraStoresFee).toBe(50);
+      expect(result.newFee.totalFee).toBe(110);
+      expect(prisma.platformPricing.findUnique).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getPlatformPricing (Sprint 6A-7)', () => {
     it('returns DEFAULT_PRICING_CONFIG when default row is absent', async () => {
       prisma.platformPricing.findUnique.mockResolvedValue(null);

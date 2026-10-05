@@ -49,6 +49,7 @@ describe('AdminOrderCommandService', () => {
   };
   let pricingService: {
     calculateFee: ReturnType<typeof vi.fn>;
+    getPricingConfig: ReturnType<typeof vi.fn>;
   };
   let orderStateMachine: OrderStateMachine;
   let runnerStateMachine: RunnerStateMachine;
@@ -85,10 +86,14 @@ describe('AdminOrderCommandService', () => {
     };
 
     pricingService = {
+      getPricingConfig: vi
+        .fn()
+        .mockResolvedValue({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 }),
       calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount, customFee }, config) => {
         const baseFee = config?.baseFee ?? 60;
-        const peripheralFee = isPeripheral ? 40 : 0;
-        const extraStoresFee = Math.max(0, (purchasedStoreCount || 0) - 1) * 20;
+        const peripheralFee = isPeripheral ? (config?.peripheralFee ?? 40) : 0;
+        const extraStoresFee =
+          Math.max(0, (purchasedStoreCount || 0) - 1) * (config?.extraStoreFee ?? 20);
         const effectiveCustomFee = customFee ?? 0;
         const totalFee = baseFee + peripheralFee + extraStoresFee + effectiveCustomFee;
         return {
@@ -507,6 +512,104 @@ describe('AdminOrderCommandService', () => {
             customFeeReason: 'محاولة في 6A',
           }),
         ).rejects.toThrow(BadRequestException);
+      });
+
+      describe('Sprint 6A-3.1b: pricing wired from PlatformPricing row', () => {
+        // قيم الصف مختلفة عمدًا عن قيم اللقطة/الافتراضية لإثبات مصدر الأرقام
+        const rowConfig = { baseFee: 999, peripheralFee: 55, extraStoreFee: 35 };
+
+        const twoStoreOrder = {
+          ...baseMockOrder,
+          baseFee: 60,
+          peripheralFee: 0,
+          extraStoresFee: 20,
+          totalFee: 80,
+          orderStores: [{ id: 'st-1' }, { id: 'st-2' }],
+        };
+
+        it('11. takes peripheralFee and extraStoreFee from the DB row while baseFee stays the order snapshot (D21)', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+          txClient.order.findUnique.mockResolvedValue(twoStoreOrder);
+          txClient.order.updateMany.mockResolvedValue({ count: 1 });
+          txClient.order.findUniqueOrThrow.mockResolvedValue({
+            ...twoStoreOrder,
+            isPeripheral: true,
+            peripheralFee: 55,
+            extraStoresFee: 35,
+            totalFee: 150,
+            status: 'AWAITING_RUNNER',
+          });
+
+          const result = await service.approveOrder(orderId, adminId, {
+            isPeripheral: true,
+          });
+
+          // تُقرأ الإعدادات من داخل نفس الـ transaction
+          expect(pricingService.getPricingConfig).toHaveBeenCalledWith(txClient);
+          // baseFee من لقطة الطلب (60) لا من الصف (999) — D21
+          expect(pricingService.calculateFee).toHaveBeenCalledWith(
+            expect.objectContaining({ isPeripheral: true, purchasedStoreCount: 2 }),
+            { baseFee: 60, peripheralFee: 55, extraStoreFee: 35 },
+          );
+
+          expect(result.newFee.baseFee).toBe(60);
+          expect(result.newFee.peripheralFee).toBe(55);
+          expect(result.newFee.extraStoresFee).toBe(35);
+          expect(result.newFee.totalFee).toBe(150);
+
+          expect(txClient.order.updateMany).toHaveBeenCalledWith({
+            where: { id: orderId, status: 'PENDING_REVIEW' },
+            data: expect.objectContaining({
+              baseFee: 60,
+              peripheralFee: 55,
+              extraStoresFee: 35,
+              totalFee: 150,
+            }),
+          });
+        });
+
+        it('12. admin baseFee override still wins over the DB row baseFee (D21)', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+          txClient.order.findUnique.mockResolvedValue(twoStoreOrder);
+          txClient.order.updateMany.mockResolvedValue({ count: 1 });
+          txClient.order.findUniqueOrThrow.mockResolvedValue({
+            ...twoStoreOrder,
+            baseFee: 95,
+            peripheralFee: 55,
+            extraStoresFee: 35,
+            totalFee: 185,
+            status: 'AWAITING_RUNNER',
+          });
+
+          const result = await service.approveOrder(orderId, adminId, {
+            isPeripheral: true,
+            baseFee: 95,
+          });
+
+          expect(pricingService.calculateFee).toHaveBeenCalledWith(
+            expect.anything(),
+            { baseFee: 95, peripheralFee: 55, extraStoreFee: 35 },
+          );
+          expect(result.newFee.baseFee).toBe(95);
+          expect(result.newFee.totalFee).toBe(185);
+        });
+
+        it('13. MAX_CUSTOM_FEE = 0 guard stays active and pricing row is never read when customFee is rejected', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+
+          await expect(
+            service.approveOrder(orderId, adminId, {
+              isPeripheral: false,
+              customFee: 1,
+              customFeeReason: 'محاولة بعد ربط الإعدادات',
+            }),
+          ).rejects.toThrow(BadRequestException);
+
+          expect(MAX_CUSTOM_FEE).toBe(0);
+          expect(pricingService.getPricingConfig).not.toHaveBeenCalled();
+          expect(pricingService.calculateFee).not.toHaveBeenCalled();
+          expect(txClient.order.updateMany).not.toHaveBeenCalled();
+        });
       });
 
       it('5. baseFee override: replaces snapshot and sets feeOverride in audit, rejects out of range', async () => {
