@@ -31,12 +31,15 @@
 > 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500`:** حساب صحيح لحماية الحصص وتفادي انحرافات الفواصل (القرار D12).
 
 ### سبرنت 6B (أسطح الزبون والمندوب وAndroid)
-| # | المهمة | الحالة | المسؤول | ملاحظات |
-|---|---|---|---|---|
-| 6B-1 | **أسطح العميل (`customer-web`)** | ⏳ مخططة | @feature-dev | عرض `customFee` و `customFeeReason` في تفاصيل الطلب ومنع التناقض الحسابي (H4) |
-| 6B-2 | **أسطح المندوب (`runner-pwa`)** | ⏳ مخططة | @feature-dev | عرض `customFee` وتفاصيل الرسوم في شاشات المندوب |
-| 6B-3 | **تطبيق Android للعميل** | ⏳ مخططة | @feature-dev | تحديث DTOs وشاشات الطلبات لعرض الرسوم الإضافية والسبب |
-| 6B-4 | **رفع حارس الإنتاج `MAX_CUSTOM_FEE = 500`** | ⏳ مخططة | @feature-dev | بعد اكتمال واختبار كافة أسطح العرض للزبون والمندوب (القرار D14) |
+| # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
+|---|---|---|---|---|---|
+| 6B-1 | رفع `MAX_CUSTOM_FEE` إلى 500 + إظهار customFee/customFeeReason في customer-web (OrderDetail) | عالية | ⏳ مخططة | @feature-dev | بعد اكتمال أسطح العرض للزبون والمندوب (القرار D14) |
+| 6B-2 | إضافة customFee/customFeeReason + estimatedFee الكاملة في runner-pwa (ActiveOrder) | عالية | ⏳ مخططة | @feature-dev | شاشة الطلب النشط والتفاصيل |
+| 6B-3 | إضافة customFee/customFeeReason في Android OrderDetailDtos.kt + واجهة العرض | عالية | ⏳ مخططة | @feature-dev | تحديث DTOs وشاشات الطلبات |
+| 6B-4 | تعديل نص strings.xml:359 («ثابتة» + «60 ل.س» → مرن) | متوسطة | ⏳ مخططة | @feature-dev | النص الحالي يفرض رسومًا ثابتة؛ يجب أن يعكس الديناميكية |
+| 6B-5 | إضافة estimatedFee.customFee في حمولة order:assigned للمندوب | متوسطة | ⏳ مخططة | @feature-dev | WebSocket event payload للـ runner |
+| 6B-6 | اختبارات وحدة مخصصة لـ DeviceToken | منخفضة | ⏳ مخططة | @test-engineer | تغطية CRUD DeviceToken و FCM integration |
+| 6B-7 | حقن TTL في PricingService بدل دوال *ForTesting | منخفضة | ⏳ مخططة | @feature-dev | تحسين قابلية الاختبار وإزالة دوال الاختبار الخاصة |
 
 ---
 

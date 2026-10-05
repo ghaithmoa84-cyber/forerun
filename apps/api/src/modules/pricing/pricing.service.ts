@@ -452,6 +452,12 @@ export class PricingService {
     }
   }
 
+  /**
+   * config اختياري عمدًا: المستدعيان الحاليان (purchaseStore, deliverOrder)
+   * يحتاجان السعر الحي من PlatformPricing (D16: extraStoreFee بلا لقطة).
+   * إن مُرِّر config يُستخدم مباشرة (للاختبار أو مسارات ذات لقطة).
+   * إن غاب، يُقرأ من DB داخل tx — لا تستخدم هذه الدالة خارج transaction.
+   */
   async recalculateFee(
     orderId: string,
     tx?: Prisma.TransactionClient,
