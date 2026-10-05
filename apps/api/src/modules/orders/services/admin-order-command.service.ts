@@ -1,5 +1,7 @@
 import {
   Injectable,
+  Inject,
+  Optional,
   Logger,
   NotFoundException,
   ConflictException,
@@ -31,21 +33,12 @@ import { OrderStateMachine } from '../../../state-machine/order-state-machine.js
 import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.js';
 import type { Prisma } from '@prisma/client';
 
+export const CUSTOM_FEE_LIMIT = 'CUSTOM_FEE_LIMIT';
+
 @Injectable()
 export class AdminOrderCommandService {
   private readonly logger = new Logger(AdminOrderCommandService.name);
-  private maxCustomFeeLimit: number = MAX_CUSTOM_FEE;
-
-  /**
-   * Helper methods for controlling the custom fee limit during testing
-   */
-  setMaxCustomFeeForTesting(limit: number): void {
-    this.maxCustomFeeLimit = limit;
-  }
-
-  resetMaxCustomFeeForTesting(): void {
-    this.maxCustomFeeLimit = MAX_CUSTOM_FEE;
-  }
+  private readonly maxCustomFeeLimit: number;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -54,7 +47,11 @@ export class AdminOrderCommandService {
     private readonly pricingService: PricingService,
     private readonly orderStateMachine: OrderStateMachine,
     private readonly runnerStateMachine: RunnerStateMachine,
-  ) {}
+    @Optional() @Inject(CUSTOM_FEE_LIMIT) customFeeLimit?: number,
+  ) {
+    this.maxCustomFeeLimit =
+      typeof customFeeLimit === 'number' ? customFeeLimit : MAX_CUSTOM_FEE;
+  }
 
   /**
    * Validates order existence and loads relations required for approval.
@@ -418,10 +415,8 @@ export class AdminOrderCommandService {
     orderId: string,
     adminId: string,
     dto: ApproveOrderRequest,
-    options?: { maxCustomFee?: number },
   ): Promise<AdminOrderApprovalResult> {
-    const effectiveMaxCustomFee =
-      options?.maxCustomFee ?? this.maxCustomFeeLimit;
+    const effectiveMaxCustomFee = this.maxCustomFeeLimit;
 
     // Defensive check on customFee
     const customFee = dto.customFee ?? 0;

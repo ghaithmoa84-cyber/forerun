@@ -381,7 +381,15 @@ describe('AdminOrderCommandService', () => {
       });
 
       it('2. approves order with customFee = 50 and reason with test cap 500', async () => {
-        service.setMaxCustomFeeForTesting(500);
+        const serviceWithCap500 = new AdminOrderCommandService(
+          prisma as unknown as PrismaService,
+          auditService as unknown as AuditService,
+          notificationsService as unknown as NotificationsService,
+          pricingService as unknown as PricingService,
+          orderStateMachine,
+          runnerStateMachine,
+          500,
+        );
         txClient.order.findUnique.mockResolvedValue(baseMockOrder);
         txClient.order.updateMany.mockResolvedValue({ count: 1 });
         txClient.order.findUniqueOrThrow.mockResolvedValue({
@@ -392,7 +400,7 @@ describe('AdminOrderCommandService', () => {
           status: 'AWAITING_RUNNER',
         });
 
-        const result = await service.approveOrder(orderId, adminId, {
+        const result = await serviceWithCap500.approveOrder(orderId, adminId, {
           isPeripheral: false,
           customFee: 50,
           customFeeReason: 'طلب خاص من العميل خارج الأوقات',
@@ -427,15 +435,22 @@ describe('AdminOrderCommandService', () => {
           }),
           txClient,
         );
-        service.resetMaxCustomFeeForTesting();
       });
 
       it('3. rejects invalid customFee: positive without reason, zero with reason, negative, fraction, over cap', async () => {
-        service.setMaxCustomFeeForTesting(500);
+        const serviceWithCap500 = new AdminOrderCommandService(
+          prisma as unknown as PrismaService,
+          auditService as unknown as AuditService,
+          notificationsService as unknown as NotificationsService,
+          pricingService as unknown as PricingService,
+          orderStateMachine,
+          runnerStateMachine,
+          500,
+        );
 
         // positive customFee without reason
         await expect(
-          service.approveOrder(orderId, adminId, {
+          serviceWithCap500.approveOrder(orderId, adminId, {
             isPeripheral: false,
             customFee: 50,
           }),
@@ -443,7 +458,7 @@ describe('AdminOrderCommandService', () => {
 
         // zero customFee with reason
         await expect(
-          service.approveOrder(orderId, adminId, {
+          serviceWithCap500.approveOrder(orderId, adminId, {
             isPeripheral: false,
             customFee: 0,
             customFeeReason: 'سبب غير مبرر',
@@ -452,7 +467,7 @@ describe('AdminOrderCommandService', () => {
 
         // negative customFee
         await expect(
-          service.approveOrder(orderId, adminId, {
+          serviceWithCap500.approveOrder(orderId, adminId, {
             isPeripheral: false,
             customFee: -10,
             customFeeReason: 'سالب',
@@ -461,7 +476,7 @@ describe('AdminOrderCommandService', () => {
 
         // decimal customFee
         await expect(
-          service.approveOrder(orderId, adminId, {
+          serviceWithCap500.approveOrder(orderId, adminId, {
             isPeripheral: false,
             customFee: 15.5,
             customFeeReason: 'كسر',
@@ -470,14 +485,12 @@ describe('AdminOrderCommandService', () => {
 
         // over cap (501 > 500)
         await expect(
-          service.approveOrder(orderId, adminId, {
+          serviceWithCap500.approveOrder(orderId, adminId, {
             isPeripheral: false,
             customFee: 501,
             customFeeReason: 'فوق السقف',
           }),
         ).rejects.toThrow(BadRequestException);
-
-        service.resetMaxCustomFeeForTesting();
       });
 
       it('4. production guard: rejects customFee = 1 with default limit 0', async () => {
@@ -1022,6 +1035,31 @@ describe('AdminOrderCommandService', () => {
         },
         'urgent',
       );
+    });
+  });
+
+  describe('Dependency Injection with CUSTOM_FEE_LIMIT', () => {
+    it('injects customFeeLimit via CUSTOM_FEE_LIMIT token and defaults to MAX_CUSTOM_FEE', () => {
+      const customService = new AdminOrderCommandService(
+        prisma as unknown as PrismaService,
+        auditService as unknown as AuditService,
+        notificationsService as unknown as NotificationsService,
+        pricingService as unknown as PricingService,
+        orderStateMachine,
+        runnerStateMachine,
+        500,
+      );
+      expect((customService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(500);
+
+      const defaultService = new AdminOrderCommandService(
+        prisma as unknown as PrismaService,
+        auditService as unknown as AuditService,
+        notificationsService as unknown as NotificationsService,
+        pricingService as unknown as PricingService,
+        orderStateMachine,
+        runnerStateMachine,
+      );
+      expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
     });
   });
 });

@@ -24,7 +24,7 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
   let settlementsService: SettlementsService;
 
   beforeAll(async () => {
-    const app = await createTestApp();
+    const app = await createTestApp({ customFeeLimit: 500 });
     request = getRequest();
     adminOrderCommandService = app.get(AdminOrderCommandService);
     settlementsService = app.get(SettlementsService);
@@ -112,129 +112,120 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
   }
 
   it('9. Full lifecycle with customFee (50 and 1): preserves customFee, matches splitShares, and verifies 0 drift in settlements', async () => {
-    // Enable test cap 500 for testing customFee
-    adminOrderCommandService.setMaxCustomFeeForTesting(500);
+    // 1. Create Order A (single store, approved with customFee = 50)
+    const createResA = await createCustomerOrder(['Store A']);
+    expect(createResA.status).toBe(201);
+    const orderAId = createResA.body.id;
 
-    try {
-      // 1. Create Order A (single store, approved with customFee = 50)
-      const createResA = await createCustomerOrder(['Store A']);
-      expect(createResA.status).toBe(201);
-      const orderAId = createResA.body.id;
+    // Start review then approve with customFee: 50
+    await request
+      .put(`/api/v1/admin/orders/${orderAId}/start-review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
 
-      // Start review then approve with customFee: 50
-      await request
-        .put(`/api/v1/admin/orders/${orderAId}/start-review`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({});
+    const approveResA = await adminOrderCommandService.approveOrder(
+      orderAId,
+      adminUser.id,
+      {
+        isPeripheral: false,
+        customFee: 50,
+        customFeeReason: 'طلب توصيل مستعجل خاص',
+      },
+    );
 
-      const approveResA = await adminOrderCommandService.approveOrder(
-        orderAId,
-        adminUser.id,
-        {
-          isPeripheral: false,
-          customFee: 50,
-          customFeeReason: 'طلب توصيل مستعجل خاص',
-        },
-        { maxCustomFee: 500 },
-      );
+    // Verify approved state & fees
+    expect(approveResA.order.status).toBe('AWAITING_RUNNER');
+    expect(approveResA.newFee.totalFee).toBe(110); // 60 + 50
+    expect(approveResA.newFee.customFee).toBe(50);
 
-      // Verify approved state & fees
-      expect(approveResA.order.status).toBe('AWAITING_RUNNER');
-      expect(approveResA.newFee.totalFee).toBe(110); // 60 + 50
-      expect(approveResA.newFee.customFee).toBe(50);
+    // Deliver Order A
+    await assignAndDeliverOrder(orderAId);
 
-      // Deliver Order A
-      await assignAndDeliverOrder(orderAId);
+    // 2. Create Order B (single store, approved with odd customFee = 1 -> total = 61 to test rounding per order)
+    const createResB = await createCustomerOrder(['Store B']);
+    expect(createResB.status).toBe(201);
+    const orderBId = createResB.body.id;
 
-      // 2. Create Order B (single store, approved with odd customFee = 1 -> total = 61 to test rounding per order)
-      const createResB = await createCustomerOrder(['Store B']);
-      expect(createResB.status).toBe(201);
-      const orderBId = createResB.body.id;
+    await request
+      .put(`/api/v1/admin/orders/${orderBId}/start-review`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
 
-      await request
-        .put(`/api/v1/admin/orders/${orderBId}/start-review`)
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({});
+    const approveResB = await adminOrderCommandService.approveOrder(
+      orderBId,
+      adminUser.id,
+      {
+        isPeripheral: false,
+        customFee: 1,
+        customFeeReason: 'رسم إضافي رمزي اختباري',
+      },
+    );
 
-      const approveResB = await adminOrderCommandService.approveOrder(
-        orderBId,
-        adminUser.id,
-        {
-          isPeripheral: false,
-          customFee: 1,
-          customFeeReason: 'رسم إضافي رمزي اختباري',
-        },
-        { maxCustomFee: 500 },
-      );
+    expect(approveResB.newFee.totalFee).toBe(61); // 60 + 1
+    expect(approveResB.newFee.customFee).toBe(1);
 
-      expect(approveResB.newFee.totalFee).toBe(61); // 60 + 1
-      expect(approveResB.newFee.customFee).toBe(1);
+    // Deliver Order B
+    await assignAndDeliverOrder(orderBId);
 
-      // Deliver Order B
-      await assignAndDeliverOrder(orderBId);
+    // Verify Database Order records
+    const dbOrderA = await prisma.order.findUniqueOrThrow({ where: { id: orderAId } });
+    expect(dbOrderA.totalFee).toBe(110);
+    expect(dbOrderA.customFee).toBe(50);
+    expect(dbOrderA.customFeeReason).toBe('طلب توصيل مستعجل خاص');
 
-      // Verify Database Order records
-      const dbOrderA = await prisma.order.findUniqueOrThrow({ where: { id: orderAId } });
-      expect(dbOrderA.totalFee).toBe(110);
-      expect(dbOrderA.customFee).toBe(50);
-      expect(dbOrderA.customFeeReason).toBe('طلب توصيل مستعجل خاص');
+    const dbOrderB = await prisma.order.findUniqueOrThrow({ where: { id: orderBId } });
+    expect(dbOrderB.totalFee).toBe(61);
+    expect(dbOrderB.customFee).toBe(1);
+    expect(dbOrderB.customFeeReason).toBe('رسم إضافي رمزي اختباري');
 
-      const dbOrderB = await prisma.order.findUniqueOrThrow({ where: { id: orderBId } });
-      expect(dbOrderB.totalFee).toBe(61);
-      expect(dbOrderB.customFee).toBe(1);
-      expect(dbOrderB.customFeeReason).toBe('رسم إضافي رمزي اختباري');
+    // Verify Ledger entries for Order A (total=110: runner=82, platform=28)
+    const ledgerA = await prisma.ledgerEntry.findMany({ where: { orderId: orderAId } });
+    const ledgerATotal = ledgerA.find((l) => l.type === 'ORDER_FEE_TOTAL')!;
+    const ledgerARunner = ledgerA.find((l) => l.type === 'RUNNER_SHARE')!;
+    const ledgerAPlatform = ledgerA.find((l) => l.type === 'PLATFORM_SHARE')!;
 
-      // Verify Ledger entries for Order A (total=110: runner=82, platform=28)
-      const ledgerA = await prisma.ledgerEntry.findMany({ where: { orderId: orderAId } });
-      const ledgerATotal = ledgerA.find((l) => l.type === 'ORDER_FEE_TOTAL')!;
-      const ledgerARunner = ledgerA.find((l) => l.type === 'RUNNER_SHARE')!;
-      const ledgerAPlatform = ledgerA.find((l) => l.type === 'PLATFORM_SHARE')!;
+    const sharesA = splitShares(110);
+    expect(ledgerATotal.amount).toBe(110);
+    expect(ledgerARunner.amount).toBe(sharesA.runnerShare);
+    expect(ledgerAPlatform.amount).toBe(sharesA.platformShare);
+    expect(ledgerARunner.amount + ledgerAPlatform.amount).toBe(110);
 
-      const sharesA = splitShares(110);
-      expect(ledgerATotal.amount).toBe(110);
-      expect(ledgerARunner.amount).toBe(sharesA.runnerShare);
-      expect(ledgerAPlatform.amount).toBe(sharesA.platformShare);
-      expect(ledgerARunner.amount + ledgerAPlatform.amount).toBe(110);
+    // Verify Ledger entries for Order B (total=61: runner=45, platform=16)
+    const ledgerB = await prisma.ledgerEntry.findMany({ where: { orderId: orderBId } });
+    const ledgerBTotal = ledgerB.find((l) => l.type === 'ORDER_FEE_TOTAL')!;
+    const ledgerBRunner = ledgerB.find((l) => l.type === 'RUNNER_SHARE')!;
+    const ledgerBPlatform = ledgerB.find((l) => l.type === 'PLATFORM_SHARE')!;
 
-      // Verify Ledger entries for Order B (total=61: runner=45, platform=16)
-      const ledgerB = await prisma.ledgerEntry.findMany({ where: { orderId: orderBId } });
-      const ledgerBTotal = ledgerB.find((l) => l.type === 'ORDER_FEE_TOTAL')!;
-      const ledgerBRunner = ledgerB.find((l) => l.type === 'RUNNER_SHARE')!;
-      const ledgerBPlatform = ledgerB.find((l) => l.type === 'PLATFORM_SHARE')!;
+    const sharesB = splitShares(61);
+    expect(ledgerBTotal.amount).toBe(61);
+    expect(ledgerBRunner.amount).toBe(sharesB.runnerShare);
+    expect(ledgerBPlatform.amount).toBe(sharesB.platformShare);
+    expect(ledgerBRunner.amount + ledgerBPlatform.amount).toBe(61);
 
-      const sharesB = splitShares(61);
-      expect(ledgerBTotal.amount).toBe(61);
-      expect(ledgerBRunner.amount).toBe(sharesB.runnerShare);
-      expect(ledgerBPlatform.amount).toBe(sharesB.platformShare);
-      expect(ledgerBRunner.amount + ledgerBPlatform.amount).toBe(61);
+    // Total expected runner share from Ledger = 82 + 45 = 127
+    const totalRunnerLedgerSum = ledgerARunner.amount + ledgerBRunner.amount;
+    expect(totalRunnerLedgerSum).toBe(82 + 45); // 127
 
-      // Total expected runner share from Ledger = 82 + 45 = 127
-      const totalRunnerLedgerSum = ledgerARunner.amount + ledgerBRunner.amount;
-      expect(totalRunnerLedgerSum).toBe(82 + 45); // 127
+    // Verify Settlements: getCurrentSettlement vs ΣLedger
+    const currentRes = await request
+      .get('/api/v1/runner/settlements/current')
+      .set('Authorization', `Bearer ${runnerToken}`);
+    expect(currentRes.status).toBe(200);
+    expect(currentRes.body.estimatedRunnerShare).toBe(totalRunnerLedgerSum);
 
-      // Verify Settlements: getCurrentSettlement vs ΣLedger
-      const currentRes = await request
-        .get('/api/v1/runner/settlements/current')
-        .set('Authorization', `Bearer ${runnerToken}`);
-      expect(currentRes.status).toBe(200);
-      expect(currentRes.body.estimatedRunnerShare).toBe(totalRunnerLedgerSum);
-
-      // Verify closeDay matches getCurrentSettlement and ΣLedger
-      const operationalDate = getOperationalDate();
-      const closeDayRes = await request
-        .post('/api/v1/admin/settlements/close-day')
-        .set('Authorization', `Bearer ${adminToken}`)
-        .send({
-          operationalDate,
-          notes: 'Sprint 6A-6 custom fee integration test',
-        });
-      expect(closeDayRes.status).toBe(201);
-      const createdSettlement = closeDayRes.body.settlements[0];
-      expect(createdSettlement.runnerShare).toBe(totalRunnerLedgerSum);
-      expect(createdSettlement.runnerShare).toBe(currentRes.body.estimatedRunnerShare);
-    } finally {
-      adminOrderCommandService.resetMaxCustomFeeForTesting();
-    }
+    // Verify closeDay matches getCurrentSettlement and ΣLedger
+    const operationalDate = getOperationalDate();
+    const closeDayRes = await request
+      .post('/api/v1/admin/settlements/close-day')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        operationalDate,
+        notes: 'Sprint 6A-6 custom fee integration test',
+      });
+    expect(closeDayRes.status).toBe(201);
+    const createdSettlement = closeDayRes.body.settlements[0];
+    expect(createdSettlement.runnerShare).toBe(totalRunnerLedgerSum);
+    expect(createdSettlement.runnerShare).toBe(currentRes.body.estimatedRunnerShare);
   });
 
   it('10. Concurrency: parallel approveOrder calls on the same order result in 1 success and 1 ConflictException', async () => {
