@@ -140,6 +140,8 @@ export class AdminOrderQueryService {
       baseFee: order.baseFee,
       peripheralFee: order.peripheralFee,
       extraStoresFee: order.extraStoresFee,
+      customFee: order.customFee,
+      customFeeReason: order.customFeeReason,
       totalFee: order.totalFee,
       deliveryLat: order.deliveryLat,
       deliveryLng: order.deliveryLng,

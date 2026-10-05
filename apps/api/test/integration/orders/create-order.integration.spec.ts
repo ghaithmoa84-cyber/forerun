@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { cleanDatabase, prisma } from '../setup';
 import { createTestApp, closeTestApp, getRequest } from '../helpers/app.helper';
 import { seedAdmin, seedRunner, seedCustomer, loginAs } from '../helpers/seed.helper';
 
-let adminToken: string;
 let runnerToken: string;
 let customerToken: string;
 let pendingCustomerToken: string;
@@ -25,7 +24,6 @@ beforeEach(async () => {
   await seedRunner(prisma);
   await seedCustomer(prisma);
   const request = getRequest();
-  adminToken = await loginAs(request, '0999000001', 'Admin@12345');
   runnerToken = await loginAs(request, '0999000002', 'Runner@12345');
   customerToken = await loginAs(request, '0999000003', 'Customer@12345');
 
@@ -155,4 +153,43 @@ describe('POST /api/v1/customer/orders', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('scenario 4 - created order defaults customFee=0 and customFeeReason=null in DB, and enforces non-negative CHECK', async () => {
+    const request = getRequest();
+    const res = await request
+      .post('/api/v1/customer/orders')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        items: [
+          {
+            itemName: 'Item CustomFee Test',
+            quantity: '1',
+            customStoreName: 'متجر تجريبي',
+            anyStore: false,
+          },
+        ],
+        notes: null,
+        preferredRunnerId: null,
+        waitForPreferred: false,
+        deliveryAddress: {
+          lat: 33.5138,
+          lng: 36.2765,
+          description: 'Damascus Test Address',
+        },
+      });
+
+    expect(res.status).toBe(201);
+    const order = await prisma.order.findUnique({
+      where: { id: res.body.id },
+    });
+    expect(order).not.toBeNull();
+    expect(order!.customFee).toBe(0);
+    expect(order!.customFeeReason).toBeNull();
+
+    // Verify non-negative CHECK constraint in PostgreSQL
+    await expect(
+      prisma.$executeRaw`UPDATE "Order" SET "customFee" = -1 WHERE id = ${order!.id}`,
+    ).rejects.toThrow();
+  });
 });
+

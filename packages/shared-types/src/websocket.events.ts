@@ -55,6 +55,8 @@ export type OrderFeeUpdatedPayload = {
   newFee: number;
   reason: string;
   sound?: SoundType;
+  customFee?: number | null;
+  customFeeReason?: string | null;
 };
 
 export type OrderStorePurchasedPayload = {

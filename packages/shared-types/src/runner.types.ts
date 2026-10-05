@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  MAX_CUSTOM_FEE,
+  CUSTOM_FEE_REASON_MAX_LENGTH,
+  PRICING_LIMITS,
+} from "@forerun/shared-constants";
 import { passwordSchema, SyrianPhoneSchema } from "./auth.types.js";
 
 const nonEmptyString = z
@@ -134,12 +139,65 @@ export type PurchaseResponse = {
   customerNotified: boolean;
 };
 
-export const ApproveOrderSchema = z.object({
-  isPeripheral: z.boolean(),
-  notes: z.string().nullable().optional(),
+export function createApproveOrderSchema({
+  maxCustomFee,
+}: {
+  maxCustomFee: number;
+}) {
+  return z
+    .object({
+      isPeripheral: z.boolean(),
+      notes: z.string().nullable().optional(),
+      baseFee: z
+        .number({ invalid_type_error: "يجب أن يكون الرسم الأساسي رقماً" })
+        .int("يجب أن يكون الرسم الأساسي عدداً صحيحاً")
+        .min(
+          PRICING_LIMITS.baseFee.min,
+          `الرسم الأساسي يجب ألا يقل عن ${PRICING_LIMITS.baseFee.min}`,
+        )
+        .max(
+          PRICING_LIMITS.baseFee.max,
+          `الرسم الأساسي يجب ألا يتجاوز ${PRICING_LIMITS.baseFee.max}`,
+        )
+        .optional(),
+      customFee: z.number().int().min(0).max(maxCustomFee).optional().default(0),
+      customFeeReason: z
+        .string()
+        .trim()
+        .min(1)
+        .max(CUSTOM_FEE_REASON_MAX_LENGTH)
+        .optional(),
+    })
+    .superRefine((data, ctx) => {
+      const fee = data.customFee ?? 0;
+      const hasReason =
+        typeof data.customFeeReason === "string" &&
+        data.customFeeReason.trim().length > 0;
+
+      if (fee > 0 && !hasReason) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "يجب إدخال سبب عند تحديد رسم إضافي للطلب",
+          path: ["customFeeReason"],
+        });
+      }
+
+      if (fee === 0 && hasReason) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "لا يمكن تحديد سبب للرسم الإضافي إذا كان الرسم الإضافي 0",
+          path: ["customFeeReason"],
+        });
+      }
+    });
+}
+
+export const ApproveOrderSchema = createApproveOrderSchema({
+  maxCustomFee: MAX_CUSTOM_FEE,
 });
 
-export type ApproveOrderRequest = z.infer<typeof ApproveOrderSchema>;
+export type ApproveOrderRequest = z.input<typeof ApproveOrderSchema>;
+export type ApproveOrderDto = z.infer<typeof ApproveOrderSchema>;
 
 export const AssignRunnerSchema = z.object({
   runnerId: z.string().trim().min(1, "runnerId cannot be empty"),

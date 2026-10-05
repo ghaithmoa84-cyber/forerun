@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -66,6 +67,24 @@ export async function cleanDatabase() {
     prisma.admin.deleteMany(),
     prisma.user.deleteMany(),
   ]);
+
+  // 6A-3.1b: إعادة صف الإعدادات إلى خط الأساس بعد كل تنظيف، لأن
+  // createOrder/approveOrder/recalculateFee تقرأ PlatformPricing فعليًا الآن.
+  // بدون هذا قد يتسرّب سعر مُعدَّل من ملف اختبار إلى الملف التالي.
+  await prisma.platformPricing.upsert({
+    where: { id: 'default' },
+    create: {
+      id: 'default',
+      baseFee: DEFAULT_PRICING_CONFIG.baseFee,
+      extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
+      peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+    },
+    update: {
+      baseFee: DEFAULT_PRICING_CONFIG.baseFee,
+      extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
+      peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+    },
+  });
 }
 
 export { prisma };

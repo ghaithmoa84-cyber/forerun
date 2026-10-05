@@ -1,11 +1,44 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-01
+> **آخر تحديث:** 2026-10-05
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
 ---
 
+## مسار التسعير الديناميكي (Sprint 6A & 6B — القرارات D11–D15)
+
+> **حارس الإنتاج:** `MAX_CUSTOM_FEE = 0` في 6A كحارس إنتاج، ويُرفع إلى 500 في 6B بعد اكتمال أسطح الزبون والمندوب.
+
+### سبرنت 6A (Backend + أسطح الأدمن)
+| # | المهمة | الحالة | المسؤول | ملاحظات |
+|---|---|---|---|---|
+| 6A-S1 | **اختبارات تكامل تثبّت سلوك التسعير الحالي** (Order / Approve / Deliver / Settlement / Invariants / Recalculate) | ✅ **مُنجَز** | @feature-dev + @test-engineer | البند S1 — تم تجميد السلوك الحالي باختبارات تكامل شاملة مع عزل B2 وتوثيق عيب التقريب |
+| 6A-1 | **جرد `order.create`** للتأكد من تمرير `baseFee` و `totalFee` صراحةً | ✅ **مُنجَز** | @feature-dev | موضع وحيد في `customer-orders.service.ts:162` يمررهما صراحة، وحذف defaults من schema آمن |
+| 6A-2 | **Migration لجدول `PlatformPricing` وعلاقة `User`** | ✅ **مُنجَز** | @feature-dev | القرار D11 — ملف migration مع إدراج صف seed افتراضي آمن 60/20/40 (فُصل customFee لخطوة لاحقة) |
+| 6A-3.1 | **نوع `PricingConfig` وثابت `DEFAULT_PRICING_CONFIG` ودالة `getPricingConfig`** | ✅ **مُنجَز** | @feature-dev | القرار D11 — إضافة النوع والثابت في shared packages، وإضافة getPricingConfig مع كاش 30ث دون ربطها بالمسارات الإنتاجية |
+| 6A-3.2 | **تحديث `PricingService` وحفظ لقطة الطلب (B2)** | ✅ **مُنجَز في `f26e2e0`** | @feature-dev | قراءة الأسعار مع جعل config إلزاميًا في `calculateFee` (`c3cc60d`)، وحفظ لقطة الطلب `baseFee/peripheralFee` في `recalculateFee` وتحديث `extraStoresFee/totalFee` فقط (`f26e2e0`). تم تفعيل اختبار 6.2 واختبارات الوحدة والتكامل. |
+| 6A-3.3 | **توحيد مصدر الحصص في `SettlementsService` (B1)** | ✅ **مُنجَز في `78b4400`** | @feature-dev | استخراج دالة نقية `splitShares` (`646f9d4`) وتوحيد حساب الحصص لكل طلب في `getCurrentSettlement` ومطابقة `closeDay` والـ Ledger (0 drift). تم تفعيل اختبار 5.2 وتحويل 5.1 لحارس انحدار وإضافة 5.3 واختبارات الوحدة (`78b4400`). |
+| 6A-4 | **ثوابت ومخططات `customFee` و `UpdatePlatformPricing` في shared packages** | ✅ **مُنجَز في `d57a564`** | @feature-dev | إضافة `MAX_CUSTOM_FEE = 0` و `CUSTOM_FEE_CAP = 500` و `PRICING_LIMITS` ومخططات Zod (`createApproveOrderSchema` و `UpdatePlatformPricingSchema`) مع تعريب كامل لرسائل الأخطاء وتغطية 21 اختبار وحدة. |
+| 6A-5 | **Migration لعمودي `customFee` و `customFeeReason` في جدول `Order` مع قيد CHECK** | ✅ **مُنجَز في `77a1e59`** | @feature-dev | إضافة عمودي `customFee` (default 0) و `customFeeReason` وقيد `Order_customFee_nonneg_check` في `20261005110000_add_order_custom_fee` بنجاح واختبار تكامل يثبت الحالات الافتراضية والقيد. |
+| 6A-6 | **ربط `baseFee` و `customFee` في خدمة `approveOrder` والتحقق الإنتاجي** | ✅ **مُنجَز في `57dce57`** | @feature-dev | ربط التمرير والتحقق الدفاعي وحفظ customFee في recalculateFee وتوسيع AuditLog وإرسال WebSocket بعد الـ commit مع بقاء حارس الإنتاج `MAX_CUSTOM_FEE = 0`. رفع MAX_CUSTOM_FEE إلى 500 في 6B بعد أسطح الزبون/المندوب. |
+| 6A-7 | **مسارات الأدمن للتحكم بالتسعير ومحاكاة رسوم الطلب** (`GET/PUT /admin/pricing`, `POST /admin/orders/:id/fee-preview`) | ✅ **مُنجَز في `61ca5f1`** (`976f3b5`) | @feature-dev | محاكاة رسوم الطلب دون كتابة بقاعدة البيانات مع سقف 500 للمعاينة، واسترجاع وتعديل أسعار المنصة مع حارس التزامن المتفائل `updatedAt` (409) وتسجيل `AuditLog` وتفريغ الكاش واختبارات وحدة وتكامل شاملة. |
+| 6A-8 | **شاشات لوحة تحكم الأدمن** لإدارة الأسعار وبطاقة المعاينة المباشرة في مراجعة الطلب | ✅ **مُنجَز في `0fba194`** | @feature-dev | أسطح الإدارة في `admin-web` (القرار D15): صفحة إعدادات الأسعار `/dashboard/pricing` مع تنبيه D20 وحارس التزامن، وبطاقة المعاينة المباشرة (Live Preview مع debounce 400ms) في صفحة الطلب `/orders/[id]` أثناء مراجعة الطلب. |
+| 6A-3.1b | **ربط `getPricingConfig` بالمسارات الإنتاجية** (إنشاء الطلب / الاعتماد / recalculate) | ✅ **مُنجَز في `0b9a88b`** | @feature-dev | آخر خطوة في 6A: `previewFee` و`recalculateFee` و`approveOrder` و`createOrder` تقرأ صف `PlatformPricing` فعليًا (القرارات D21/D22/D23)، مع بقاء `baseFee` لقطةً للطلب عند الاعتماد. +9 اختبارات وحدة و+6 اختبارات تكامل (S2) ⇒ **355 وحدة + 44 تكامل**. جاهز لبوابة الدمج `git merge --no-ff` (والمالك فقط). |
+
+> **ديون فنية مؤجلة بقرارات معتمدة:**
+> 1. **حذف `@default(60)` من `baseFee` و`totalFee`:** يُنفَّذ كـ migration مستقل لاحق لتفادي خلط التعديلات (القرار D19).
+> 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500`:** حساب صحيح لحماية الحصص وتفادي انحرافات الفواصل (القرار D12).
+
+### سبرنت 6B (أسطح الزبون والمندوب وAndroid)
+| # | المهمة | الحالة | المسؤول | ملاحظات |
+|---|---|---|---|---|
+| 6B-1 | **أسطح العميل (`customer-web`)** | ⏳ مخططة | @feature-dev | عرض `customFee` و `customFeeReason` في تفاصيل الطلب ومنع التناقض الحسابي (H4) |
+| 6B-2 | **أسطح المندوب (`runner-pwa`)** | ⏳ مخططة | @feature-dev | عرض `customFee` وتفاصيل الرسوم في شاشات المندوب |
+| 6B-3 | **تطبيق Android للعميل** | ⏳ مخططة | @feature-dev | تحديث DTOs وشاشات الطلبات لعرض الرسوم الإضافية والسبب |
+| 6B-4 | **رفع حارس الإنتاج `MAX_CUSTOM_FEE = 500`** | ⏳ مخططة | @feature-dev | بعد اكتمال واختبار كافة أسطح العرض للزبون والمندوب (القرار D14) |
+
+---
 
 ## مسار Android (مرقّم 8D–10 — لا يدخل ترقيم `Sprint N` الخاص بـ backend)
 
@@ -57,7 +90,7 @@
 
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
 |---|---|---|---|---|---|
-| S1 | اختبار تكامل Pricing | متوسطة | ⏳ غير مُنجَز | @feature-dev | `apps/api/vitest.config.ts:21` يستثني `test/integration/**` — لا تغطية تسعير. |
+| S1 | اختبار تكامل Pricing | متوسطة | ✅ مُنجَز (Sprint 6A-S1) | @feature-dev + @test-engineer | تغطية مسار التسعير الحالي باختبارات تكامل شاملة تثبت السلوك وتوثق الانحرافات. |
 | S2 | مراجعة أمنية موثّقة | عالية | 🟡 **بانتظار التوقيع** | @test-engineer | الوثيقة جاهزة: [docs/SECURITY-AND-CODE-REVIEW.md](docs/SECURITY-AND-CODE-REVIEW.md) الإصدار 2 — 33 بنداً مفتوحاً موثّقاً بـ`ملف:سطر` على `744bf23` + قسم مرفوضات مُثبتة بالدليل. **المتبقّي: توقيع المستخدم.** |
 | S3 | خط أساس الأداء `docs/performance-baseline.md` | متوسطة | ⏳ **الملف غير موجود** | @test-engineer | مُشار إليه في Sprint 6 Brief لكنه لم يُنشأ. |
 | S4 | Sentry — تفعيل على الإنتاج | منخفضة | ⏸️ مؤجل | @feature-dev | `SENTRY_DSN` غير مضبوط. |

@@ -15,6 +15,7 @@ import type {
   OrderStatus,
   OrderStoreStatus,
   RunnerStatus,
+  FeePreviewResponse,
 } from '@forerun/shared-types';
 
 const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
@@ -73,6 +74,13 @@ export default function OrderDetailPage() {
   // Action states
   const [actionLoading, setActionLoading] = useState(false);
   const [isPeripheralChecked, setIsPeripheralChecked] = useState(false);
+  const [baseFeeInput, setBaseFeeInput] = useState<number | string>('');
+  const [customFeeInput, setCustomFeeInput] = useState<number | string>(0);
+  const [customFeeReasonInput, setCustomFeeReasonInput] = useState<string>('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewResult, setPreviewResult] = useState<FeePreviewResponse | null>(null);
+
   const [rejectReason, setRejectReason] = useState('');
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -91,8 +99,13 @@ export default function OrderDetailPage() {
         api.get<{ data: AvailableRunner[] }>('/admin/runners', { params: { limit: 100 } }),
       ]);
 
-      setOrder(orderRes.data);
-      setIsPeripheralChecked(orderRes.data.isPeripheral);
+      const data = orderRes.data;
+      setOrder(data);
+      setIsPeripheralChecked(data.isPeripheral);
+      setBaseFeeInput(data.baseFee);
+      setCustomFeeInput(data.customFee ?? 0);
+      setCustomFeeReasonInput(data.customFeeReason ?? '');
+
       setAuditLogs(auditRes.data);
       const runners = runnersRes.data?.data || [];
       setAvailableRunners(runners.filter((r) => r.status === 'AVAILABLE'));
@@ -108,16 +121,96 @@ export default function OrderDetailPage() {
     fetchOrderData();
   }, [fetchOrderData]);
 
+  const orderStatus = order?.status;
+
+  // Live fee preview with 400ms debounce during PENDING_REVIEW and UNDER_REVIEW
+  useEffect(() => {
+    if (!orderId || !orderStatus) return;
+    if (orderStatus !== 'PENDING_REVIEW' && orderStatus !== 'UNDER_REVIEW') {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setPreviewLoading(true);
+        setPreviewError(null);
+        const parsedBase =
+          baseFeeInput !== '' && !isNaN(Number(baseFeeInput))
+            ? Number(baseFeeInput)
+            : undefined;
+        const parsedCustom =
+          customFeeInput !== '' && !isNaN(Number(customFeeInput))
+            ? Number(customFeeInput)
+            : 0;
+
+        const res = await api.post<FeePreviewResponse>(
+          `/admin/orders/${orderId}/fee-preview`,
+          {
+            isPeripheral: isPeripheralChecked,
+            baseFee: parsedBase,
+            customFee: parsedCustom,
+            customFeeReason:
+              parsedCustom > 0 ? customFeeReasonInput.trim() : undefined,
+          },
+        );
+        setPreviewResult(res.data);
+      } catch (err: unknown) {
+        const axiosError = err as {
+          response?: { data?: { message?: string } };
+        };
+        setPreviewError(
+          axiosError?.response?.data?.message || 'تعذر حساب معاينة الرسوم',
+        );
+      } finally {
+        setPreviewLoading(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [
+    orderId,
+    orderStatus,
+    baseFeeInput,
+    isPeripheralChecked,
+    customFeeInput,
+    customFeeReasonInput,
+  ]);
+
   const handleApprove = async () => {
     try {
       setActionLoading(true);
+      const parsedBase =
+        baseFeeInput !== '' && !isNaN(Number(baseFeeInput))
+          ? Number(baseFeeInput)
+          : undefined;
+      const parsedCustom =
+        customFeeInput !== '' && !isNaN(Number(customFeeInput))
+          ? Number(customFeeInput)
+          : 0;
+
+      if (parsedCustom > 0 && !customFeeReasonInput.trim()) {
+        showToast('يجب إدخال سبب عند تحديد رسم إضافي للطلب', 'info');
+        setActionLoading(false);
+        return;
+      }
+
       await api.put(`/admin/orders/${orderId}/approve`, {
         isPeripheral: isPeripheralChecked,
+        baseFee: parsedBase,
+        customFee: parsedCustom,
+        customFeeReason:
+          parsedCustom > 0 ? customFeeReasonInput.trim() : undefined,
       });
       showToast('تم اعتماد الطلب وتحويله للبحث عن مندوب', 'success');
       fetchOrderData();
-    } catch {
-      showToast('فشل في اعتماد الطلب', 'error');
+    } catch (err: unknown) {
+      const axiosError = err as {
+        response?: { data?: { message?: string } };
+      };
+      showToast(
+        axiosError?.response?.data?.message || 'فشل في اعتماد الطلب',
+        'error',
+      );
     } finally {
       setActionLoading(false);
     }
@@ -323,6 +416,173 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {/* Fee Review & Live Preview Card (Sprint 6A-8) */}
+      {(order.status === 'PENDING_REVIEW' || order.status === 'UNDER_REVIEW') && (
+        <div className="bg-white rounded-2xl border-2 border-[#7DDDD4]/40 p-6 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100 gap-2">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#7DDDD4] inline-block animate-pulse"></span>
+                مراجعة وتعديل رسوم الطلب والمعاينة المباشرة
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                يمكنك تعديل الرسم الأساسي أو تعيين المنطقة الطرفية أو إضافة رسم إضافي مع المعاينة الفورية قبل الاعتماد.
+              </p>
+            </div>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 w-fit">
+              {ORDER_STATUS_LABEL[order.status]}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Base Fee Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                الرسم الأساسي (ل.س)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  step={1}
+                  value={baseFeeInput}
+                  onChange={(e) => setBaseFeeInput(e.target.value)}
+                  placeholder={String(order.baseFee)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] focus:bg-white"
+                />
+                <span className="absolute left-3 top-2 text-[11px] text-slate-400 font-bold pointer-events-none">
+                  ل.س
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                الافتراضي للطلب: {order.baseFee} ل.س
+              </p>
+            </div>
+
+            {/* Peripheral Area Checkbox */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                المنطقة الجغرافية
+              </label>
+              <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isPeripheralChecked}
+                  onChange={(e) => setIsPeripheralChecked(e.target.checked)}
+                  className="rounded text-[#7DDDD4] focus:ring-[#7DDDD4] w-4 h-4"
+                />
+                <span className="text-xs font-bold text-slate-700">
+                  منطقة نائية (طرفية)
+                </span>
+              </label>
+              <p className="text-[11px] text-slate-400">
+                تضيف رسم المنطقة الطرفية إن كانت الوجهة خارج المدينة
+              </p>
+            </div>
+
+            {/* Custom Fee Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                رسم إضافي خاص (customFee)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  max={500}
+                  step={1}
+                  value={customFeeInput}
+                  onChange={(e) => setCustomFeeInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] focus:bg-white"
+                />
+                <span className="absolute left-3 top-2 text-[11px] text-slate-400 font-bold pointer-events-none">
+                  ل.س
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                الحد الأقصى: 500 ل.س (يتطلب توضيح السبب)
+              </p>
+            </div>
+          </div>
+
+          {/* Custom Fee Reason Input (Shown ONLY if customFee > 0) */}
+          {Number(customFeeInput) > 0 && (
+            <div className="space-y-1.5 p-3.5 bg-amber-50/50 border border-amber-200 rounded-xl">
+              <label className="block text-xs font-bold text-amber-900">
+                سبب الرسم الإضافي (إلزامي للعميل)
+                <span className="text-rose-500 mr-1">*</span>
+              </label>
+              <input
+                type="text"
+                maxLength={200}
+                value={customFeeReasonInput}
+                onChange={(e) => setCustomFeeReasonInput(e.target.value)}
+                placeholder="مثال: حمولة ثقيلة أو طلب بعد منتصف الليل أو منطقة وعرة..."
+                required
+                className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-amber-500"
+              />
+              <p className="text-[11px] text-amber-700">
+                يظهر هذا السبب في تفاصيل الطلب لدى العميل لتبرير الزيادة.
+              </p>
+            </div>
+          )}
+
+          {/* Live Preview Display Box */}
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <span className="flex items-center gap-2">
+                <span>معاينة الرسوم الحية المباشرة (Live Preview):</span>
+                {previewLoading && (
+                  <span className="text-slate-400 font-normal flex items-center gap-1">
+                    <span className="w-3 h-3 border-2 border-[#7DDDD4] border-t-transparent rounded-full animate-spin"></span>
+                    جاري الحساب...
+                  </span>
+                )}
+              </span>
+              {previewResult && (
+                <span className="text-slate-400 font-normal text-[11px]">
+                  متاجر الطلب: {order.orderStores.length}
+                </span>
+              )}
+            </div>
+
+            {previewError ? (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-bold">
+                ⚠️ {previewError}
+              </div>
+            ) : previewResult ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-400 block font-medium">إجمالي الرسم</span>
+                  <span className="text-base font-black text-[#3ABFB5]">
+                    {formatCurrency(previewResult.totalFee)}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-400 block font-medium">حصة الكابتن (75%)</span>
+                  <span className="text-sm font-black text-emerald-600">
+                    {formatCurrency(previewResult.runnerShare)}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[11px] text-slate-400 block font-medium">حصة المنصة (25%)</span>
+                  <span className="text-sm font-black text-slate-700">
+                    {formatCurrency(previewResult.platformShare)}
+                  </span>
+                </div>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-center text-[11px] text-slate-500 font-medium space-y-0.5">
+                  <div>أساسي: {previewResult.baseFee} ل.س</div>
+                  <div>طرفي: {previewResult.peripheralFee} ل.س | إضافي: {previewResult.customFee} ل.س</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-400">جاري إعداد المعاينة...</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Grid: Order Info & Map */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Order & Parties Metadata */}
@@ -407,6 +667,20 @@ export default function OrderDetailPage() {
               <span>رسوم المتاجر الإضافية:</span>
               <span className="font-bold">{formatCurrency(order.extraStoresFee)}</span>
             </div>
+
+            {order.customFee !== undefined && order.customFee !== null && order.customFee > 0 && (
+              <div className="flex justify-between text-xs text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                <span>رسم إضافي خاص:</span>
+                <span className="font-bold">+{formatCurrency(order.customFee)}</span>
+              </div>
+            )}
+
+            {order.customFeeReason && (
+              <div className="text-[11px] text-amber-800 bg-amber-50/50 p-2 rounded-lg">
+                <span className="font-bold">سبب الرسم الإضافي: </span>
+                {order.customFeeReason}
+              </div>
+            )}
 
             <div className="flex justify-between text-sm font-black text-slate-900 pt-3 border-t border-slate-100">
               <span>الإجمالي:</span>

@@ -1,13 +1,18 @@
 import {
   Injectable,
+  Inject,
   Logger,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { OrderStatus } from '@forerun/shared-constants';
-import { CONFIG } from '@forerun/shared-constants';
+import {
+  CONFIG,
+  PRICING_LIMITS,
+} from '@forerun/shared-constants';
 import {
   ApproveOrderRequest,
   RejectOrderRequest,
@@ -21,9 +26,12 @@ import { PrismaService } from '../../../database/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
 import { PricingService, type FeeResult } from '../../pricing/pricing.service.js';
+import type { PricingConfig } from '@forerun/shared-types';
 import { OrderStateMachine } from '../../../state-machine/order-state-machine.js';
 import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.js';
 import type { Prisma } from '@prisma/client';
+
+export const CUSTOM_FEE_LIMIT = 'CUSTOM_FEE_LIMIT';
 
 @Injectable()
 export class AdminOrderCommandService {
@@ -36,6 +44,7 @@ export class AdminOrderCommandService {
     private readonly pricingService: PricingService,
     private readonly orderStateMachine: OrderStateMachine,
     private readonly runnerStateMachine: RunnerStateMachine,
+    @Inject(CUSTOM_FEE_LIMIT) private readonly maxCustomFeeLimit: number,
   ) {}
 
   /**
@@ -90,6 +99,10 @@ export class AdminOrderCommandService {
     targetStatus: OrderStatus,
     notes?: string | null,
   ): Promise<void> {
+    if (order.status !== 'PENDING_REVIEW' && order.status !== 'UNDER_REVIEW') {
+      throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+    }
+
     if (order.status === 'PENDING_REVIEW') {
       this.orderStateMachine.transition(
         'PENDING_REVIEW',
@@ -118,15 +131,9 @@ export class AdminOrderCommandService {
         targetStatus,
         'ADMIN',
       );
-    } else if (order.status === 'UNDER_REVIEW') {
-      this.orderStateMachine.transition(
-        'UNDER_REVIEW',
-        targetStatus,
-        'ADMIN',
-      );
     } else {
       this.orderStateMachine.transition(
-        order.status as OrderStatus,
+        'UNDER_REVIEW',
         targetStatus,
         'ADMIN',
       );
@@ -145,6 +152,8 @@ export class AdminOrderCommandService {
       baseFee: number;
       peripheralFee: number;
       extraStoresFee: number;
+      customFee?: number | null;
+      customFeeReason?: string | null;
       totalFee: number;
       orderStores: unknown[];
     },
@@ -157,18 +166,38 @@ export class AdminOrderCommandService {
       baseFee: number;
       peripheralFee: number;
       extraStoresFee: number;
+      customFee?: number | null;
       totalFee: number;
     };
     newFee: FeeResult;
+    feeOverride: boolean;
+    customFeeReason: string | null;
   }> {
-    const newFee = this.pricingService.calculateFee({
-      isPeripheral: dto.isPeripheral,
-      purchasedStoreCount: order.orderStores.length,
-    });
+    const effectiveBaseFee = dto.baseFee !== undefined ? dto.baseFee : order.baseFee;
+    const effectiveCustomFee = dto.customFee ?? 0;
+    const effectiveCustomFeeReason =
+      effectiveCustomFee > 0 ? (dto.customFeeReason?.trim() ?? null) : null;
+    const feeOverride = dto.baseFee !== undefined;
+
+    // 6A-3.1b: تُقرأ رسوم peripheralFee/extraStoreFee من صف PlatformPricing داخل نفس
+    // الـ transaction، مع إبقاء baseFee كلقطة الطلب ما لم يحدّد الأدمن قيمة (D21).
+    const pricingConfig: PricingConfig = {
+      ...(await this.pricingService.getPricingConfig(tx)),
+      baseFee: effectiveBaseFee,
+    };
+    const newFee = this.pricingService.calculateFee(
+      {
+        isPeripheral: dto.isPeripheral,
+        purchasedStoreCount: order.orderStores.length,
+        customFee: effectiveCustomFee,
+      },
+      pricingConfig,
+    );
     const oldFee = {
       baseFee: order.baseFee,
       peripheralFee: order.peripheralFee,
       extraStoresFee: order.extraStoresFee,
+      customFee: order.customFee ?? 0,
       totalFee: order.totalFee,
     };
     const feeChanged =
@@ -176,6 +205,7 @@ export class AdminOrderCommandService {
       oldFee.baseFee !== newFee.baseFee ||
       oldFee.peripheralFee !== newFee.peripheralFee ||
       oldFee.extraStoresFee !== newFee.extraStoresFee ||
+      oldFee.customFee !== (newFee.customFee ?? 0) ||
       oldFee.totalFee !== newFee.totalFee;
 
     const updated = await tx.order.updateMany({
@@ -185,14 +215,12 @@ export class AdminOrderCommandService {
         status: targetStatus,
         reviewedAt: new Date(),
         ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
-        ...(feeChanged
-          ? {
-              baseFee: newFee.baseFee,
-              peripheralFee: newFee.peripheralFee,
-              extraStoresFee: newFee.extraStoresFee,
-              totalFee: newFee.totalFee,
-            }
-          : {}),
+        baseFee: newFee.baseFee,
+        peripheralFee: newFee.peripheralFee,
+        extraStoresFee: newFee.extraStoresFee,
+        customFee: effectiveCustomFee,
+        customFeeReason: effectiveCustomFeeReason,
+        totalFee: newFee.totalFee,
       },
     });
     if (updated.count === 0) {
@@ -207,6 +235,8 @@ export class AdminOrderCommandService {
       feeChanged,
       oldFee,
       newFee,
+      feeOverride,
+      customFeeReason: effectiveCustomFeeReason,
     };
   }
 
@@ -227,9 +257,12 @@ export class AdminOrderCommandService {
         baseFee: number;
         peripheralFee: number;
         extraStoresFee: number;
+        customFee?: number | null;
         totalFee: number;
       };
       newFee: FeeResult;
+      feeOverride: boolean;
+      customFeeReason: string | null;
     },
   ): Promise<void> {
     const {
@@ -242,6 +275,8 @@ export class AdminOrderCommandService {
       feeChanged,
       oldFee,
       newFee,
+      feeOverride,
+      customFeeReason,
     } = params;
 
     await this.auditService.log(
@@ -289,7 +324,9 @@ export class AdminOrderCommandService {
             orderNumber,
             oldFee,
             newFee,
+            customFeeReason,
             reason: 'ADMIN_APPROVAL',
+            feeOverride,
           },
         },
         tx,
@@ -310,9 +347,10 @@ export class AdminOrderCommandService {
     oldStatus: string;
     feeChanged: boolean;
     oldFee: { totalFee: number };
-    newFee: { totalFee: number };
+    newFee: { totalFee: number; customFee?: number | null };
+    customFeeReason: string | null;
   }): Promise<void> {
-    const { customerUserId, order, oldStatus, feeChanged, oldFee, newFee } = params;
+    const { customerUserId, order, oldStatus, feeChanged, oldFee, newFee, customFeeReason } = params;
     try {
       await this.notificationsService.emitToCustomer(
         customerUserId,
@@ -336,12 +374,15 @@ export class AdminOrderCommandService {
         'status_update',
       );
 
-      if (feeChanged) {
+      // WebSocket يُرسل بعد commit فقط، وفقط إذا تغيّر totalFee فعلًا عمّا كان قبل الاعتماد
+      if (feeChanged && oldFee.totalFee !== newFee.totalFee) {
         const feePayload = {
           orderId: order.id,
           oldFee: oldFee.totalFee,
           newFee: newFee.totalFee,
           reason: 'ADMIN_APPROVAL',
+          customFee: newFee.customFee ?? null,
+          customFeeReason,
         };
 
         await this.notificationsService.emitToCustomer(
@@ -370,6 +411,47 @@ export class AdminOrderCommandService {
     adminId: string,
     dto: ApproveOrderRequest,
   ): Promise<AdminOrderApprovalResult> {
+    const effectiveMaxCustomFee = this.maxCustomFeeLimit;
+
+    // Defensive check on customFee
+    const customFee = dto.customFee ?? 0;
+    if (!Number.isInteger(customFee) || customFee < 0) {
+      throw new BadRequestException('يجب أن يكون الرسم الإضافي عدداً صحيحاً غير سالب');
+    }
+    if (customFee > effectiveMaxCustomFee) {
+      throw new BadRequestException(
+        `الرسم الإضافي (${customFee}) يتجاوز الحد الأقصى المسموح به (${effectiveMaxCustomFee})`,
+      );
+    }
+
+    const hasReason =
+      typeof dto.customFeeReason === 'string' &&
+      dto.customFeeReason.trim().length > 0;
+
+    if (customFee > 0 && !hasReason) {
+      throw new BadRequestException(
+        'يجب إدخال سبب عند تحديد رسم إضافي للطلب',
+      );
+    }
+    if (customFee === 0 && hasReason) {
+      throw new BadRequestException(
+        'لا يمكن تحديد سبب للرسم الإضافي إذا كان الرسم الإضافي 0',
+      );
+    }
+
+    // Defensive check on baseFee if provided
+    if (dto.baseFee !== undefined) {
+      if (
+        !Number.isInteger(dto.baseFee) ||
+        dto.baseFee < PRICING_LIMITS.baseFee.min ||
+        dto.baseFee > PRICING_LIMITS.baseFee.max
+      ) {
+        throw new BadRequestException(
+          `الرسم الأساسي يجب أن يكون عدداً صحيحاً بين ${PRICING_LIMITS.baseFee.min} و ${PRICING_LIMITS.baseFee.max}`,
+        );
+      }
+    }
+
     const result = await this.prisma.$transaction(
       async (tx) => {
         const order = await this.validateApprovalPreconditions(tx, orderId);
@@ -384,13 +466,19 @@ export class AdminOrderCommandService {
           dto.notes,
         );
 
-        const { updatedOrder, feeChanged, oldFee, newFee } =
-          await this.applyPeripheralFeeIfNeeded(
-            tx,
-            order,
-            targetStatus,
-            dto,
-          );
+        const {
+          updatedOrder,
+          feeChanged,
+          oldFee,
+          newFee,
+          feeOverride,
+          customFeeReason,
+        } = await this.applyPeripheralFeeIfNeeded(
+          tx,
+          order,
+          targetStatus,
+          dto,
+        );
 
         await this.recordApprovalAuditLog(tx, {
           orderId: order.id,
@@ -402,6 +490,8 @@ export class AdminOrderCommandService {
           feeChanged,
           oldFee,
           newFee,
+          feeOverride,
+          customFeeReason,
         });
 
         return {
@@ -411,6 +501,7 @@ export class AdminOrderCommandService {
           feeChanged,
           oldFee,
           newFee,
+          customFeeReason,
           oldStatus: order.status,
         };
       },
@@ -424,6 +515,7 @@ export class AdminOrderCommandService {
       feeChanged: result.feeChanged,
       oldFee: result.oldFee,
       newFee: result.newFee,
+      customFeeReason: result.customFeeReason,
     });
 
     return {

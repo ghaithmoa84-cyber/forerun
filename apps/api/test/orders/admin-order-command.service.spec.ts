@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   NotFoundException,
   ConflictException,
+  BadRequestException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { AdminOrderCommandService } from '../../src/modules/orders/services/admin-order-command.service.js';
@@ -9,10 +10,14 @@ import { OrderStateMachine } from '../../src/state-machine/order-state-machine.j
 import { RunnerStateMachine } from '../../src/state-machine/runner-state-machine.js';
 import { ORDER_TRANSITIONS } from '../../src/state-machine/order-transitions.js';
 import { RUNNER_TRANSITIONS } from '../../src/state-machine/runner-transitions.js';
-import type { PrismaService } from '../../src/database/prisma.service.js';
+import { PrismaService } from '../../src/database/prisma.service.js';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
-import type { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
 import type { PricingService } from '../../src/modules/pricing/pricing.service.js';
+import { ConfigModule } from '@nestjs/config';
+import { MAX_CUSTOM_FEE } from '@forerun/shared-constants';
+import { Test } from '@nestjs/testing';
+import { OrdersModule } from '../../src/modules/orders/orders.module.js';
 
 describe('AdminOrderCommandService', () => {
   let service: AdminOrderCommandService;
@@ -44,6 +49,7 @@ describe('AdminOrderCommandService', () => {
   };
   let pricingService: {
     calculateFee: ReturnType<typeof vi.fn>;
+    getPricingConfig: ReturnType<typeof vi.fn>;
   };
   let orderStateMachine: OrderStateMachine;
   let runnerStateMachine: RunnerStateMachine;
@@ -80,15 +86,21 @@ describe('AdminOrderCommandService', () => {
     };
 
     pricingService = {
-      calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount }) => {
-        const baseFee = 60;
-        const peripheralFee = isPeripheral ? 40 : 0;
-        const extraStoresFee = Math.max(0, (purchasedStoreCount || 0) - 1) * 20;
-        const totalFee = baseFee + peripheralFee + extraStoresFee;
+      getPricingConfig: vi
+        .fn()
+        .mockResolvedValue({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 }),
+      calculateFee: vi.fn().mockImplementation(({ isPeripheral, purchasedStoreCount, customFee }, config) => {
+        const baseFee = config?.baseFee ?? 60;
+        const peripheralFee = isPeripheral ? (config?.peripheralFee ?? 40) : 0;
+        const extraStoresFee =
+          Math.max(0, (purchasedStoreCount || 0) - 1) * (config?.extraStoreFee ?? 20);
+        const effectiveCustomFee = customFee ?? 0;
+        const totalFee = baseFee + peripheralFee + extraStoresFee + effectiveCustomFee;
         return {
           baseFee,
           peripheralFee,
           extraStoresFee,
+          customFee: effectiveCustomFee,
           totalFee,
           runnerShare: Math.floor(totalFee * 0.75),
           platformShare: Math.ceil(totalFee * 0.25),
@@ -106,6 +118,7 @@ describe('AdminOrderCommandService', () => {
       pricingService as unknown as PricingService,
       orderStateMachine,
       runnerStateMachine,
+      MAX_CUSTOM_FEE,
     );
   });
 
@@ -329,6 +342,480 @@ describe('AdminOrderCommandService', () => {
         'status_update',
       );
     });
+
+    describe('Sprint 6A-6: customFee and baseFee features', () => {
+      const baseMockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-6A6',
+        status: 'PENDING_REVIEW',
+        customerId: 'cust-1',
+        customer: { userId: 'usr-cust-1' },
+        preferredRunnerId: null,
+        waitForPreferred: false,
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        customFee: 0,
+        customFeeReason: null,
+        totalFee: 60,
+        orderStores: [{ id: 'st-1' }],
+      };
+
+      it('1. approves order without customFee preserving baseline fees (60/0)', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+        });
+
+        expect(result.feeChanged).toBe(false);
+        expect(result.newFee.totalFee).toBe(60);
+        expect(result.newFee.customFee).toBe(0);
+        expect(txClient.order.updateMany).toHaveBeenCalledWith({
+          where: { id: orderId, status: 'PENDING_REVIEW' },
+          data: expect.objectContaining({
+            baseFee: 60,
+            peripheralFee: 0,
+            extraStoresFee: 0,
+            customFee: 0,
+            customFeeReason: null,
+            totalFee: 60,
+          }),
+        });
+      });
+
+      it('2. approves order with customFee = 50 and reason with test cap 500', async () => {
+        const serviceWithCap500 = new AdminOrderCommandService(
+          prisma as unknown as PrismaService,
+          auditService as unknown as AuditService,
+          notificationsService as unknown as NotificationsService,
+          pricingService as unknown as PricingService,
+          orderStateMachine,
+          runnerStateMachine,
+          500,
+        );
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          customFee: 50,
+          customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+          totalFee: 110,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await serviceWithCap500.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+          customFee: 50,
+          customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+        });
+
+        expect(result.feeChanged).toBe(true);
+        expect(result.newFee.totalFee).toBe(110);
+        expect(result.newFee.customFee).toBe(50);
+        expect(result.newFee.runnerShare).toBe(82);
+        expect(result.newFee.platformShare).toBe(28);
+
+        expect(txClient.order.updateMany).toHaveBeenCalledWith({
+          where: { id: orderId, status: 'PENDING_REVIEW' },
+          data: expect.objectContaining({
+            baseFee: 60,
+            customFee: 50,
+            customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+            totalFee: 110,
+          }),
+        });
+
+        expect(auditService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: 'ORDER_FEE_UPDATED',
+            meta: expect.objectContaining({
+              reason: 'ADMIN_APPROVAL',
+              customFeeReason: 'طلب خاص من العميل خارج الأوقات',
+              feeOverride: false,
+              oldFee: expect.objectContaining({ totalFee: 60 }),
+              newFee: expect.objectContaining({ totalFee: 110, customFee: 50 }),
+            }),
+          }),
+          txClient,
+        );
+      });
+
+      it('3. rejects invalid customFee: positive without reason, zero with reason, negative, fraction, over cap', async () => {
+        const serviceWithCap500 = new AdminOrderCommandService(
+          prisma as unknown as PrismaService,
+          auditService as unknown as AuditService,
+          notificationsService as unknown as NotificationsService,
+          pricingService as unknown as PricingService,
+          orderStateMachine,
+          runnerStateMachine,
+          500,
+        );
+
+        // positive customFee without reason
+        await expect(
+          serviceWithCap500.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 50,
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // zero customFee with reason
+        await expect(
+          serviceWithCap500.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 0,
+            customFeeReason: 'سبب غير مبرر',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // negative customFee
+        await expect(
+          serviceWithCap500.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: -10,
+            customFeeReason: 'سالب',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // decimal customFee
+        await expect(
+          serviceWithCap500.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 15.5,
+            customFeeReason: 'كسر',
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // over cap (501 > 500)
+        await expect(
+          serviceWithCap500.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 501,
+            customFeeReason: 'فوق السقف',
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('4. production guard: rejects customFee = 1 with default limit 0', async () => {
+        // default limit is MAX_CUSTOM_FEE = 0
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            customFee: 1,
+            customFeeReason: 'محاولة في 6A',
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      describe('Sprint 6A-3.1b: pricing wired from PlatformPricing row', () => {
+        // قيم الصف مختلفة عمدًا عن قيم اللقطة/الافتراضية لإثبات مصدر الأرقام
+        const rowConfig = { baseFee: 999, peripheralFee: 55, extraStoreFee: 35 };
+
+        const twoStoreOrder = {
+          ...baseMockOrder,
+          baseFee: 60,
+          peripheralFee: 0,
+          extraStoresFee: 20,
+          totalFee: 80,
+          orderStores: [{ id: 'st-1' }, { id: 'st-2' }],
+        };
+
+        it('11. takes peripheralFee and extraStoreFee from the DB row while baseFee stays the order snapshot (D21)', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+          txClient.order.findUnique.mockResolvedValue(twoStoreOrder);
+          txClient.order.updateMany.mockResolvedValue({ count: 1 });
+          txClient.order.findUniqueOrThrow.mockResolvedValue({
+            ...twoStoreOrder,
+            isPeripheral: true,
+            peripheralFee: 55,
+            extraStoresFee: 35,
+            totalFee: 150,
+            status: 'AWAITING_RUNNER',
+          });
+
+          const result = await service.approveOrder(orderId, adminId, {
+            isPeripheral: true,
+          });
+
+          // تُقرأ الإعدادات من داخل نفس الـ transaction
+          expect(pricingService.getPricingConfig).toHaveBeenCalledWith(txClient);
+          // baseFee من لقطة الطلب (60) لا من الصف (999) — D21
+          expect(pricingService.calculateFee).toHaveBeenCalledWith(
+            expect.objectContaining({ isPeripheral: true, purchasedStoreCount: 2 }),
+            { baseFee: 60, peripheralFee: 55, extraStoreFee: 35 },
+          );
+
+          expect(result.newFee.baseFee).toBe(60);
+          expect(result.newFee.peripheralFee).toBe(55);
+          expect(result.newFee.extraStoresFee).toBe(35);
+          expect(result.newFee.totalFee).toBe(150);
+
+          expect(txClient.order.updateMany).toHaveBeenCalledWith({
+            where: { id: orderId, status: 'PENDING_REVIEW' },
+            data: expect.objectContaining({
+              baseFee: 60,
+              peripheralFee: 55,
+              extraStoresFee: 35,
+              totalFee: 150,
+            }),
+          });
+        });
+
+        it('12. admin baseFee override still wins over the DB row baseFee (D21)', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+          txClient.order.findUnique.mockResolvedValue(twoStoreOrder);
+          txClient.order.updateMany.mockResolvedValue({ count: 1 });
+          txClient.order.findUniqueOrThrow.mockResolvedValue({
+            ...twoStoreOrder,
+            baseFee: 95,
+            peripheralFee: 55,
+            extraStoresFee: 35,
+            totalFee: 185,
+            status: 'AWAITING_RUNNER',
+          });
+
+          const result = await service.approveOrder(orderId, adminId, {
+            isPeripheral: true,
+            baseFee: 95,
+          });
+
+          expect(pricingService.calculateFee).toHaveBeenCalledWith(
+            expect.anything(),
+            { baseFee: 95, peripheralFee: 55, extraStoreFee: 35 },
+          );
+          expect(result.newFee.baseFee).toBe(95);
+          expect(result.newFee.totalFee).toBe(185);
+        });
+
+        it('13. MAX_CUSTOM_FEE = 0 guard stays active and pricing row is never read when customFee is rejected', async () => {
+          pricingService.getPricingConfig.mockResolvedValue(rowConfig);
+
+          await expect(
+            service.approveOrder(orderId, adminId, {
+              isPeripheral: false,
+              customFee: 1,
+              customFeeReason: 'محاولة بعد ربط الإعدادات',
+            }),
+          ).rejects.toThrow(BadRequestException);
+
+          expect(MAX_CUSTOM_FEE).toBe(0);
+          expect(pricingService.getPricingConfig).not.toHaveBeenCalled();
+          expect(pricingService.calculateFee).not.toHaveBeenCalled();
+          expect(txClient.order.updateMany).not.toHaveBeenCalled();
+        });
+      });
+
+      it('5. baseFee override: replaces snapshot and sets feeOverride in audit, rejects out of range', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          baseFee: 80,
+          totalFee: 80,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+          baseFee: 80,
+        });
+
+        expect(result.feeChanged).toBe(true);
+        expect(result.newFee.baseFee).toBe(80);
+        expect(result.newFee.totalFee).toBe(80);
+
+        expect(auditService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: 'ORDER_FEE_UPDATED',
+            meta: expect.objectContaining({
+              feeOverride: true,
+              oldFee: expect.objectContaining({ baseFee: 60 }),
+              newFee: expect.objectContaining({ baseFee: 80 }),
+            }),
+          }),
+          txClient,
+        );
+
+        // Rejects baseFee = 0 or < min
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            baseFee: 0,
+          }),
+        ).rejects.toThrow(BadRequestException);
+
+        // Rejects baseFee > max (1001)
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: false,
+            baseFee: 1001,
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('6. updateMany count = 0 throws ConflictException and suppresses WebSocket', async () => {
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(
+          service.approveOrder(orderId, adminId, {
+            isPeripheral: true,
+          }),
+        ).rejects.toThrow(ConflictException);
+
+        expect(notificationsService.emitToCustomer).not.toHaveBeenCalled();
+        expect(notificationsService.emitToAdmin).not.toHaveBeenCalled();
+      });
+
+      it('7. WebSocket emits only when totalFee changes, failure is logged and does not abort approval', async () => {
+        // Case A: totalFee did not change -> no order:fee_updated emitted
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+        });
+
+        expect(notificationsService.emitToCustomer).toHaveBeenCalledWith(
+          'usr-cust-1',
+          'order:status_changed',
+          expect.anything(),
+          'status_update',
+        );
+        expect(notificationsService.emitToCustomer).not.toHaveBeenCalledWith(
+          'usr-cust-1',
+          'order:fee_updated',
+          expect.anything(),
+          'status_update',
+        );
+
+        // Case B: totalFee changed + notification failure is caught and does not throw
+        vi.clearAllMocks();
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          isPeripheral: true,
+          peripheralFee: 40,
+          totalFee: 100,
+          status: 'AWAITING_RUNNER',
+        });
+        notificationsService.emitToCustomer.mockRejectedValueOnce(new Error('Network offline'));
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: true,
+        });
+
+        expect(result.order.status).toBe('AWAITING_RUNNER');
+        expect(result.feeChanged).toBe(true);
+      });
+
+      it('8. proves no behavioral change for standard non-peripheral order without customFee (written values match previous snapshot 60/0/extra)', async () => {
+        const standardOrder = {
+          ...baseMockOrder,
+          isPeripheral: false,
+          baseFee: 60,
+          peripheralFee: 0,
+          extraStoresFee: 0,
+          customFee: 0,
+          customFeeReason: null,
+          totalFee: 60,
+          orderStores: [{ id: 'st-1' }],
+        };
+        txClient.order.findUnique.mockResolvedValue(standardOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...standardOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        const result = await service.approveOrder(orderId, adminId, {
+          isPeripheral: false,
+        });
+
+        expect(result.feeChanged).toBe(false);
+        expect(result.newFee.baseFee).toBe(60);
+        expect(result.newFee.peripheralFee).toBe(0);
+        expect(result.newFee.extraStoresFee).toBe(0);
+        expect(result.newFee.customFee).toBe(0);
+        expect(result.newFee.totalFee).toBe(60);
+
+        // Values written to updateMany are identical to previous snapshot
+        expect(txClient.order.updateMany).toHaveBeenCalledWith({
+          where: { id: orderId, status: 'PENDING_REVIEW' },
+          data: expect.objectContaining({
+            isPeripheral: false,
+            baseFee: 60,
+            peripheralFee: 0,
+            extraStoresFee: 0,
+            customFee: 0,
+            customFeeReason: null,
+            totalFee: 60,
+          }),
+        });
+      });
+
+      it('9. proves ORDER_FEE_UPDATED audit log is emitted only when feeChanged is true', async () => {
+        // Case A: feeChanged is false -> ORDER_FEE_UPDATED is NOT logged
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await service.approveOrder(orderId, adminId, { isPeripheral: false });
+        expect(auditService.log).not.toHaveBeenCalledWith(
+          expect.objectContaining({ event: 'ORDER_FEE_UPDATED' }),
+          expect.anything(),
+        );
+
+        // Case B: feeChanged is true -> ORDER_FEE_UPDATED is logged
+        vi.clearAllMocks();
+        txClient.order.findUnique.mockResolvedValue(baseMockOrder);
+        txClient.order.updateMany.mockResolvedValue({ count: 1 });
+        txClient.order.findUniqueOrThrow.mockResolvedValue({
+          ...baseMockOrder,
+          isPeripheral: true,
+          peripheralFee: 40,
+          totalFee: 100,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await service.approveOrder(orderId, adminId, { isPeripheral: true });
+        expect(auditService.log).toHaveBeenCalledWith(
+          expect.objectContaining({
+            event: 'ORDER_FEE_UPDATED',
+            meta: expect.objectContaining({
+              reason: 'ADMIN_APPROVAL',
+            }),
+          }),
+          txClient,
+        );
+      });
+
+      it('10. throws ConflictException when order status changed concurrently before approval (e.g. AWAITING_RUNNER)', async () => {
+        txClient.order.findUnique.mockResolvedValue({
+          ...baseMockOrder,
+          status: 'AWAITING_RUNNER',
+        });
+
+        await expect(
+          service.approveOrder(orderId, adminId, { isPeripheral: false }),
+        ).rejects.toThrow(ConflictException);
+      });
+    });
   });
 
   describe('rejectOrder', () => {
@@ -417,6 +904,48 @@ describe('AdminOrderCommandService', () => {
       await expect(
         service.rejectOrder(orderId, adminId, { cancelReason: 'Cancelled' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects order from UNDER_REVIEW to CANCELLED with cancelReason', async () => {
+      const mockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-200',
+        status: 'UNDER_REVIEW',
+        customerId: 'cust-2',
+        customer: { userId: 'usr-cust-2' },
+      };
+
+      txClient.order.findUnique.mockResolvedValue(mockOrder);
+      txClient.order.updateMany.mockResolvedValue({ count: 1 });
+      txClient.order.findUniqueOrThrow.mockResolvedValue({
+        ...mockOrder,
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelReason: 'Client requested cancellation',
+      });
+
+      const result = await service.rejectOrder(orderId, adminId, {
+        cancelReason: 'Client requested cancellation',
+      });
+
+      expect(result.order.status).toBe('CANCELLED');
+      expect(txClient.order.updateMany).toHaveBeenCalledWith({
+        where: { id: orderId, status: 'UNDER_REVIEW' },
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          cancelledByUserId: adminId,
+          cancelReason: 'Client requested cancellation',
+        }),
+      });
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'ORDER_REJECTED',
+          fromStatus: 'UNDER_REVIEW',
+          toStatus: 'CANCELLED',
+        }),
+        txClient,
+      );
     });
   });
 
@@ -751,6 +1280,48 @@ describe('AdminOrderCommandService', () => {
         },
         'urgent',
       );
+    });
+  });
+
+  describe('Dependency Injection with CUSTOM_FEE_LIMIT', () => {
+    it('injects customFeeLimit explicitly in unit tests', () => {
+      const customService = new AdminOrderCommandService(
+        prisma as unknown as PrismaService,
+        auditService as unknown as AuditService,
+        notificationsService as unknown as NotificationsService,
+        pricingService as unknown as PricingService,
+        orderStateMachine,
+        runnerStateMachine,
+        500,
+      );
+      expect((customService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(500);
+
+      const defaultService = new AdminOrderCommandService(
+        prisma as unknown as PrismaService,
+        auditService as unknown as AuditService,
+        notificationsService as unknown as NotificationsService,
+        pricingService as unknown as PricingService,
+        orderStateMachine,
+        runnerStateMachine,
+        MAX_CUSTOM_FEE,
+      );
+      expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
+      expect((defaultService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(MAX_CUSTOM_FEE);
+    });
+
+    it('proves that OrdersModule boots without override and the guard is 0', async () => {
+      const moduleRef = await Test.createTestingModule({
+        imports: [ConfigModule.forRoot({ isGlobal: true }), OrdersModule],
+      })
+        .overrideProvider(PrismaService)
+        .useValue(prisma)
+        .overrideProvider(NotificationsService)
+        .useValue(notificationsService)
+        .compile();
+
+      const commandService = moduleRef.get(AdminOrderCommandService);
+      expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(0);
+      expect((commandService as unknown as { maxCustomFeeLimit: number }).maxCustomFeeLimit).toBe(MAX_CUSTOM_FEE);
     });
   });
 });

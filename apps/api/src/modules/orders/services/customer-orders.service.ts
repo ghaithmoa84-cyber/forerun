@@ -109,12 +109,20 @@ export class CustomerOrdersService {
 
   /**
    * Calculates estimated fee for a new order based on store count.
+   * 6A-3.1b: تُقرأ الإعدادات من صف PlatformPricing داخل نفس الـ transaction (D22)
+   * حتى تتطابق لقطة الرسوم مع لحظة إيداع الطلب.
    */
-  private calculateOrderFee(storeCount: number): FeeResult {
-    return this.pricingService.calculateFee({
-      isPeripheral: false,
-      purchasedStoreCount: storeCount,
-    });
+  private async calculateOrderFee(
+    tx: Prisma.TransactionClient,
+    storeCount: number,
+  ): Promise<FeeResult> {
+    return this.pricingService.calculateFee(
+      {
+        isPeripheral: false,
+        purchasedStoreCount: storeCount,
+      },
+      await this.pricingService.getPricingConfig(tx),
+    );
   }
 
   /**
@@ -331,17 +339,18 @@ export class CustomerOrdersService {
 
     const orderStoresData = this.buildOrderStoresData(dto.items);
 
-    const fee = this.calculateOrderFee(orderStoresData.length);
-
-    const order = await this.prisma.$transaction(
+    // D22: الحساب يتم داخل الـ transaction لتطابق اللقطة مع صف الإعدادات لحظة الإيداع
+    const { order, fee } = await this.prisma.$transaction(
       async (tx) => {
-        return this.createOrderRecord(tx, {
+        const fee = await this.calculateOrderFee(tx, orderStoresData.length);
+        const order = await this.createOrderRecord(tx, {
           customerId: customer.id,
           userId,
           dto,
           fee,
           orderStoresData,
         });
+        return { order, fee };
       },
       { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
     );
