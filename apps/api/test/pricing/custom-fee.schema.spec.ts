@@ -3,6 +3,7 @@ import {
   createApproveOrderSchema,
   ApproveOrderSchema,
   UpdatePlatformPricingSchema,
+  FeePreviewRequestSchema,
 } from '@forerun/shared-types';
 import {
   MAX_CUSTOM_FEE,
@@ -355,5 +356,98 @@ describe('Pricing & CustomFee Schemas (Sprint 6A-4)', () => {
       expect((result as Record<string, unknown>).runnerShare).toBeUndefined();
       expect((result as Record<string, unknown>).platformShare).toBeUndefined();
     });
+
+    it('accepts valid updatedAt date / ISO string', () => {
+      const dateStr = '2026-10-05T12:00:00.000Z';
+      const result = UpdatePlatformPricingSchema.parse({
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 15,
+        updatedAt: dateStr,
+      });
+      expect(result.updatedAt).toBeInstanceOf(Date);
+      expect(result.updatedAt?.toISOString()).toBe(dateStr);
+    });
+  });
+
+  describe('FeePreviewRequestSchema', () => {
+    it('accepts default empty payload and defaults customFee to 0', () => {
+      const result = FeePreviewRequestSchema.parse({});
+      expect(result.customFee).toBe(0);
+      expect(result.customFeeReason).toBeUndefined();
+    });
+
+    it('accepts customFee = 50 with valid reason', () => {
+      const result = FeePreviewRequestSchema.parse({
+        isPeripheral: true,
+        customFee: 50,
+        customFeeReason: 'طلب خاص من العميل',
+        baseFee: 70,
+      });
+      expect(result.isPeripheral).toBe(true);
+      expect(result.customFee).toBe(50);
+      expect(result.customFeeReason).toBe('طلب خاص من العميل');
+      expect(result.baseFee).toBe(70);
+    });
+
+    it('accepts customFee up to CUSTOM_FEE_CAP (500)', () => {
+      const result = FeePreviewRequestSchema.parse({
+        customFee: 500,
+        customFeeReason: 'السقف الأقصى للرسم الإضافي',
+      });
+      expect(result.customFee).toBe(500);
+    });
+
+    it('rejects customFee > 500', () => {
+      const parsed = FeePreviewRequestSchema.safeParse({
+        customFee: 501,
+        customFeeReason: 'تجاوز السقف',
+      });
+      expect(parsed.success).toBe(false);
+    });
+
+    it('rejects customFee > 0 without reason', () => {
+      const parsed = FeePreviewRequestSchema.safeParse({
+        customFee: 50,
+      });
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) {
+        const issue = parsed.error.issues.find(
+          (i) => i.path.join('.') === 'customFeeReason',
+        );
+        expect(issue?.message).toBe('يجب إدخال سبب عند تحديد رسم إضافي للطلب');
+      }
+    });
+
+    it('rejects customFee = 0 with reason', () => {
+      const parsed = FeePreviewRequestSchema.safeParse({
+        customFee: 0,
+        customFeeReason: 'سبب بلا رسم',
+      });
+      expect(parsed.success).toBe(false);
+      if (!parsed.success) {
+        const issue = parsed.error.issues.find(
+          (i) => i.path.join('.') === 'customFeeReason',
+        );
+        expect(issue?.message).toBe(
+          'لا يمكن تحديد سبب للرسم الإضافي إذا كان الرسم الإضافي 0',
+        );
+      }
+    });
+
+    it('rejects baseFee out of limits (e.g. 0 or > 1000)', () => {
+      expect(
+        FeePreviewRequestSchema.safeParse({
+          baseFee: 0,
+        }).success,
+      ).toBe(false);
+
+      expect(
+        FeePreviewRequestSchema.safeParse({
+          baseFee: 1001,
+        }).success,
+      ).toBe(false);
+    });
   });
 });
+
