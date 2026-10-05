@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { cleanDatabase, prisma } from '../setup';
-import { createTestApp, closeTestApp, getRequest, getTestApp } from '../helpers/app.helper';
+import { createTestApp, closeTestApp, getRequest } from '../helpers/app.helper';
 import {
   seedAdmin,
   seedRunner,
@@ -9,7 +9,7 @@ import {
   loginAs,
 } from '../helpers/seed.helper';
 import { AdminOrderCommandService } from '../../../src/modules/orders/services/admin-order-command.service';
-import { SettlementsService, getOperationalDate } from '../../../src/modules/settlements/settlements.service';
+import { getOperationalDate } from '../../../src/modules/settlements/settlements.service';
 import { splitShares } from '../../../src/modules/pricing/split-shares';
 
 describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Concurrency', () => {
@@ -21,13 +21,11 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
   let runnerUser: Awaited<ReturnType<typeof seedRunner>>;
   let customerUser: Awaited<ReturnType<typeof seedCustomer>>;
   let adminOrderCommandService: AdminOrderCommandService;
-  let settlementsService: SettlementsService;
 
   beforeAll(async () => {
     const app = await createTestApp({ customFeeLimit: 500 });
     request = getRequest();
     adminOrderCommandService = app.get(AdminOrderCommandService);
-    settlementsService = app.get(SettlementsService);
   });
 
   afterAll(async () => {
@@ -241,8 +239,8 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
 
     // Launch 2 parallel approvals
     const [res1, res2] = await Promise.allSettled([
-      adminOrderCommandService.approveOrder(orderId, adminUser.id, { isPeripheral: false }),
-      adminOrderCommandService.approveOrder(orderId, adminUser.id, { isPeripheral: false }),
+      adminOrderCommandService.approveOrder(orderId, adminUser.id, { isPeripheral: false, customFee: 0 }),
+      adminOrderCommandService.approveOrder(orderId, adminUser.id, { isPeripheral: false, customFee: 0 }),
     ]);
 
     const successes = [res1, res2].filter((r) => r.status === 'fulfilled');

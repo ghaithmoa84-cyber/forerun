@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import { cleanDatabase, prisma } from '../setup';
 import { createTestApp, closeTestApp, getRequest } from '../helpers/app.helper';
 import { seedAdmin, seedRunner, seedCustomer, loginAs } from '../helpers/seed.helper';
 
-let adminToken: string;
 let runnerToken: string;
 let customerToken: string;
 let pendingCustomerToken: string;
@@ -25,7 +24,6 @@ beforeEach(async () => {
   await seedRunner(prisma);
   await seedCustomer(prisma);
   const request = getRequest();
-  adminToken = await loginAs(request, '0999000001', 'Admin@12345');
   runnerToken = await loginAs(request, '0999000002', 'Runner@12345');
   customerToken = await loginAs(request, '0999000003', 'Customer@12345');
 
