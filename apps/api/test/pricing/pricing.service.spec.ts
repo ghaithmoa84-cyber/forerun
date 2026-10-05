@@ -822,6 +822,28 @@ describe('PricingService', () => {
       expect(prisma.order.update).not.toHaveBeenCalled();
     });
 
+    it('counts soft-deleted order stores exactly like approveOrder', async () => {
+      const mockOrder = {
+        id: 'ord-prev-deleted',
+        isPeripheral: false,
+        baseFee: 60,
+        orderStores: [{ id: 's1' }, { id: 's2' }, { id: 's3', isDeleted: true }],
+      };
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+
+      const result = await service.previewFee('ord-prev-deleted', {
+        isPeripheral: false,
+        customFee: 0,
+      });
+
+      expect(result.extraStoresFee).toBe(40);
+      expect(result.totalFee).toBe(100);
+      expect(prisma.order.findUnique).toHaveBeenCalledWith({
+        where: { id: 'ord-prev-deleted' },
+        include: { orderStores: { select: { id: true } } },
+      });
+    });
+
     it('previews fee for peripheral order with customFee=50 (matches splitShares)', async () => {
       const mockOrder = {
         id: 'ord-prev-2',

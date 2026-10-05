@@ -110,7 +110,6 @@ export class PricingService {
       where: { id: orderId },
       include: {
         orderStores: {
-          where: { isDeleted: false },
           select: { id: true },
         },
       },

@@ -286,6 +286,36 @@ describe('Pricing & CustomFee Schemas (Sprint 6A-4)', () => {
       expect(UpdatePlatformPricingSchema.parse(atMax)).toEqual(atMax);
     });
 
+    it('treats null or empty updatedAt as absent (no stale-write guard)', () => {
+      const withNull = UpdatePlatformPricingSchema.safeParse({
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 15,
+        updatedAt: null,
+      });
+      expect(withNull.success).toBe(true);
+      expect(withNull.data?.updatedAt).toBeUndefined();
+
+      const withEmptyString = UpdatePlatformPricingSchema.safeParse({
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 15,
+        updatedAt: '',
+      });
+      expect(withEmptyString.success).toBe(true);
+      expect(withEmptyString.data?.updatedAt).toBeUndefined();
+    });
+
+    it('rejects a non-parsable updatedAt value', () => {
+      const parsed = UpdatePlatformPricingSchema.safeParse({
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 15,
+        updatedAt: 'not-a-date',
+      });
+      expect(parsed.success).toBe(false);
+    });
+
     it('rejects baseFee = 0 (D18: baseFee must be >= 1)', () => {
       const parsed = UpdatePlatformPricingSchema.safeParse({
         baseFee: 0,

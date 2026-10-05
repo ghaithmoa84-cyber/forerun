@@ -51,7 +51,10 @@ export const UpdatePlatformPricingSchema = z.object({
       PRICING_LIMITS.peripheralFee.max,
       `رسم المنطقة الطرفية يجب ألا يتجاوز ${PRICING_LIMITS.peripheralFee.max}`,
     ),
-  updatedAt: z.coerce.date().optional(),
+  updatedAt: z.preprocess(
+    (value) => (value === null || value === '' ? undefined : value),
+    z.coerce.date().optional(),
+  ),
 });
 
 export type UpdatePlatformPricingRequest = z.input<
