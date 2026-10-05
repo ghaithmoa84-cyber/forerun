@@ -17,6 +17,7 @@ export interface FeeResult {
   baseFee: number;
   peripheralFee: number;
   extraStoresFee: number;
+  customFee?: number;
   totalFee: number;
   runnerShare: number;
   platformShare: number;
@@ -28,6 +29,7 @@ export interface RecalculateFeeResult {
     baseFee: number;
     peripheralFee: number;
     extraStoresFee: number;
+    customFee?: number;
     totalFee: number;
   } | null;
   newFee: FeeResult;
@@ -39,6 +41,7 @@ export interface RecalculateFeeResult {
       baseFee: number;
       peripheralFee: number;
       extraStoresFee: number;
+      customFee?: number;
       totalFee: number;
     } | null;
     newFee: FeeResult;
@@ -84,6 +87,7 @@ export class PricingService {
     params: {
       isPeripheral: boolean;
       purchasedStoreCount: number;
+      customFee?: number;
     },
     config: PricingConfig,
   ): FeeResult {
@@ -96,13 +100,18 @@ export class PricingService {
       );
     }
 
+    const customFee = params.customFee ?? 0;
+    if (!Number.isInteger(customFee) || customFee < 0) {
+      throw new BadRequestException('customFee must be a non-negative integer');
+    }
+
     const baseFee = config.baseFee;
     const peripheralFee = params.isPeripheral
       ? config.peripheralFee
       : 0;
     const extraStoresFee =
       Math.max(0, params.purchasedStoreCount - 1) * config.extraStoreFee;
-    const totalFee = baseFee + peripheralFee + extraStoresFee;
+    const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
     const { runnerShare, platformShare } = splitShares(totalFee);
 
     return {
@@ -112,6 +121,7 @@ export class PricingService {
       totalFee,
       runnerShare,
       platformShare,
+      ...(params.customFee !== undefined ? { customFee: params.customFee } : {}),
     };
   }
 
@@ -192,9 +202,10 @@ export class PricingService {
       );
     }
 
-    // Preserve the order's existing fee snapshot (Bug B2 fix)
+    // Preserve the order's existing fee snapshot (Bug B2 fix + customFee)
     const baseFee = order.baseFee;
     const peripheralFee = order.peripheralFee;
+    const customFee = (order as { customFee?: number }).customFee ?? 0;
 
     // Recalculate extraStoresFee only, based on purchased stores count
     const purchasedStoreCount = order.orderStores.length;
@@ -202,8 +213,12 @@ export class PricingService {
     const extraStoresFee =
       Math.max(0, purchasedStoreCount - 1) * config.extraStoreFee;
 
-    const totalFee = baseFee + peripheralFee + extraStoresFee;
+    const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
     const { runnerShare, platformShare } = splitShares(totalFee);
+
+    const hasOrderCustomFee =
+      (order as { customFee?: number }).customFee !== undefined &&
+      (order as { customFee?: number }).customFee !== null;
 
     const newFee: FeeResult = {
       baseFee,
@@ -212,6 +227,7 @@ export class PricingService {
       totalFee,
       runnerShare,
       platformShare,
+      ...(hasOrderCustomFee ? { customFee } : {}),
     };
 
     const oldFee = {
@@ -219,6 +235,7 @@ export class PricingService {
       peripheralFee: order.peripheralFee,
       extraStoresFee: order.extraStoresFee,
       totalFee: order.totalFee,
+      ...(hasOrderCustomFee ? { customFee: (order as { customFee?: number }).customFee } : {}),
     };
 
     const feeChanged =
@@ -227,7 +244,7 @@ export class PricingService {
       oldFee.extraStoresFee !== newFee.extraStoresFee ||
       oldFee.totalFee !== newFee.totalFee;
 
-    // Write back ONLY extraStoresFee and totalFee (DO NOT overwrite baseFee or peripheralFee)
+    // Write back ONLY extraStoresFee and totalFee (DO NOT overwrite baseFee, peripheralFee, or customFee)
     await client.order.update({
       where: { id: order.id },
       data: {

@@ -701,5 +701,83 @@ describe('PricingService', () => {
       expect(prisma.platformPricing.findUnique).not.toHaveBeenCalled();
     });
   });
+
+  describe('customFee handling (Sprint 6A-6)', () => {
+    it('calculateFee adds customFee to totalFee and distributes shares via splitShares', () => {
+      const result = service.calculateFee(
+        {
+          isPeripheral: false,
+          purchasedStoreCount: 1,
+          customFee: 50,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
+
+      // baseFee=60, peripheral=0, extra=0, customFee=50 -> total=110
+      // splitShares(110): runner=82 (floor(110*0.75)=82), platform=28 (110-82=28)
+      expect(result.baseFee).toBe(60);
+      expect(result.customFee).toBe(50);
+      expect(result.totalFee).toBe(110);
+      expect(result.runnerShare).toBe(82);
+      expect(result.platformShare).toBe(28);
+      expect(result.runnerShare + result.platformShare).toBe(110);
+    });
+
+    it('calculateFee rejects negative or non-integer customFee', () => {
+      expect(() =>
+        service.calculateFee(
+          { isPeripheral: false, purchasedStoreCount: 1, customFee: -1 },
+          DEFAULT_PRICING_CONFIG,
+        ),
+      ).toThrow(BadRequestException);
+
+      expect(() =>
+        service.calculateFee(
+          { isPeripheral: false, purchasedStoreCount: 1, customFee: 10.5 },
+          DEFAULT_PRICING_CONFIG,
+        ),
+      ).toThrow(BadRequestException);
+    });
+
+    it('recalculateFee preserves order customFee in totalFee and shares', async () => {
+      const mockOrder = {
+        id: 'ord-custom-1',
+        orderNumber: 'ORD-2026-CF1',
+        status: 'IN_PROGRESS',
+        customerId: 'cust-cf',
+        isPeripheral: false,
+        baseFee: 60,
+        peripheralFee: 0,
+        extraStoresFee: 0,
+        customFee: 50,
+        totalFee: 110,
+        orderStores: [{ status: 'PURCHASED' }, { status: 'PURCHASED' }], // 2 stores -> extraStoresFee = 20
+      };
+
+      prisma.order.findUnique.mockResolvedValue(mockOrder);
+      prisma.order.update.mockResolvedValue(mockOrder);
+
+      const result = await service.recalculateFee('ord-custom-1');
+
+      // newFee: base=60 + peripheral=0 + extra=20 + custom=50 -> total=130
+      // splitShares(130): runner=97, platform=33
+      expect(result.feeChanged).toBe(true);
+      expect(result.newFee.baseFee).toBe(60);
+      expect(result.newFee.extraStoresFee).toBe(20);
+      expect(result.newFee.customFee).toBe(50);
+      expect(result.newFee.totalFee).toBe(130);
+      expect(result.newFee.runnerShare).toBe(97);
+      expect(result.newFee.platformShare).toBe(33);
+
+      // Verifies update writes back ONLY extraStoresFee and totalFee
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: 'ord-custom-1' },
+        data: {
+          extraStoresFee: 20,
+          totalFee: 130,
+        },
+      });
+    });
+  });
 });
 
