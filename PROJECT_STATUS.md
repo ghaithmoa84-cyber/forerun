@@ -327,6 +327,7 @@ fawrun/
 | 2026-10-05 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid)** — رفع MAX_CUSTOM_FEE إلى 500، إضافة customFee/customFeeReason لـ customer-web (OrderDetail) و runner-pwa (ActiveOrder) و Android (DTO + PricingCard + strings.xml)، وحمولة order:assigned WebSocket carrying customFee. 4 semantic commits: 4fe7cb (shared types) · aaf2d8 (backend) · 86ac39a (frontends) · 7b4ae2 (tests). pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
 | 2026-10-06 | إلغاء نظام الحصص (D25–D28) نُشر على الإنتاج: merge `af6ae4e` · 12 commits · API/Admin/Runner Ready · Customer Web لم يتغيّر. |
 | 2026-10-06 | S5 ميداني ناجح (FW-000093) · LedgerEntry واحد ORDER_FEE_TOTAL=100 · M-1 مغلق. |
+| 2026-10-06 | توقيع المراجعة الأمنية الإصدار 3 على `7787553` · 5 بنود مفتوحة مقبولة كدين تقني · 28 مُغلقة · 0 حرجة. |
 
 ---
 
