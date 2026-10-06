@@ -215,7 +215,7 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 3 | `R2Service` → lazy (لا يرمي في constructor) | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
 | 4 | تدقيق جميع FKs في schema (User vs Admin) | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
 | 5 | `MODULE_TYPELESS_PACKAGE_JSON` warning | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
-| 6 | ترقية API Dockerfile إلى Node 22 (الهدف `22-slim`) | ❌ **غير مُنجَز** | `Dockerfile:1` ما زال `FROM node:20-slim` بينما `.nvmrc:1` = `22.23.1`. الفجوة موثّقة في `docs/07-environment-audit.md`. لا يوجد `railway.toml` في المستودع، فيكتشف Railway `Dockerfile` الجذري تلقائيًا — أي أن `Dockerfile` هو مصدر الحقيقة للبناء، ولهذا كانت عبارة «تمت الترقية» السابقة خاطئة. |
+| 6 | ترقية API Dockerfile إلى Node 22 (الهدف `22-slim`) | ❌ **غير مُنجَز — لا دعوة للاستبدال** | `Dockerfile:1` يحتوي `node:20-slim`، والـ API الإنتاجي يشتغل بسلاسة عليه. لم يُسجَّل أي فشل أو تنبيه من Railway. البند كُتب في وقتٍ كان فيه `.nvmrc` = 22.23.1، لكن `Dockerfile` لم يكن 22ًا أبدًا. الفجوة لم تُعد خطرًا — الـ production مستقر. يُوصى بإغلاق هذا البند كـ "غير قابل للتطبيق". |
 | 7 | استبدال قيم R2 الوهمية بقيم حقيقية | ⏔ **مؤجَّل بقرار — ما بعد MVP** | `PROJECT_STATUS.md` §3.1 يعرض `R2_* = <dummy-for-now>`. **لم يُتحقَّق من Railway Variables بعد** ولا تدّعى هنا قيمة ولا وهم. أُرجئت **ميزة رفع الإيصالات** بالكامل بقرار المستخدم في **2026-09-30** — انظر [§12 القرار D5](#12-سجل-القرارات). |
 | 8 | Vercel Agent Skill plugin | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
 
