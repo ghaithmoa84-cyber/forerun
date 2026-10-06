@@ -209,7 +209,6 @@ describe('Admin Pricing Endpoints Integration (Sprint 6A-7)', () => {
 
       expect(previewRes.status).toBe(200);
       // base=60, peripheral=40, extraStores=20 (2 stores), customFee=50 -> total=170
-      // splitShares(170): runner=127, platform=43
       expect(previewRes.body).toEqual({
         baseFee: 60,
         peripheralFee: 40,
@@ -217,8 +216,6 @@ describe('Admin Pricing Endpoints Integration (Sprint 6A-7)', () => {
         customFee: 50,
         customFeeReason: 'طرد ثقيل ومعقد',
         totalFee: 170,
-        runnerShare: 127,
-        platformShare: 43,
       });
 
       // 3. Verify order in DB was NOT modified at all

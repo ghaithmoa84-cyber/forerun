@@ -110,7 +110,7 @@ describe('deliverOrder — Integration', () => {
     return { orderId, storeId };
   }
 
-  it('should deliver order and create 3 ledger entries', async () => {
+  it('should deliver order and create 1 ledger entry (ORDER_FEE_TOTAL)', async () => {
     await prepareOrderForDelivery();
     const idempotencyKey = randomUUID();
 
@@ -126,29 +126,11 @@ describe('deliverOrder — Integration', () => {
     expect(order!.deliveredAt).not.toBeNull();
 
     const entries = await prisma.ledgerEntry.findMany({ where: { orderId } });
-    expect(entries).toHaveLength(3);
-    expect(
-      entries.find((entry) => entry.type === 'ORDER_FEE_TOTAL'),
-    ).toBeDefined();
-    expect(
-      entries.find((entry) => entry.type === 'RUNNER_SHARE'),
-    ).toBeDefined();
-    expect(
-      entries.find((entry) => entry.type === 'PLATFORM_SHARE'),
-    ).toBeDefined();
-
-    const total = entries.find(
-      (entry) => entry.type === 'ORDER_FEE_TOTAL',
-    )!.amount;
-    const runnerShare = entries.find(
-      (entry) => entry.type === 'RUNNER_SHARE',
-    )!.amount;
-    const platformShare = entries.find(
-      (entry) => entry.type === 'PLATFORM_SHARE',
-    )!.amount;
-    expect(runnerShare + platformShare).toBe(total);
-    expect(runnerShare).toBe(Math.floor(total * 0.75));
-    expect(platformShare).toBe(Math.ceil(total * 0.25));
+    expect(entries).toHaveLength(1);
+    const totalEntry = entries[0];
+    expect(totalEntry.type).toBe('ORDER_FEE_TOTAL');
+    expect(totalEntry.amount).toBe(60);
+    const total = totalEntry.amount;
 
     const customer = await prisma.customer.findUnique({
       where: { userId: customerUser.id },
@@ -196,7 +178,7 @@ describe('deliverOrder — Integration', () => {
     expect(mismatchRes.status).toBe(409);
 
     const entries = await prisma.ledgerEntry.findMany({ where: { orderId } });
-    expect(entries).toHaveLength(3);
+    expect(entries).toHaveLength(1);
   });
 
   it('should return 404 when wrong runner tries to deliver', async () => {
