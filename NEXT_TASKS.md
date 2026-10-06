@@ -8,6 +8,8 @@
 
 ## مسار إلغاء نظام الحصص واعتماد الراتب الثابت (القرارات D25–D28)
 
+> ⚠️ **Release Blocker:** كسر عقد `FeePreviewResponse` (بحذف حقول الحصص `runnerShare` و `platformShare`) يتطلب إطلاق المرحلة 1 (Backend) والمرحلة 3 (admin-web) معاً في **نفس الإصدار (Same Release)**، ويُحظر نشر الـ Backend منفرداً قبل تحديث أسطح الأدمن.
+
 ### المرحلة 1: Backend (فرع `feature/remove-shares-mvp`) — ✅ مُنجَز
 - إلغاء قيدي `RUNNER_SHARE` و `PLATFORM_SHARE` عند التسليم في الـ Ledger، وحصر القيد بـ `ORDER_FEE_TOTAL` (D25).
 - تبسيط التسويات إلى `totalFees` وتصفير الحصص دون المساس بـ DB (D26).

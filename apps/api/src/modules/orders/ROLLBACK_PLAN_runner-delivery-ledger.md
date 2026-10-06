@@ -1,5 +1,9 @@
 # Rollback Plan — Runner Delivery and Ledger Creation
 
+> ⚠️ **OUTDATED — see D25/D28.**
+> نظام الحصص (RUNNER_SHARE / PLATFORM_SHARE) أُلغي بالقرارين D25 وD28.
+> التسليم الآن يكتب قيداً واحداً فقط: ORDER_FEE_TOTAL.
+
 ## 1. Operation Description
 
 - Adds authenticated runner delivery actions and creates append-only `LedgerEntry` records for the order fee, runner share, and platform share when an order reaches `DELIVERED`.
