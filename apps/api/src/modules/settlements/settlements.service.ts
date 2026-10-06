@@ -157,12 +157,15 @@ export class SettlementsService {
       items.push({
         orderId: order.id,
         orderFee: fee,
-        runnerShare: fee,
-        platformShare: 0,
+        runnerShare: 0,
+        platformShare: fee,
       });
     }
 
-    return { totalFees, runnerShare: 0, platformShare: 0, items };
+    // D26 / D28: المندوب موظف براتب ثابت خارج التطبيق، وبالتالي حصة المندوب = 0
+    // وكامل الرسوم تؤول إحصائياً للمنصة (platformShare = totalFees في Settlement و orderFee في SettlementItem).
+    // هذا يضمن التطابق التام بين رأس Settlement وبنود SettlementItem.
+    return { totalFees, runnerShare: 0, platformShare: totalFees, items };
   }
 
   /**
@@ -520,7 +523,7 @@ export class SettlementsService {
       totalOrders,
       totalFees,
       estimatedRunnerShare: 0,
-      estimatedPlatformShare: 0,
+      estimatedPlatformShare: totalFees,
       orders,
     });
   }
