@@ -90,6 +90,7 @@
 | A1 | **Sprint 8E** — WebSocket Port | منجَز | ✅ **مُدمج في `b6acfaf`** | @code-architect | **261 `@Test` ناجح (+14)** · `lint` 0 · `assembleDebug` ناجح · تم فصل WebSocket عن `core` عبر `OrderEventsGateway` وإغلاق فجوة D23 (`account:verified`) واستهلاك `connectionState`. المرجع: [docs/android/ROADMAP.md](docs/android/ROADMAP.md). |
 | A2 | **Firebase** — إعداد النشر | عالية | ✅ **مُنجَز** | المستخدم | تم إنشاء مشروع Firebase ووضع `google-services.json` الحقيقي وتوفير `Service Account`. |
 | A3 | **Sprint 8F** — إشعارات FCM والنشر | عالية | ✅ **مُنجَز في `090d261`** | @feature-dev | تم إنشاء `DeviceToken` في الـ DB ونقاط نهاية `POST/DELETE /api/v1/customer/me/device-token` وخدمة `FcmService` وإرسال إشعارات تغيير حالة الطلب. |
+| A4 | **Sprint 9** — Android UI Polish | عالية | ✅ **مُدمج في `2088b51`** (2026-10-06) | @feature-dev + @test-engineer | **269 `@Test` ناجح (+8)** · `lint` 0 · `assembleDebug` ناجح · توحيد ترجمة وبادجات الحالات عبر `OrderStatusLabel` · تدويل رسائل الخطأ من `strings.xml` (صفر نص عربي في `.kt`) · حماية تدوير الشاشة بـ `rememberSaveable` · ضبط Scaffolds وإزاحة الدبوس الديناميكية مع `imePadding` · إحداثيات دمشق الافتراضية · مراجعة بصرية ناجحة لـ 5 شاشات. |
 
 ---
 

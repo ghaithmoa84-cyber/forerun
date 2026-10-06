@@ -277,7 +277,7 @@ fawrun/
 │   ├── customer-web/           ← Vite
 │   │   ├── vercel.json
 │   │   └── vite.config.ts
-│   └── android/                ← Kotlin + Jetpack Compose (9 سبرنتات منجزة: 1–8D)
+│   └── android/                ← Kotlin + Jetpack Compose (10 سبرنتات منجزة: 1–9)
 │       ├── app/src/main/java/  ← MVVM + Hilt + Retrofit + WebSocket
 │       └── app/src/test/       ← 247 @Test
 ├── docs/
@@ -329,6 +329,7 @@ fawrun/
 | 2026-10-06 | S5 ميداني ناجح (FW-000093) · LedgerEntry واحد ORDER_FEE_TOTAL=100 · M-1 مغلق. |
 | 2026-10-06 | توقيع المراجعة الأمنية الإصدار 3 على `7787553` · 5 بنود مفتوحة مقبولة كدين تقني · 28 مُغلقة · 0 حرجة. |
 | 2026-10-06 | Sprint 6 S3: خط أساس الأداء موثّق في `docs/performance-baseline.md` · RSS ~122MB · p50<p95 تحت الحدود · لا اختناقات. |
+| 2026-10-06 | `2088b51` — **Sprint 9 (Android UI Polish)** مُدمج في `master` · 269 اختباراً · 0 lint · صفر نص عربي في `.kt` · مراجعة بصرية ناجحة. |
 
 ---
 
