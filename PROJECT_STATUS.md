@@ -326,6 +326,7 @@ fawrun/
 
 | 2026-10-05 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid)** — رفع MAX_CUSTOM_FEE إلى 500، إضافة customFee/customFeeReason لـ customer-web (OrderDetail) و runner-pwa (ActiveOrder) و Android (DTO + PricingCard + strings.xml)، وحمولة order:assigned WebSocket carrying customFee. 4 semantic commits: 4fe7cb (shared types) · aaf2d8 (backend) · 86ac39a (frontends) · 7b4ae2 (tests). pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
 | 2026-10-06 | إلغاء نظام الحصص (D25–D28) نُشر على الإنتاج: merge `af6ae4e` · 12 commits · API/Admin/Runner Ready · Customer Web لم يتغيّر. |
+| 2026-10-06 | S5 ميداني ناجح (FW-000093) · LedgerEntry واحد ORDER_FEE_TOTAL=100 · M-1 مغلق. |
 
 ---
 
@@ -484,6 +485,7 @@ fawrun/
   - هذا التوحيد يضمن التطابق الرياضي الصارم: مجموع `platformShare` في البنود يطابق تماماً `platformShare` في رأس التسوية (100% للمنصة إحصائياً، والمندوب يحاسب براتب ثابت خارج النظام).
   - استعلام `getCurrentSettlement` يرجع `totalFees` مع `estimatedRunnerShare: 0` و`estimatedPlatformShare: totalFees`.
   - **ملاحظة UI:** بطاقة لوحة الأدمن تحوّلت من `platformShare` إلى `totalFees` — الرقم سيظهر ~4× أكبر، وهذا صحيح دلاليًا بعد D26.
+  - **ملاحظة Schema:** عمودا `runnerShare` و `platformShare` موجودان فعليًا في جدولي `Settlement` و `SettlementItem` في `schema.prisma` وقاعدة البيانات منذ الهجرة التأسيسية (`20260911172902_init`)؛ وتعبئتهما بهذه القيم الثابتة (`0` للمندوب و `order.totalFee` للمنصة) مقصودة للحفاظ على التوافق دون أي migrations في الـ MVP (مُدرج كدين تقني C-2 في NEXT_TASKS.md).
 - **D27 — عرض الرسوم للمندوب:** المندوب يرى إجمالي الرسم `totalFee` في التطبيق دون تفكيك لحصص غير مستحقة.
 - **D28 — تهميش دوال وثوابت الحصص:** وضع علامة `@deprecated` على ثوابت `RUNNER_SHARE` و`PLATFORM_SHARE` ودالة `splitShares`، وإيقاف استدعائها في مسارات الإنتاج بالكامل.
 - **سياسة التراجع وسلامة البيانات:** لا يوجد أي تغيير في `schema.prisma` ولا أي migration جديد. التراجع يتم عبر `git revert` بصورة فورية وآمنة دون مساس بسلامة البيانات.
