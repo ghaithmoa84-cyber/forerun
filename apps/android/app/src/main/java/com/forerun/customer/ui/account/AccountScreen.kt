@@ -51,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,14 +92,14 @@ fun AccountScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    var nameInput by remember { mutableStateOf("") }
-    var altPhoneInput by remember { mutableStateOf("") }
-    var isInitialized by remember { mutableStateOf(false) }
+    var nameInput by rememberSaveable { mutableStateOf("") }
+    var altPhoneInput by rememberSaveable { mutableStateOf("") }
+    var isInitialized by rememberSaveable { mutableStateOf(false) }
 
-    var isPasswordExpanded by remember { mutableStateOf(false) }
-    var newPasswordInput by remember { mutableStateOf("") }
-    var confirmPasswordInput by remember { mutableStateOf("") }
-    var showPassword by remember { mutableStateOf(false) }
+    var isPasswordExpanded by rememberSaveable { mutableStateOf(false) }
+    var newPasswordInput by rememberSaveable { mutableStateOf("") }
+    var confirmPasswordInput by rememberSaveable { mutableStateOf("") }
+    var showPassword by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(uiState.profile) {
         uiState.profile?.let { profile ->

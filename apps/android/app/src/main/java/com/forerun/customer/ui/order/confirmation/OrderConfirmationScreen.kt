@@ -65,14 +65,14 @@ fun OrderConfirmationScreen(
     onNewOrder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = ForerunSoftSurface
-    ) { innerPadding ->
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(ForerunSoftSurface)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(Dimens.ScreenMargin),
             horizontalAlignment = Alignment.CenterHorizontally,
