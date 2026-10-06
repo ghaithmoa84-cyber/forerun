@@ -27,7 +27,7 @@ interface PendingOrderItem {
 }
 
 interface DashboardStats {
-  todayPlatformShare: number;
+  todayTotalFees: number;
   pendingSettlements: number;
   runnersAvailable: number;
   runnersOnMission: number;
@@ -116,7 +116,7 @@ export default function DashboardPage() {
   const [highlightedOrderIds, setHighlightedOrderIds] = useState<Set<string>>(new Set());
 
   const [stats, setStats] = useState<DashboardStats>({
-    todayPlatformShare: 0,
+    todayTotalFees: 0,
     pendingSettlements: 0,
     runnersAvailable: 0,
     runnersOnMission: 0,
@@ -201,8 +201,8 @@ export default function DashboardPage() {
         }),
       ]);
 
-      const todayPlatformShare = settlements.reduce(
-        (sum: number, s: Settlement) => sum + (s.platformShare ?? 0),
+      const todayTotalFees = settlements.reduce(
+        (sum: number, s: Settlement) => sum + (s.totalFees ?? 0),
         0,
       );
       const pendingSettlements = pendingSettlementsRes.data?.meta?.total ?? 0;
@@ -223,7 +223,7 @@ export default function DashboardPage() {
 
       setStats((prev) => ({
         ...prev,
-        todayPlatformShare,
+        todayTotalFees,
         pendingSettlements,
         runnersAvailable,
         runnersOnMission,
@@ -484,18 +484,18 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Card 3: إجمالي اليوم (platformShare) */}
+          {/* Card 3: إجمالي رسوم اليوم */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">حصة المنصة اليوم (platformShare)</span>
+              <span className="text-xs font-bold text-slate-500">إجمالي رسوم اليوم</span>
               <span className="text-lg">💰</span>
             </div>
             <div>
               <div className="text-2xl font-black text-emerald-600">
-                {loading ? '-' : formatCurrency(stats.todayPlatformShare)}
+                {loading ? '-' : formatCurrency(stats.todayTotalFees)}
               </div>
               <span className="text-[11px] text-slate-500 mt-1 block">
-                إجمالي الأرباح الصافية المحققة اليوم
+                إجمالي رسوم التوصيل المحققة اليوم
               </span>
             </div>
           </div>

@@ -363,8 +363,6 @@ export default function SettlementsPage() {
                       <th>التاريخ التشغيلي</th>
                       <th>عدد الطلبات</th>
                       <th>إجمالي الرسوم</th>
-                      <th>حصة المندوب</th>
-                      <th>حصة المنصة</th>
                       <th>الإجراء</th>
                     </tr>
                   </thead>
@@ -384,8 +382,6 @@ export default function SettlementsPage() {
                         <td>{formatDate(settlement.operationalDate)}</td>
                         <td>{settlement.totalOrders}</td>
                         <td>{formatCurrency(settlement.totalFees)}</td>
-                        <td style={{ fontWeight: 600, color: '#166534' }}>{formatCurrency(settlement.runnerShare)}</td>
-                        <td>{formatCurrency(settlement.platformShare)}</td>
                         <td>
                           <button
                             className="btn btn-success btn-sm"
@@ -480,8 +476,6 @@ export default function SettlementsPage() {
                         <th>الحالة</th>
                         <th>الطلبات</th>
                         <th>إجمالي الرسوم</th>
-                        <th>حصة المندوب</th>
-                        <th>حصة المنصة</th>
                         <th>تاريخ الإغلاق</th>
                         <th>الإجراءات</th>
                       </tr>
@@ -494,8 +488,6 @@ export default function SettlementsPage() {
                           <td>{getStatusBadge(settlement.status)}</td>
                           <td>{settlement.totalOrders}</td>
                           <td>{formatCurrency(settlement.totalFees)}</td>
-                          <td>{formatCurrency(settlement.runnerShare)}</td>
-                          <td>{formatCurrency(settlement.platformShare)}</td>
                           <td>{settlement.closedAt ? formatDate(settlement.closedAt) : '-'}</td>
                           <td>
                             {settlement.status === 'PENDING' && (
