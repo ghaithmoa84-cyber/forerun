@@ -134,8 +134,6 @@ export const FeePreviewResponseSchema = z.object({
   customFee: z.number().int(),
   customFeeReason: z.string().nullable().optional(),
   totalFee: z.number().int(),
-  runnerShare: z.number().int(),
-  platformShare: z.number().int(),
 });
 
 export type FeePreviewResponse = z.infer<typeof FeePreviewResponseSchema>;
@@ -151,4 +149,3 @@ export const PlatformPricingResponseSchema = z.object({
 export type PlatformPricingResponse = z.infer<
   typeof PlatformPricingResponseSchema
 >;
-
