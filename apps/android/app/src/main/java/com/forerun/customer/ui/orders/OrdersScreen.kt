@@ -1,5 +1,7 @@
 package com.forerun.customer.ui.orders
 
+import com.forerun.customer.ui.order.getOrderStatusColors
+import com.forerun.customer.ui.order.getOrderStatusLabelRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -347,8 +349,10 @@ private fun OrderCard(
     order: CustomerOrder,
     onClick: () -> Unit = {}
 ) {
-    val (statusBg, statusTextColor) = getStatusColors(order.status)
-    val statusText = getStatusText(order.status)
+    val statusColors = getOrderStatusColors(order.status)
+    val statusBg = statusColors.background
+    val statusTextColor = statusColors.text
+    val statusText = stringResource(getOrderStatusLabelRes(order.status))
     val formattedDate = formatOrderDate(order.createdAt)
 
     Card(
@@ -665,33 +669,7 @@ private fun OrdersEmptyState(onNewOrderClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun getStatusText(status: String): String {
-    return when (status) {
-        "DRAFT" -> stringResource(R.string.orders_status_draft)
-        "PENDING_REVIEW" -> stringResource(R.string.orders_status_pending_review)
-        "UNDER_REVIEW" -> stringResource(R.string.orders_status_under_review)
-        "AWAITING_RUNNER" -> stringResource(R.string.orders_status_awaiting_runner)
-        "AWAITING_PREFERRED_RUNNER" -> stringResource(R.string.orders_status_awaiting_preferred)
-        "ASSIGNED" -> stringResource(R.string.orders_status_assigned)
-        "IN_PROGRESS" -> stringResource(R.string.orders_status_in_progress)
-        "OUT_FOR_DELIVERY" -> stringResource(R.string.orders_status_out_for_delivery)
-        "DELIVERED" -> stringResource(R.string.orders_status_delivered)
-        "CANCELLED" -> stringResource(R.string.orders_status_cancelled)
-        else -> status
-    }
-}
 
-private fun getStatusColors(status: String): Pair<Color, Color> {
-    return when (status) {
-        "DELIVERED" -> Pair(ForerunGreenLight, ForerunGreen)
-        "CANCELLED" -> Pair(Color(0xFFFFEBEE), ForerunDanger)
-        "PENDING_REVIEW", "UNDER_REVIEW" -> Pair(Color(0xFFFFF8E1), Color(0xFFB78103))
-        "AWAITING_RUNNER", "AWAITING_PREFERRED_RUNNER" -> Pair(Color(0xFFE3F2FD), Color(0xFF1565C0))
-        "ASSIGNED", "IN_PROGRESS", "OUT_FOR_DELIVERY" -> Pair(ForerunGreenLight, ForerunGreenDark)
-        else -> Pair(Color(0xFFEEEEEE), Color(0xFF616161))
-    }
-}
 
 private fun formatOrderDate(isoString: String): String {
     return try {

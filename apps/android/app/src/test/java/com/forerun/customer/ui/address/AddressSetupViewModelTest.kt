@@ -83,6 +83,8 @@ class AddressSetupViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertFalse(state.isEditMode)
+        assertEquals(33.5138, state.lat, 0.001)
+        assertEquals(36.2765, state.lng, 0.001)
         assertEquals("", state.description)
     }
 

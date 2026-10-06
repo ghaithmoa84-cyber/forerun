@@ -2,6 +2,8 @@ package com.forerun.customer.ui.order.detail
 
 import android.content.Intent
 import android.net.Uri
+import com.forerun.customer.ui.order.getOrderStatusColors
+import com.forerun.customer.ui.order.getOrderStatusLabelRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -143,6 +146,7 @@ fun OrderDetailScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = ForerunSoftSurface,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -389,17 +393,18 @@ private fun StatusBanner(order: CustomerOrderDetail) {
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
+                val statusColors = getOrderStatusColors(order.status)
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Dimens.RadiusPill))
-                        .background(textColor.copy(alpha = 0.15f))
+                        .background(statusColors.background)
                         .padding(horizontal = Dimens.Space10, vertical = Dimens.Space4)
                 ) {
                     Text(
-                        text = getStatusBadgeLabel(order.status),
+                        text = stringResource(getOrderStatusLabelRes(order.status)),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = textColor
+                        color = statusColors.text
                     )
                 }
             }
@@ -1111,22 +1116,6 @@ private fun CancelOrderSection(
     }
 }
 
-@Composable
-private fun getStatusBadgeLabel(status: String): String {
-    return when (status) {
-        "DRAFT" -> stringResource(R.string.orders_status_draft)
-        "PENDING_REVIEW" -> stringResource(R.string.orders_status_pending_review)
-        "UNDER_REVIEW" -> stringResource(R.string.orders_status_under_review)
-        "AWAITING_RUNNER" -> stringResource(R.string.orders_status_awaiting_runner)
-        "AWAITING_PREFERRED_RUNNER" -> stringResource(R.string.orders_status_awaiting_runner)
-        "ASSIGNED" -> stringResource(R.string.orders_status_assigned)
-        "IN_PROGRESS" -> stringResource(R.string.orders_status_in_progress)
-        "OUT_FOR_DELIVERY" -> stringResource(R.string.status_out_for_delivery)
-        "DELIVERED" -> stringResource(R.string.status_delivered)
-        "CANCELLED" -> stringResource(R.string.orders_status_cancelled)
-        else -> status
-    }
-}
 
 private fun formatTimestamp(isoString: String): String {
     return try {

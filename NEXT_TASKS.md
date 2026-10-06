@@ -35,6 +35,8 @@
 |---|---|---|---|---|---|
 | C-1 | مراجعة `getEntriesByRunner` (`ledger.service.ts:145`) — إما rename أو حذف | منخفضة | ⏳ معلّق | @code-architect | إدراج `ORDER_FEE_TOTAL` فيها يخالف D25 مفهوميًا |
 | C-2 | تنظيف عمودَي `runnerShare` و `platformShare` من جدولي `Settlement` و `SettlementItem` في migration مستقل بعد MVP | منخفضة | ⏳ مؤجل لما بعد MVP | @code-architect | حقول إرثية (Legacy) أصبحت ثابتة (0 و totalFees) بموجب D26 لتجنب تعديل schema في MVP |
+| C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ⏳ معلّق | @android-dev | تنظيف لاحق لـ Sprint 9 |
+| P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |

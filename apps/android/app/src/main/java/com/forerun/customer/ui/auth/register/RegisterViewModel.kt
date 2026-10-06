@@ -27,8 +27,8 @@ data class RegisterUiState(
     val altPhone: String = "",
     val password: String = "",
     val addressDescription: String = "",
-    val lat: Double = 35.5234,
-    val lng: Double = 35.9876,
+    val lat: Double = 33.5138,
+    val lng: Double = 36.2765,
     val isLoading: Boolean = false,
     val nameErrorRes: Int? = null,
     val whatsappErrorRes: Int? = null,
@@ -68,11 +68,7 @@ class RegisterViewModel @Inject constructor(
         application = application
     )
 
-    private val _uiState = MutableStateFlow(
-        RegisterUiState(
-            addressDescription = getApplication<Application>().getString(R.string.register_default_address)
-        )
-    )
+    private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     private val _navigationEvent = MutableSharedFlow<RegisterNavigationEvent>()

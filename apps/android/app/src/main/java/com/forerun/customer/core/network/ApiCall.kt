@@ -1,5 +1,7 @@
 package com.forerun.customer.core.network
 
+import android.content.Context
+import com.forerun.customer.R
 import com.squareup.moshi.Moshi
 import okhttp3.Request
 import okio.Timeout
@@ -10,7 +12,8 @@ import java.io.IOException
 
 internal class ApiCall<T>(
     private val delegate: Call<T>,
-    private val moshi: Moshi
+    private val moshi: Moshi,
+    private val context: Context? = null
 ) : Call<ApiResponse<T>> {
 
     override fun enqueue(callback: Callback<ApiResponse<T>>) {
@@ -38,12 +41,18 @@ internal class ApiCall<T>(
                     is IOException -> ApiResponse.Error(
                         statusCode = -1,
                         error = "NETWORK_ERROR",
-                        message = "تعذر الاتصال بالخادم، يرجى التحقق من اتصالك بالإنترنت"
+                        message = context?.getString(R.string.error_network) ?: run {
+                            // dev-only, not user-facing
+                            "Network connection failed. Please check your internet connection."
+                        }
                     )
                     else -> ApiResponse.Error(
                         statusCode = -1,
                         error = "UNKNOWN",
-                        message = t.localizedMessage ?: "حدث خطأ غير متوقع"
+                        message = t.localizedMessage ?: context?.getString(R.string.error_generic) ?: run {
+                            // dev-only, not user-facing
+                            "Unexpected error occurred"
+                        }
                     )
                 }
                 callback.onResponse(this@ApiCall, Response.success(apiResponse))
@@ -76,12 +85,18 @@ internal class ApiCall<T>(
                 is IOException -> ApiResponse.Error(
                     statusCode = -1,
                     error = "NETWORK_ERROR",
-                    message = "تعذر الاتصال بالخادم، يرجى التحقق من اتصالك بالإنترنت"
+                    message = context?.getString(R.string.error_network) ?: run {
+                        // dev-only, not user-facing
+                        "Network connection failed. Please check your internet connection."
+                    }
                 )
                 else -> ApiResponse.Error(
                     statusCode = -1,
                     error = "UNKNOWN",
-                    message = t.localizedMessage ?: "حدث خطأ غير متوقع"
+                    message = t.localizedMessage ?: context?.getString(R.string.error_generic) ?: run {
+                        // dev-only, not user-facing
+                        "Unexpected error occurred"
+                    }
                 )
             }
             Response.success(apiResponse)
@@ -92,7 +107,7 @@ internal class ApiCall<T>(
 
     override fun isCanceled(): Boolean = delegate.isCanceled
 
-    override fun clone(): Call<ApiResponse<T>> = ApiCall(delegate.clone(), moshi)
+    override fun clone(): Call<ApiResponse<T>> = ApiCall(delegate.clone(), moshi, context)
 
     override fun request(): Request = delegate.request()
 
@@ -108,7 +123,10 @@ internal class ApiCall<T>(
                     return ApiResponse.Error(
                         statusCode = errorResponse.statusCode ?: response.code(),
                         error = errorResponse.error ?: "UNKNOWN",
-                        message = errorResponse.message ?: "خطأ غير متوقع"
+                        message = errorResponse.message ?: context?.getString(R.string.error_generic) ?: run {
+                            // dev-only, not user-facing
+                            "Unexpected error"
+                        }
                     )
                 }
             } catch (_: Exception) {
@@ -118,7 +136,10 @@ internal class ApiCall<T>(
         return ApiResponse.Error(
             statusCode = response.code(),
             error = "UNKNOWN",
-            message = "خطأ غير متوقع"
+            message = context?.getString(R.string.error_generic) ?: run {
+                // dev-only, not user-facing
+                "Unexpected error"
+            }
         )
     }
 }

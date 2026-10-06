@@ -211,6 +211,7 @@
     <string name="orders_status_out_for_delivery">في طريق التوصيل</string>
     <string name="orders_status_delivered">تم التسليم بنجاح</string>
     <string name="orders_status_cancelled">ملغي</string>
+    <string name="orders_status_unknown">غير محدد</string>
     <string name="orders_load_more">جاري تحميل المزيد…</string>
     <string name="orders_error_loading">تعذر جلب قائمة الطلبات، يرجى المحاولة ثانية</string>
     <string name="orders_load_more_failed">تعذر تحميل المزيد من الطلبات</string>
@@ -392,6 +393,8 @@
     <string name="error_address_save_failed_generic">فشل حفظ العنوان</string>
 
     <!-- Shared UI labels -->
+    <string name="action_hide_password">إخفاء</string>
+    <string name="action_show_password">إظهار</string>
     <string name="label_hide">إخفاء</string>
     <string name="label_show">إظهار</string>
     <string name="label_back">رجوع</string>

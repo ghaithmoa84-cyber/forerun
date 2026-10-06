@@ -2,6 +2,8 @@ package com.forerun.customer.ui.home
 
 import android.content.Intent
 import android.net.Uri
+import com.forerun.customer.ui.order.getOrderStatusColors
+import com.forerun.customer.ui.order.getOrderStatusLabelRes
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -56,6 +58,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -173,7 +176,7 @@ private fun HomeContent(
     onNewOrderClick: () -> Unit,
     onOrderDetailClick: (String) -> Unit
 ) {
-    var showServiceDialog by remember { mutableStateOf(false) }
+    var showServiceDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
     if (showServiceDialog) {
@@ -422,10 +425,14 @@ private fun HomeContent(
                 order = activeOrder,
                 onClick = { onOrderDetailClick(activeOrder.id) }
             )
-            Spacer(modifier = Modifier.height(Dimens.Space20))
+        } else {
+            HomeNoActiveOrderCard(
+                onNewOrderClick = onNewOrderClick
+            )
         }
+        Spacer(modifier = Modifier.height(Dimens.Space20))
 
-        // 4. Services Section ("خدماتنا")
+        // 4. Services Section
         Text(
             text = stringResource(R.string.services_section_title),
             fontSize = 18.sp,
@@ -709,10 +716,11 @@ private fun ActiveOrderCard(
                     )
                 }
 
+                val statusColors = getOrderStatusColors(order.status)
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Dimens.RadiusPill))
-                        .background(ForerunGreenLight)
+                        .background(statusColors.background)
                         .padding(horizontal = Dimens.Space10, vertical = Dimens.Space4)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -720,14 +728,14 @@ private fun ActiveOrderCard(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(ForerunGreenDark.copy(alpha = alphaAnim))
+                                .background(statusColors.text.copy(alpha = alphaAnim))
                         )
                         Spacer(modifier = Modifier.width(Dimens.Space6))
                         Text(
-                            text = mapStatusToArabic(order.status),
+                            text = stringResource(getOrderStatusLabelRes(order.status)),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ForerunGreenDark
+                            color = statusColors.text
                         )
                     }
                 }
@@ -842,11 +850,74 @@ private fun ActiveOrderCard(
                     fontSize = 12.sp,
                     color = ForerunTextMuted
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_track_order),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunGreenDark
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space4))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = ForerunGreenDark,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeNoActiveOrderCard(
+    onNewOrderClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+            .clickable { onNewOrderClick() },
+        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space16),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(ForerunGreenLight),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShoppingCart,
+                    contentDescription = null,
+                    tint = ForerunGreenDark,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(Dimens.Space14))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(R.string.home_track_order) + " ←",
-                    fontSize = 13.sp,
+                    text = stringResource(R.string.home_no_active_orders),
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ForerunGreenDark
+                    color = ForerunTextPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.home_no_active_orders_desc),
+                    fontSize = 12.sp,
+                    color = ForerunTextMuted
                 )
             }
         }
@@ -928,19 +999,6 @@ private fun OrderStepper(status: String) {
     }
 }
 
-@Composable
-private fun mapStatusToArabic(status: String): String = when (status) {
-    "DRAFT" -> stringResource(R.string.orders_status_draft)
-    "PENDING_REVIEW" -> stringResource(R.string.orders_status_pending_review)
-    "UNDER_REVIEW" -> stringResource(R.string.orders_status_under_review)
-    "AWAITING_RUNNER", "AWAITING_PREFERRED_RUNNER" -> stringResource(R.string.orders_status_awaiting_runner)
-    "ASSIGNED" -> stringResource(R.string.orders_status_assigned)
-    "IN_PROGRESS" -> stringResource(R.string.status_in_progress_shopping)
-    "OUT_FOR_DELIVERY" -> stringResource(R.string.status_out_for_delivery_to_you)
-    "DELIVERED" -> stringResource(R.string.orders_status_delivered)
-    "CANCELLED" -> stringResource(R.string.orders_status_cancelled)
-    else -> status
-}
 
 @Composable
 private fun StatsCard(profile: CustomerProfile) {

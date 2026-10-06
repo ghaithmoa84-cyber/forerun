@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -142,82 +142,9 @@ fun CreateOrderScreen(
         }
     }
 
-    // Success Confirmation Dialog
-    uiState.createdOrder?.let { order ->
-        AlertDialog(
-            onDismissRequest = { viewModel.onIntent(CreateOrderIntent.DismissSuccess) },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = ForerunSuccess,
-                    modifier = Modifier.size(52.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.create_order_success_title),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = stringResource(R.string.create_order_success_desc),
-                        fontSize = 14.sp,
-                        color = ForerunTextMuted,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(Dimens.Space12))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(Dimens.RadiusMedium))
-                            .background(ForerunGreenLight)
-                            .padding(horizontal = Dimens.Space16, vertical = Dimens.Space8)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.create_order_success_order_number, order.orderNumber),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunGreenDark
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.onIntent(CreateOrderIntent.DismissSuccess)
-                        onNavigateToOrders()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ForerunGreenDark,
-                        contentColor = ForerunTextOnPrimary
-                    )
-                ) {
-                    Text(stringResource(R.string.create_order_track_order_btn), fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onIntent(CreateOrderIntent.DismissSuccess)
-                        onNavigateBack()
-                    }
-                ) {
-                    Text(stringResource(R.string.create_order_back_home_btn), color = ForerunTextMuted)
-                }
-            }
-        )
-    }
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -877,7 +804,8 @@ private fun StructuredOrderItemCard(
                     text = stringResource(R.string.create_order_store_any_label),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = ForerunTextPrimary
+                    color = ForerunTextPrimary,
+                    modifier = Modifier.weight(1f)
                 )
                 Switch(
                     checked = item.anyStore,

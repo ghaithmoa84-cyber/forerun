@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,7 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
@@ -218,6 +223,7 @@ fun AddressSetupScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -257,6 +263,11 @@ fun AddressSetupScreen(
             )
         }
     ) { innerPadding ->
+        var bottomCardHeightPx by remember { mutableIntStateOf(0) }
+        val density = LocalDensity.current
+        val bottomCardHeightDp = with(density) { bottomCardHeightPx.toDp() }
+        val pinBottomPadding = if (bottomCardHeightDp > 0.dp) bottomCardHeightDp else 200.dp
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -326,11 +337,11 @@ fun AddressSetupScreen(
                         }
                     )
 
-                    // Centered Pulsing Mint Pin Overlay
+                    // Centered Pulsing Mint Pin Overlay (centered dynamically above bottom card)
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = 200.dp), // offset slightly so bottom card doesn't hide it
+                            .padding(bottom = pinBottomPadding),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -430,6 +441,10 @@ fun AddressSetupScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        .imePadding()
+                        .onGloballyPositioned { coordinates ->
+                            bottomCardHeightPx = coordinates.size.height
+                        }
                         .shadow(12.dp, shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                     colors = CardDefaults.cardColors(containerColor = ForerunSurface)
