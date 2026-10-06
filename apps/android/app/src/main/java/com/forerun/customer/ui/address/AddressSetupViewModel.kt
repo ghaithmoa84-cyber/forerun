@@ -28,8 +28,8 @@ data class AddressSetupUiState(
     val isEditMode: Boolean = false,
     val isGeocodingLoading: Boolean = false,
     val geocodingError: String? = null,
-    val lat: Double = 35.5500,
-    val lng: Double = 35.8000,
+    val lat: Double = 33.5138,
+    val lng: Double = 36.2765,
     val description: String = "",
     val descriptionError: String? = null,
     val errorMessage: String? = null,
@@ -150,8 +150,8 @@ class AddressSetupViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             isEditMode = false,
-                            lat = 35.5500,
-                            lng = 35.8000,
+                            lat = 33.5138,
+                            lng = 36.2765,
                             description = ""
                         )
                     }

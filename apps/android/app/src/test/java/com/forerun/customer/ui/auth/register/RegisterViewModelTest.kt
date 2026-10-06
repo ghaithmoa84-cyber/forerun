@@ -42,6 +42,7 @@ class RegisterViewModelTest {
         assertEquals(R.string.error_name_short, viewModel.uiState.value.nameErrorRes)
         assertEquals(R.string.error_phone_invalid, viewModel.uiState.value.whatsappErrorRes)
         assertEquals(R.string.error_password_short, viewModel.uiState.value.passwordErrorRes)
+        assertEquals(R.string.error_address_required, viewModel.uiState.value.addressErrorRes)
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
