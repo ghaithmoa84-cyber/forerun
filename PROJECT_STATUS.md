@@ -1,6 +1,6 @@
 # FORERUN — Project Status & Diagnostic Playbook
 
-> **آخر تحديث:** 2026-10-05
+> **آخر تحديث:** 2026-10-06
 > **الغرض:** هذا الملف هو المرجع الوحيد لحالة المشروع، القرارات المعمارية، الأخطاء المعروفة، وحلولها.
 > **مهم:** أي وكيل أو مطوّر يبدأ العمل يجب أن يقرأ هذا الملف كاملًا قبل أي تعديل.
 > **نطاق المرجعية:** هذا الملف يملك حقائق **الإنتاج والبنية التحتية** فقط. لتوثيق Android انظر خريطة التوثيق في [§11](#11-خريطة-التوثيق--أي-ملف-يملك-أي-حققيقة).
@@ -325,6 +325,8 @@ fawrun/
 | 2026-10-05 | **6A-3.1b (الخطوة الأخيرة)** — ربط `getPricingConfig` بمسارات الإنتاج الأربعة `createOrder` · `approveOrder` · `recalculateFee` · `previewFee` (القرارات **D21/D22/D23**). +9 اختبارات وحدة و+6 اختبارات تكامل (S2) ⇒ **355 وحدة + 44 تكامل ناجح**. `cleanDatabase` في `test/integration/setup.ts` يعيد صف الأسعار إلى خط الأساس. **تحذير D20 أصبح محققاً: تعديل الأسعار مؤثّر فعلي الآن.** لا الدمج ولا النشر بعد — المالك فقط (`prisma migrate deploy` قبل تشغيل الـ API الجديد). |
 
 | 2026-10-05 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid)** — رفع MAX_CUSTOM_FEE إلى 500، إضافة customFee/customFeeReason لـ customer-web (OrderDetail) و runner-pwa (ActiveOrder) و Android (DTO + PricingCard + strings.xml)، وحمولة order:assigned WebSocket carrying customFee. 4 semantic commits: 4fe7cb (shared types) · aaf2d8 (backend) · 86ac39a (frontends) · 7b4ae2 (tests). pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
+| 2026-10-06 | إلغاء نظام الحصص (D25–D28) نُشر على الإنتاج: merge `af6ae4e` · 12 commits · API/Admin/Runner Ready · Customer Web لم يتغيّر. |
+
 ---
 
 ## 10. نصائح لتسريع التشخيص مستقبلًا
