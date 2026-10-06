@@ -481,6 +481,7 @@ fawrun/
   - سجل `SettlementItem` يكتب `runnerShare = 0` و`platformShare = order.totalFee`.
   - هذا التوحيد يضمن التطابق الرياضي الصارم: مجموع `platformShare` في البنود يطابق تماماً `platformShare` في رأس التسوية (100% للمنصة إحصائياً، والمندوب يحاسب براتب ثابت خارج النظام).
   - استعلام `getCurrentSettlement` يرجع `totalFees` مع `estimatedRunnerShare: 0` و`estimatedPlatformShare: totalFees`.
+  - **ملاحظة UI:** بطاقة لوحة الأدمن تحوّلت من `platformShare` إلى `totalFees` — الرقم سيظهر ~4× أكبر، وهذا صحيح دلاليًا بعد D26.
 - **D27 — عرض الرسوم للمندوب:** المندوب يرى إجمالي الرسم `totalFee` في التطبيق دون تفكيك لحصص غير مستحقة.
 - **D28 — تهميش دوال وثوابت الحصص:** وضع علامة `@deprecated` على ثوابت `RUNNER_SHARE` و`PLATFORM_SHARE` ودالة `splitShares`، وإيقاف استدعائها في مسارات الإنتاج بالكامل.
 - **سياسة التراجع وسلامة البيانات:** لا يوجد أي تغيير في `schema.prisma` ولا أي migration جديد. التراجع يتم عبر `git revert` بصورة فورية وآمنة دون مساس بسلامة البيانات.
