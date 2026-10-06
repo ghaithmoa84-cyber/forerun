@@ -1,3 +1,8 @@
+/**
+ * @deprecated D28: splitShares لم تعد تُستدعى في الإنتاج.
+ * المندوب موظف براتب ثابت، لا توزيع حصص.
+ * الملف محفوظ لأن اختبارات قديمة تستورده؛ يُحذف في cleanup لاحق.
+ */
 import { PRICING } from '@forerun/shared-constants';
 
 export interface SplitSharesResult {

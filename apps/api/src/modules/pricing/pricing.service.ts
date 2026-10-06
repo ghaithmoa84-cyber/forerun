@@ -18,7 +18,6 @@ import type {
   PlatformPricingResponse,
   UpdatePlatformPricingDto,
 } from '@forerun/shared-types';
-import { splitShares } from './split-shares.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -30,8 +29,6 @@ export interface FeeResult {
   customFee: number;
   customFeeReason?: string | null;
   totalFee: number;
-  runnerShare: number;
-  platformShare: number;
 }
 
 export interface RecalculateFeeResult {
@@ -185,8 +182,6 @@ export class PricingService {
       customFee,
       customFeeReason: dto.customFeeReason ?? null,
       totalFee: feeResult.totalFee,
-      runnerShare: feeResult.runnerShare,
-      platformShare: feeResult.platformShare,
     };
   }
 
@@ -392,7 +387,6 @@ export class PricingService {
     const extraStoresFee =
       Math.max(0, params.purchasedStoreCount - 1) * config.extraStoreFee;
     const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
-    const { runnerShare, platformShare } = splitShares(totalFee);
 
     return {
       baseFee,
@@ -401,8 +395,6 @@ export class PricingService {
       customFee,
       customFeeReason: params.customFeeReason ?? null,
       totalFee,
-      runnerShare,
-      platformShare,
     };
   }
 
@@ -502,7 +494,6 @@ export class PricingService {
       Math.max(0, purchasedStoreCount - 1) * effectiveConfig.extraStoreFee;
 
     const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
-    const { runnerShare, platformShare } = splitShares(totalFee);
 
     const newFee: FeeResult = {
       baseFee,
@@ -511,8 +502,6 @@ export class PricingService {
       customFee,
       customFeeReason: (order as { customFeeReason?: string | null }).customFeeReason ?? null,
       totalFee,
-      runnerShare,
-      platformShare,
     };
 
     const oldFee = {

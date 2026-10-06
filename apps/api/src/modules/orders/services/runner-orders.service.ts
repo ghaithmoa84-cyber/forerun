@@ -965,22 +965,6 @@ export class RunnerOrdersService {
           runnerId: runnerId ?? undefined,
           meta: { idempotencyKey },
         },
-        {
-          type: 'RUNNER_SHARE',
-          amount: feeResult.newFee.runnerShare,
-          description: `Runner share for ${orderNumber}`,
-          orderId,
-          runnerId: runnerId ?? undefined,
-          meta: { idempotencyKey },
-        },
-        {
-          type: 'PLATFORM_SHARE',
-          amount: feeResult.newFee.platformShare,
-          description: `Platform share for ${orderNumber}`,
-          orderId,
-          runnerId: runnerId ?? undefined,
-          meta: { idempotencyKey },
-        },
       ],
       tx,
     );

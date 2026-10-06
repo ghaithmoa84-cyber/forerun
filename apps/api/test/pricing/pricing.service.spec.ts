@@ -74,13 +74,8 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: PRICING.BASE_FEE,
-        runnerShare: Math.floor(PRICING.BASE_FEE * PRICING.RUNNER_SHARE),
-        platformShare: Math.ceil(PRICING.BASE_FEE * PRICING.PLATFORM_SHARE),
       });
       expect(result.totalFee).toBe(60);
-      expect(result.runnerShare).toBe(45);
-      expect(result.platformShare).toBe(15);
-      expect(result.runnerShare + result.platformShare).toBe(result.totalFee);
     });
 
     it('calculates fee for single store, peripheral (baseFee + peripheralFee)', () => {
@@ -99,13 +94,8 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: PRICING.BASE_FEE + PRICING.PERIPHERAL_FEE,
-        runnerShare: Math.floor((PRICING.BASE_FEE + PRICING.PERIPHERAL_FEE) * PRICING.RUNNER_SHARE),
-        platformShare: Math.ceil((PRICING.BASE_FEE + PRICING.PERIPHERAL_FEE) * PRICING.PLATFORM_SHARE),
       });
       expect(result.totalFee).toBe(100);
-      expect(result.runnerShare).toBe(75);
-      expect(result.platformShare).toBe(25);
-      expect(result.runnerShare + result.platformShare).toBe(result.totalFee);
     });
 
     it('calculates fee for 3 stores (baseFee + extraStoresFee * 2)', () => {
@@ -127,13 +117,9 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: expectedTotalFee,
-        runnerShare: Math.floor(expectedTotalFee * PRICING.RUNNER_SHARE),
-        platformShare: Math.ceil(expectedTotalFee * PRICING.PLATFORM_SHARE),
       });
       expect(result.extraStoresFee).toBe(40);
       expect(result.totalFee).toBe(100);
-      expect(result.runnerShare).toBe(75);
-      expect(result.platformShare).toBe(25);
     });
 
     it('calculates fee for 0 stores (baseFee only, extraStoresFee = 0)', () => {
@@ -152,8 +138,6 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: PRICING.BASE_FEE,
-        runnerShare: Math.floor(PRICING.BASE_FEE * PRICING.RUNNER_SHARE),
-        platformShare: Math.ceil(PRICING.BASE_FEE * PRICING.PLATFORM_SHARE),
       });
       expect(result.extraStoresFee).toBe(0);
       expect(result.totalFee).toBe(60);
@@ -289,8 +273,6 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: 80,
-        runnerShare: 60,
-        platformShare: 20,
       });
       expect(result.notificationPayload).toEqual({
         customerId: 'cust-1',
@@ -427,8 +409,6 @@ describe('PricingService', () => {
       expect(result.newFee.peripheralFee).toBe(0);
       expect(result.newFee.extraStoresFee).toBe(20);
       expect(result.newFee.totalFee).toBe(100);
-      expect(result.newFee.runnerShare).toBe(75);
-      expect(result.newFee.platformShare).toBe(25);
 
       expect(prisma.order.update).toHaveBeenCalledWith({
         where: { id: 'ord-base80' },
@@ -467,8 +447,6 @@ describe('PricingService', () => {
       expect(result.newFee.peripheralFee).toBe(40);
       expect(result.newFee.extraStoresFee).toBe(20);
       expect(result.newFee.totalFee).toBe(120);
-      expect(result.newFee.runnerShare).toBe(90);
-      expect(result.newFee.platformShare).toBe(30);
 
       expect(prisma.order.update).toHaveBeenCalledWith({
         where: { id: 'ord-peri40' },
@@ -555,13 +533,8 @@ describe('PricingService', () => {
       prisma.order.update.mockResolvedValue({});
 
       // totalFee = 61 + 0 + 20 = 81
-      // runnerShare = floor(81 * 0.75) = floor(60.75) = 60
-      // platformShare = ceil(81 * 0.25) = ceil(20.25) = 21
       const result = await service.recalculateFee('ord-odd');
       expect(result.newFee.totalFee).toBe(81);
-      expect(result.newFee.runnerShare).toBe(60);
-      expect(result.newFee.platformShare).toBe(21);
-      expect(result.newFee.runnerShare + result.newFee.platformShare).toBe(81);
     });
   });
 
@@ -586,8 +559,6 @@ describe('PricingService', () => {
       expect(result.peripheralFee).toBe(50);
       expect(result.extraStoresFee).toBe(60);
       expect(result.totalFee).toBe(210);
-      expect(result.runnerShare).toBe(Math.floor(210 * PRICING.RUNNER_SHARE));
-      expect(result.platformShare).toBe(Math.ceil(210 * PRICING.PLATFORM_SHARE));
     });
 
     it('calculates 60/40/20 when DEFAULT_PRICING_CONFIG is provided', () => {
@@ -734,7 +705,7 @@ describe('PricingService', () => {
   });
 
   describe('customFee handling (Sprint 6A-6)', () => {
-    it('calculateFee adds customFee to totalFee and distributes shares via splitShares', () => {
+    it('calculateFee adds customFee to totalFee', () => {
       const result = service.calculateFee(
         {
           isPeripheral: false,
@@ -745,13 +716,9 @@ describe('PricingService', () => {
       );
 
       // baseFee=60, peripheral=0, extra=0, customFee=50 -> total=110
-      // splitShares(110): runner=82 (floor(110*0.75)=82), platform=28 (110-82=28)
       expect(result.baseFee).toBe(60);
       expect(result.customFee).toBe(50);
       expect(result.totalFee).toBe(110);
-      expect(result.runnerShare).toBe(82);
-      expect(result.platformShare).toBe(28);
-      expect(result.runnerShare + result.platformShare).toBe(110);
     });
 
     it('calculateFee rejects negative or non-integer customFee', () => {
@@ -797,8 +764,6 @@ describe('PricingService', () => {
       expect(result.newFee.extraStoresFee).toBe(20);
       expect(result.newFee.customFee).toBe(50);
       expect(result.newFee.totalFee).toBe(130);
-      expect(result.newFee.runnerShare).toBe(97);
-      expect(result.newFee.platformShare).toBe(33);
 
       // Verifies update writes back ONLY extraStoresFee and totalFee
       expect(prisma.order.update).toHaveBeenCalledWith({
@@ -833,10 +798,7 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: 80,
-        runnerShare: 60,
-        platformShare: 20,
       });
-      expect(result.runnerShare + result.platformShare).toBe(result.totalFee);
       // Verify NO database writes
       expect(prisma.order.update).not.toHaveBeenCalled();
     });
@@ -887,10 +849,7 @@ describe('PricingService', () => {
         customFee: 50,
         customFeeReason: 'طرد ثقيل',
         totalFee: 150,
-        runnerShare: 112,
-        platformShare: 38,
       });
-      expect(result.runnerShare + result.platformShare).toBe(150);
       expect(prisma.order.update).not.toHaveBeenCalled();
     });
 
@@ -957,8 +916,6 @@ describe('PricingService', () => {
 
       expect(result.baseFee).toBe(80);
       expect(result.totalFee).toBe(80);
-      expect(result.runnerShare).toBe(60);
-      expect(result.platformShare).toBe(20);
     });
   });
 
@@ -987,8 +944,6 @@ describe('PricingService', () => {
       expect(result.extraStoresFee).toBe(60);
       expect(result.baseFee).toBe(60);
       expect(result.totalFee).toBe(120);
-      expect(result.runnerShare).toBe(90);
-      expect(result.platformShare).toBe(30);
       expect(prisma.platformPricing.findUnique).toHaveBeenCalledWith({
         where: { id: 'default' },
       });
@@ -1040,8 +995,6 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: 80,
-        runnerShare: 60,
-        platformShare: 20,
       });
     });
 
