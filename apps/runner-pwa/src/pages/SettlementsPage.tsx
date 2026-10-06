@@ -87,7 +87,7 @@ export function SettlementsPage() {
       <div className="page-header" style={{ marginBottom: '16px' }}>
         <h2>التسويات المالية</h2>
         <p style={{ color: 'var(--text)', fontSize: '14px', marginTop: '4px' }}>
-          متابعة مستحقاتك اليومية وتاريخ تسوياتك السابقة (نسبة المندوب 75%)
+          متابعة تسليماتك اليومية وتاريخ تسوياتك السابقة
         </p>
       </div>
 
@@ -115,17 +115,9 @@ export function SettlementsPage() {
               <span className="label">الطلبات المنجزة:</span>
               <span className="val">{current.totalOrders} طلب</span>
             </div>
-            <div className="settlement-stat">
-              <span className="label">إجمالي الرسوم:</span>
-              <span className="val">{current.totalFees} ل.س</span>
-            </div>
             <div className="settlement-stat settlement-stat--highlight">
-              <span className="label">مستحقاتك التقديرية (75%):</span>
-              <span className="val highlight">{current.estimatedRunnerShare} ل.س</span>
-            </div>
-            <div className="settlement-stat">
-              <span className="label">حصة المنصة (25%):</span>
-              <span className="val">{current.estimatedPlatformShare} ل.س</span>
+              <span className="label">إجمالي الرسوم:</span>
+              <span className="val highlight">{current.totalFees} ل.س</span>
             </div>
           </div>
 
@@ -166,12 +158,12 @@ export function SettlementsPage() {
 
                 <div className="history-details" style={{ marginTop: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                    <span>الطلبات: {s.totalOrders}</span>
-                    <span>إجمالي الرسوم: {s.totalFees} ل.س</span>
+                    <span>الطلبات المنجزة:</span>
+                    <span>{s.totalOrders} طلب</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold', marginTop: '4px', color: 'var(--accent)' }}>
-                    <span>مستحقات المندوب:</span>
-                    <span>{s.runnerShare} ل.س</span>
+                    <span>إجمالي الرسوم:</span>
+                    <span>{s.totalFees} ل.س</span>
                   </div>
                 </div>
               </div>
