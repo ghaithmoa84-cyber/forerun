@@ -77,38 +77,37 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
   });
 
   describe('calculateSettlementAmounts', () => {
-    it('calculates amounts with correct floor(75%) and ceil(25%) per order and totals', () => {
+    it('calculates amounts with totalFees and unified runnerShare=0, platformShare=totalFees per D26', () => {
       const orders = [
-        { id: 'ord-1', totalFee: 60 },  // 60 * 0.75 = 45, 60 * 0.25 = 15
-        { id: 'ord-2', totalFee: 75 },  // 75 * 0.75 = 56.25 -> 56, 75 * 0.25 = 18.75 -> 19
-        { id: 'ord-3', totalFee: 100 }, // 100 * 0.75 = 75, 100 * 0.25 = 25
+        { id: 'ord-1', totalFee: 60 },
+        { id: 'ord-2', totalFee: 75 },
+        { id: 'ord-3', totalFee: 100 },
       ];
 
       const result = (service as any).calculateSettlementAmounts(orders);
 
       expect(result.totalFees).toBe(235);
-      expect(result.runnerShare).toBe(45 + 56 + 75); // 176
-      expect(result.platformShare).toBe(15 + 19 + 25); // 59
-      expect(result.runnerShare + result.platformShare).toBeGreaterThanOrEqual(result.totalFees);
+      expect(result.runnerShare).toBe(0);
+      expect(result.platformShare).toBe(235);
 
       expect(result.items).toHaveLength(3);
       expect(result.items[0]).toEqual({
         orderId: 'ord-1',
         orderFee: 60,
-        runnerShare: 45,
-        platformShare: 15,
+        runnerShare: 0,
+        platformShare: 60,
       });
       expect(result.items[1]).toEqual({
         orderId: 'ord-2',
         orderFee: 75,
-        runnerShare: 56,
-        platformShare: 19,
+        runnerShare: 0,
+        platformShare: 75,
       });
       expect(result.items[2]).toEqual({
         orderId: 'ord-3',
         orderFee: 100,
-        runnerShare: 75,
-        platformShare: 25,
+        runnerShare: 0,
+        platformShare: 100,
       });
     });
 
@@ -221,41 +220,41 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       expect(result.runnerCount).toBe(3);
       expect(result.settlements).toHaveLength(3);
 
-      // Runner 1: 60 + 100 = 160; runnerShare: 45 + 75 = 120; platformShare: 15 + 25 = 40
+      // Runner 1: 60 + 100 = 160; runnerShare: 0; platformShare: 160
       expect(txClient.settlement.create).toHaveBeenCalledWith({
         data: {
           runnerId: 'r-1',
           operationalDate,
           totalOrders: 2,
           totalFees: 160,
-          runnerShare: 120,
-          platformShare: 40,
+          runnerShare: 0,
+          platformShare: 160,
           notes: 'Daily settlement batch',
         },
       });
 
-      // Runner 2: 80 + 90 = 170; runnerShare: 60 + 67 = 127; platformShare: 20 + 23 = 43
+      // Runner 2: 80 + 90 = 170; runnerShare: 0; platformShare: 170
       expect(txClient.settlement.create).toHaveBeenCalledWith({
         data: {
           runnerId: 'r-2',
           operationalDate,
           totalOrders: 2,
           totalFees: 170,
-          runnerShare: 127,
-          platformShare: 43,
+          runnerShare: 0,
+          platformShare: 170,
           notes: 'Daily settlement batch',
         },
       });
 
-      // Runner 3: 70; runnerShare: 52; platformShare: 18
+      // Runner 3: 70; runnerShare: 0; platformShare: 70
       expect(txClient.settlement.create).toHaveBeenCalledWith({
         data: {
           runnerId: 'r-3',
           operationalDate,
           totalOrders: 1,
           totalFees: 70,
-          runnerShare: 52,
-          platformShare: 18,
+          runnerShare: 0,
+          platformShare: 70,
           notes: 'Daily settlement batch',
         },
       });

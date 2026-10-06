@@ -18,7 +18,6 @@ import {
   type RunnerCurrentSettlement,
   type RunnerSettlementItem,
 } from '@forerun/shared-types';
-import { splitShares } from '../pricing/split-shares.js';
 
 import { fromZonedTime } from 'date-fns-tz';
 
@@ -144,8 +143,7 @@ export class SettlementsService {
       platformShare: number;
     }>;
   } {
-    let runnerShare = 0;
-    let platformShare = 0;
+    let totalFees = 0;
     const items: Array<{
       orderId: string;
       orderFee: number;
@@ -155,23 +153,19 @@ export class SettlementsService {
 
     for (const order of runnerOrders) {
       const fee = order.totalFee;
-      const { runnerShare: rShare, platformShare: pShare } = splitShares(fee);
-      runnerShare += rShare;
-      platformShare += pShare;
+      totalFees += fee;
       items.push({
         orderId: order.id,
         orderFee: fee,
-        runnerShare: rShare,
-        platformShare: pShare,
+        runnerShare: 0,
+        platformShare: fee,
       });
     }
 
-    const totalFees = runnerOrders.reduce(
-      (sum: number, o: { totalFee: number }) => sum + o.totalFee,
-      0,
-    );
-
-    return { totalFees, runnerShare, platformShare, items };
+    // D26 / D28: المندوب موظف براتب ثابت خارج التطبيق، وبالتالي حصة المندوب = 0
+    // وكامل الرسوم تؤول إحصائياً للمنصة (platformShare = totalFees في Settlement و orderFee في SettlementItem).
+    // هذا يضمن التطابق التام بين رأس Settlement وبنود SettlementItem.
+    return { totalFees, runnerShare: 0, platformShare: totalFees, items };
   }
 
   /**
@@ -518,14 +512,9 @@ export class SettlementsService {
 
     const totalOrders = orders.length;
     let totalFees = 0;
-    let estimatedRunnerShare = 0;
-    let estimatedPlatformShare = 0;
 
     for (const o of orders) {
       totalFees += o.totalFee;
-      const split = splitShares(o.totalFee);
-      estimatedRunnerShare += split.runnerShare;
-      estimatedPlatformShare += split.platformShare;
     }
 
     return RunnerCurrentSettlementSchema.parse({
@@ -533,8 +522,8 @@ export class SettlementsService {
       status: 'NOT_CLOSED',
       totalOrders,
       totalFees,
-      estimatedRunnerShare,
-      estimatedPlatformShare,
+      estimatedRunnerShare: 0,
+      estimatedPlatformShare: totalFees,
       orders,
     });
   }

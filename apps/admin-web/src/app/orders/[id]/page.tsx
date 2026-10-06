@@ -552,23 +552,11 @@ export default function OrderDetailPage() {
                 ⚠️ {previewError}
               </div>
             ) : previewResult ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
                   <span className="text-[11px] text-slate-400 block font-medium">إجمالي الرسم</span>
                   <span className="text-base font-black text-[#3ABFB5]">
                     {formatCurrency(previewResult.totalFee)}
-                  </span>
-                </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                  <span className="text-[11px] text-slate-400 block font-medium">حصة الكابتن (75%)</span>
-                  <span className="text-sm font-black text-emerald-600">
-                    {formatCurrency(previewResult.runnerShare)}
-                  </span>
-                </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                  <span className="text-[11px] text-slate-400 block font-medium">حصة المنصة (25%)</span>
-                  <span className="text-sm font-black text-slate-700">
-                    {formatCurrency(previewResult.platformShare)}
                   </span>
                 </div>
                 <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-center text-[11px] text-slate-500 font-medium space-y-0.5">

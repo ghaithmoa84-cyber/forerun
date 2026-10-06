@@ -144,7 +144,10 @@ export class LedgerService {
 
   async getEntriesByRunner(runnerId: string): Promise<LedgerEntry[]> {
     const entries = await this.prisma.ledgerEntry.findMany({
-      where: { runnerId, type: 'RUNNER_SHARE' },
+      where: {
+        runnerId,
+        type: { in: ['RUNNER_SHARE', 'ORDER_FEE_TOTAL'] },
+      },
       orderBy: { createdAt: 'asc' },
     });
 

@@ -237,8 +237,6 @@ export type AdminOrderApprovalResult = {
     customFee?: number | null;
     customFeeReason?: string | null;
     totalFee: number;
-    runnerShare?: number;
-    platformShare?: number;
   };
 };
 
@@ -356,8 +354,6 @@ export const PurchaseStoreResponseSchema = z.object({
     customFee: z.number().optional().default(0),
     customFeeReason: z.string().nullable().optional(),
     totalFee: z.number(),
-    runnerShare: z.number(),
-    platformShare: z.number(),
   }),
   customerNotified: z.boolean(),
 });

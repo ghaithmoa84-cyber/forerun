@@ -176,42 +176,33 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
     expect(dbOrderB.customFee).toBe(1);
     expect(dbOrderB.customFeeReason).toBe('رسم إضافي رمزي اختباري');
 
-    // Verify Ledger entries for Order A (total=110: runner=82, platform=28)
+    // Verify Ledger entries for Order A (single entry: ORDER_FEE_TOTAL = 110)
     const ledgerA = await prisma.ledgerEntry.findMany({ where: { orderId: orderAId } });
-    const ledgerATotal = ledgerA.find((l) => l.type === 'ORDER_FEE_TOTAL')!;
-    const ledgerARunner = ledgerA.find((l) => l.type === 'RUNNER_SHARE')!;
-    const ledgerAPlatform = ledgerA.find((l) => l.type === 'PLATFORM_SHARE')!;
-
-    const sharesA = splitShares(110);
+    expect(ledgerA).toHaveLength(1);
+    const ledgerATotal = ledgerA[0];
+    expect(ledgerATotal.type).toBe('ORDER_FEE_TOTAL');
     expect(ledgerATotal.amount).toBe(110);
-    expect(ledgerARunner.amount).toBe(sharesA.runnerShare);
-    expect(ledgerAPlatform.amount).toBe(sharesA.platformShare);
-    expect(ledgerARunner.amount + ledgerAPlatform.amount).toBe(110);
 
-    // Verify Ledger entries for Order B (total=61: runner=45, platform=16)
+    // Verify Ledger entries for Order B (single entry: ORDER_FEE_TOTAL = 61)
     const ledgerB = await prisma.ledgerEntry.findMany({ where: { orderId: orderBId } });
-    const ledgerBTotal = ledgerB.find((l) => l.type === 'ORDER_FEE_TOTAL')!;
-    const ledgerBRunner = ledgerB.find((l) => l.type === 'RUNNER_SHARE')!;
-    const ledgerBPlatform = ledgerB.find((l) => l.type === 'PLATFORM_SHARE')!;
-
-    const sharesB = splitShares(61);
+    expect(ledgerB).toHaveLength(1);
+    const ledgerBTotal = ledgerB[0];
+    expect(ledgerBTotal.type).toBe('ORDER_FEE_TOTAL');
     expect(ledgerBTotal.amount).toBe(61);
-    expect(ledgerBRunner.amount).toBe(sharesB.runnerShare);
-    expect(ledgerBPlatform.amount).toBe(sharesB.platformShare);
-    expect(ledgerBRunner.amount + ledgerBPlatform.amount).toBe(61);
 
-    // Total expected runner share from Ledger = 82 + 45 = 127
-    const totalRunnerLedgerSum = ledgerARunner.amount + ledgerBRunner.amount;
-    expect(totalRunnerLedgerSum).toBe(82 + 45); // 127
+    const totalFeesSum = ledgerATotal.amount + ledgerBTotal.amount;
+    expect(totalFeesSum).toBe(110 + 61); // 171
 
-    // Verify Settlements: getCurrentSettlement vs ΣLedger
+    // Verify Settlements: getCurrentSettlement
     const currentRes = await request
       .get('/api/v1/runner/settlements/current')
       .set('Authorization', `Bearer ${runnerToken}`);
     expect(currentRes.status).toBe(200);
-    expect(currentRes.body.estimatedRunnerShare).toBe(totalRunnerLedgerSum);
+    expect(currentRes.body.totalFees).toBe(totalFeesSum);
+    expect(currentRes.body.estimatedRunnerShare).toBe(0);
+    expect(currentRes.body.estimatedPlatformShare).toBe(totalFeesSum);
 
-    // Verify closeDay matches getCurrentSettlement and ΣLedger
+    // Verify closeDay matches getCurrentSettlement
     const operationalDate = getOperationalDate();
     const closeDayRes = await request
       .post('/api/v1/admin/settlements/close-day')
@@ -222,7 +213,9 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
       });
     expect(closeDayRes.status).toBe(201);
     const createdSettlement = closeDayRes.body.settlements[0];
-    expect(createdSettlement.runnerShare).toBe(totalRunnerLedgerSum);
+    expect(createdSettlement.totalFees).toBe(totalFeesSum);
+    expect(createdSettlement.runnerShare).toBe(0);
+    expect(createdSettlement.platformShare).toBe(totalFeesSum);
     expect(createdSettlement.runnerShare).toBe(currentRes.body.estimatedRunnerShare);
   });
 
