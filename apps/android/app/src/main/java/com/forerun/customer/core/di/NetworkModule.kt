@@ -1,6 +1,8 @@
 package com.forerun.customer.core.di
 
+import android.content.Context
 import com.forerun.customer.BuildConfig
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.forerun.customer.core.network.ApiCallAdapterFactory
 import com.forerun.customer.core.network.interceptor.AuthInterceptor
 import com.forerun.customer.core.network.interceptor.HeaderInterceptor
@@ -75,6 +77,10 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRetrofit(
+        // ApplicationContext is injected to resolve localized error strings
+        // (R.string.error_network, R.string.error_generic) in ApiCall dynamically at runtime,
+        // fulfilling the zero-hardcoded-Arabic rule while keeping unit tests functional via null Context fallback.
+        @ApplicationContext context: Context,
         okHttpClient: OkHttpClient,
         moshi: Moshi
     ): Retrofit {
@@ -82,7 +88,7 @@ object NetworkModule {
             .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi).withNullSerialization())
-            .addCallAdapterFactory(ApiCallAdapterFactory.create(moshi))
+            .addCallAdapterFactory(ApiCallAdapterFactory.create(moshi, context))
             .build()
     }
 

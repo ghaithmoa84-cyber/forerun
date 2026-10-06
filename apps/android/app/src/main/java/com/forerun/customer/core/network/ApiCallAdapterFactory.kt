@@ -1,5 +1,6 @@
 package com.forerun.customer.core.network
 
+import android.content.Context
 import com.squareup.moshi.Moshi
 import retrofit2.Call
 import retrofit2.CallAdapter
@@ -8,7 +9,8 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 class ApiCallAdapterFactory(
-    private val moshi: Moshi
+    private val moshi: Moshi,
+    private val context: Context? = null
 ) : CallAdapter.Factory() {
 
     override fun get(
@@ -32,10 +34,11 @@ class ApiCallAdapterFactory(
         }
 
         val successType = getParameterUpperBound(0, responseType)
-        return ApiCallAdapter<Any>(successType, moshi)
+        return ApiCallAdapter<Any>(successType, moshi, context)
     }
 
     companion object {
-        fun create(moshi: Moshi): ApiCallAdapterFactory = ApiCallAdapterFactory(moshi)
+        fun create(moshi: Moshi, context: Context? = null): ApiCallAdapterFactory =
+            ApiCallAdapterFactory(moshi, context)
     }
 }
