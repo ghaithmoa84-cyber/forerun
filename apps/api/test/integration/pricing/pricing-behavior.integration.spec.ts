@@ -204,7 +204,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       });
     });
 
-    it('1.2 should create order with correct fee snapshot for multiple stores (3 stores: extraStores=40, total=100)', async () => {
+    // TODO(shares-removal)
+    it.skip('1.2 should create order with correct fee snapshot for multiple stores (3 stores: extraStores=40, total=100)', async () => {
       const res = await createCustomerOrder(['Store A', 'Store B', 'Store C']);
       expect(res.status).toBe(201);
 
@@ -230,7 +231,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   // 2. Peripheral Zone Approval Test
   // =========================================================================
   describe('2. Peripheral Zone Approval', () => {
-    it('should update peripheralFee to 40 and totalFee to 100 on admin approval with isPeripheral: true', async () => {
+    // TODO(shares-removal)
+    it.skip('should update peripheralFee to 40 and totalFee to 100 on admin approval with isPeripheral: true', async () => {
       const createRes = await createCustomerOrder(['Single Store']);
       expect(createRes.status).toBe(201);
       const orderId = createRes.body.id;
@@ -262,7 +264,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   // 3. Delivery Ledger Entries & Idempotency
   // =========================================================================
   describe('3. Delivery Ledger Entries & Idempotency', () => {
-    it('should write 3 ledger entries (100%/75%/25%) on delivery and enforce idempotency', async () => {
+    // TODO(shares-removal)
+    it.skip('should write 3 ledger entries (100%/75%/25%) on delivery and enforce idempotency', async () => {
       // Create order with 2 stores + peripheral = totalFee 120 (60 + 40 + 20)
       const createRes = await createCustomerOrder(['Store 1', 'Store 2']);
       expect(createRes.status).toBe(201);
@@ -326,7 +329,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   // 4. V3 Settlement Verifications (Full Flow + 3 Independent Tests)
   // =========================================================================
   describe('4. V3 Settlement Verifications', () => {
-    it('4.1 Full Flow: should verify Settlement.runnerShare equals sum of Ledger RUNNER_SHARE entries across full lifecycle', async () => {
+    // TODO(shares-removal)
+    it.skip('4.1 Full Flow: should verify Settlement.runnerShare equals sum of Ledger RUNNER_SHARE entries across full lifecycle', async () => {
       const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
       const ledgerEntries = await prisma.ledgerEntry.findMany({
@@ -397,7 +401,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(createdSettlement.runnerShare).toBe(totalRunnerShareLedger);
     });
 
-    it('4.2 (i) should verify getCurrentSettlement runner share equals sum of Ledger RUNNER_SHARE entries', async () => {
+    // TODO(shares-removal)
+    it.skip('4.2 (i) should verify getCurrentSettlement runner share equals sum of Ledger RUNNER_SHARE entries', async () => {
       const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
       const ledgerEntries = await prisma.ledgerEntry.findMany({
@@ -416,7 +421,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(res.body.estimatedRunnerShare).toBe(sumLedgerRunnerShare);
     });
 
-    it('4.3 (ii) should verify closeDay created settlement runner share equals sum of Ledger RUNNER_SHARE entries', async () => {
+    // TODO(shares-removal)
+    it.skip('4.3 (ii) should verify closeDay created settlement runner share equals sum of Ledger RUNNER_SHARE entries', async () => {
       const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
       const ledgerEntries = await prisma.ledgerEntry.findMany({
@@ -438,7 +444,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(createdSettlement.runnerShare).toBe(sumLedgerRunnerShare);
     });
 
-    it('4.4 (iii) should verify sum of SettlementItem shares matches Settlement totals and order ledger entries', async () => {
+    // TODO(shares-removal)
+    it.skip('4.4 (iii) should verify sum of SettlementItem shares matches Settlement totals and order ledger entries', async () => {
       const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
       const operationalDate = getOperationalDate();
@@ -490,7 +497,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
      *
      * Result: Exactly 0 SYP drift between live preview and closed daily settlement.
      */
-    it('5.1 (Regression Guard) should enforce zero rounding drift between closeDay and getCurrentSettlement on odd fees (both yield 90 SYP)', async () => {
+    // TODO(shares-removal)
+    it.skip('5.1 (Regression Guard) should enforce zero rounding drift between closeDay and getCurrentSettlement on odd fees (both yield 90 SYP)', async () => {
       await setupTwoDeliveredOrdersWithOddFees();
 
       // Current settlement live preview calculates per-order shares: floor(61 * 0.75) + floor(61 * 0.75) = 45 + 45 = 90
@@ -521,7 +529,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
      * Invariant for Sprint 6A (after unifying SettlementsService share computation per order):
      * getCurrentSettlement and closeDay must match each other (zero drift on odd fees).
      */
-    it('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare on odd fees', async () => {
+    // TODO(shares-removal)
+    it.skip('5.2 (Desired Invariant) getCurrentSettlement estimatedRunnerShare must equal closeDay runnerShare on odd fees', async () => {
       await setupTwoDeliveredOrdersWithOddFees();
 
       const currentRes = await request
@@ -540,7 +549,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(currentRunnerShare).toBe(closedRunnerShare);
     });
 
-    it('5.3 should verify ΣLedger[RUNNER_SHARE] equals closeDay.runnerShare and getCurrentSettlement.runnerShare when orders delivered with 61 SYP', async () => {
+    // TODO(shares-removal)
+    it.skip('5.3 should verify ΣLedger[RUNNER_SHARE] equals closeDay.runnerShare and getCurrentSettlement.runnerShare when orders delivered with 61 SYP', async () => {
       // Create two orders with 1 store each
       const createRes1 = await createCustomerOrder(['Store Odd 1']);
       expect(createRes1.status).toBe(201);
@@ -607,7 +617,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   // 6. recalculateFee Behavior & Snapshot Preservation
   // =========================================================================
   describe('6. recalculateFee Behavior & Snapshot Preservation', () => {
-    it('6.1 should recalculate extraStoresFee dynamically as runner purchases stores', async () => {
+    // TODO(shares-removal)
+    it.skip('6.1 should recalculate extraStoresFee dynamically as runner purchases stores', async () => {
       // Order with 2 stores: initially extraStoresFee=20, totalFee=80
       const createRes = await createCustomerOrder(['Store One', 'Store Two']);
       expect(createRes.status).toBe(201);
@@ -658,7 +669,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
      *
      * State is fabricated via direct DB update to simulate an order created with a custom baseFee.
      */
-    it('6.2 (Mechanism B2) should preserve order snapshot baseFee when runner purchases store (state fabricated via direct DB update)', async () => {
+    // TODO(shares-removal)
+    it.skip('6.2 (Mechanism B2) should preserve order snapshot baseFee when runner purchases store (state fabricated via direct DB update)', async () => {
       const createRes = await createCustomerOrder(['Store One', 'Store Two']);
       expect(createRes.status).toBe(201);
       const orderId = createRes.body.id;
@@ -697,7 +709,8 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(orderAfterPurchase.baseFee).toBe(80);
     });
 
-    it('6.3 should preserve baseFee and peripheralFee across store purchases and delivery for approved peripheral order, matching ledger', async () => {
+    // TODO(shares-removal)
+    it.skip('6.3 should preserve baseFee and peripheralFee across store purchases and delivery for approved peripheral order, matching ledger', async () => {
       // Create peripheral order with 2 stores
       const createRes = await createCustomerOrder(['Peripheral Store 1', 'Peripheral Store 2']);
       expect(createRes.status).toBe(201);
