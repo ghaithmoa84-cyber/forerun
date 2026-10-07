@@ -36,4 +36,10 @@ object ApiModule {
     fun provideDeviceTokenApi(retrofit: Retrofit): com.forerun.customer.data.remote.api.DeviceTokenApi {
         return retrofit.create(com.forerun.customer.data.remote.api.DeviceTokenApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideBannerApi(retrofit: Retrofit): com.forerun.customer.data.remote.api.BannerApi {
+        return retrofit.create(com.forerun.customer.data.remote.api.BannerApi::class.java)
+    }
 }
