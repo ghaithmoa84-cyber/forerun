@@ -1,9 +1,9 @@
 # FORERUN — Project Status & Diagnostic Playbook
 
-> **آخر تحديث:** 2026-10-06
+> **آخر تحديث:** 2026-10-07
 > **الغرض:** هذا الملف هو المرجع الوحيد لحالة المشروع، القرارات المعمارية، الأخطاء المعروفة، وحلولها.
 > **مهم:** أي وكيل أو مطوّر يبدأ العمل يجب أن يقرأ هذا الملف كاملًا قبل أي تعديل.
-> **نطاق المرجعية:** هذا الملف يملك حقائق **الإنتاج والبنية التحتية** فقط. لتوثيق Android انظر خريطة التوثيق في [§11](#11-خريطة-التوثيق--أي-ملف-يملك-أي-حققيقة).
+> **نطاق المرجعية:** هذا الملف يملك حقائق **الإنتاج والبنية التحتية** فقط. لتوثيق Android انظر خريطة التوثيق في [§11](#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة).
 
 ---
 
@@ -218,9 +218,9 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 6 | ترقية API Dockerfile إلى Node 22 (الهدف `22-slim`) | ❌ **غير مُنجَز — لا دعوة للاستبدال** | `Dockerfile:1` يحتوي `node:20-slim`، والـ API الإنتاجي يشتغل بسلاسة عليه. لم يُسجَّل أي فشل أو تنبيه من Railway. البند كُتب في وقتٍ كان فيه `.nvmrc` = 22.23.1، لكن `Dockerfile` لم يكن 22ًا أبدًا. الفجوة لم تُعد خطرًا — الـ production مستقر. يُوصى بإغلاق هذا البند كـ "غير قابل للتطبيق". |
 | 7 | استبدال قيم R2 الوهمية بقيم حقيقية | ⏔ **مؤجَّل بقرار — ما بعد MVP** | `PROJECT_STATUS.md` §3.1 يعرض `R2_* = <dummy-for-now>`. **لم يُتحقَّق من Railway Variables بعد** ولا تدّعى هنا قيمة ولا وهم. أُرجئت **ميزة رفع الإيصالات** بالكامل بقرار المستخدم في **2026-09-30** — انظر [§12 القرار D5](#12-سجل-القرارات). |
 | 8 | Vercel Agent Skill plugin | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
-
-| 9 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid) — إضافة customFee/customFeeReason إلى الـ frontends و raise MAX_CUSTOM_FEE إلى 500** | ✅ مكتملة ومختبرة | 4 commits: 4fe7cb · aaf2d8 · 86ac39a · 7b4ae2. pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
+| 9 | **سبرنت 6B (أسطح الزبون والمندوب وAndroid) — إضافة customFee/customFeeReason إلى الـ frontends ورفع MAX_CUSTOM_FEE إلى 500** | ✅ مكتملة ومختبرة | 4 commits: 64fe7cb · baaf2d8 · 86ac39a · a7b4ae2. pnpm build + typecheck + lint ناجح (6/6). مدموج في `master`. |
 | 10 | **Sprint 7A — شرائح الشاشة الرئيسية (Banners admin + backend، روابط https فقط)** | ✅ مكتملة ومختبرة | فرع `feature/sprint-7a-banners-admin` مدموج بـ `git merge --no-ff` إلى `master`. 390 اختبار وحدة (+33) · 53 تكامل (+7) · migration مطبَّقة على الإنتاج وDrift = 0. انظر [§12 القرار D29](#12-سجل-القرارات). |
+
 ---
 
 ## 6. حالة أول Admin (بيانات اختبار)
@@ -324,8 +324,7 @@ fawrun/
 | 2026-10-04 | `744bf23` — **إعادة هيكلة `docs/SECURITY-AND-CODE-REVIEW.md` (الإصدار 2)**: كل بند موثّق بـ`ملف:سطر` على `744bf23` · **33 بنداً مفتوحاً** (1 🔴 · 24 🟡 · 8 🟢) · **12 مُغلقاً** · **5 مرفوضة بالدليل** (أهمها: نسبة `RUNNER_SHARE = 0.75` **صحيحة** والمواصفة تنص على 75/25 — لا تغيير). 🔴 الوحيد: `runner-orders.service.ts:1096–1102` (حاجز يُبطل Idempotency التسليم) |
 | 2026-10-05 | `69555ea`..`de8eda8` — **سبرنت 6A (التسعير الديناميكي) 6A-1 → 6A-8** على الفرع `feature/sprint-6a-dynamic-pricing-backend` (34 commit عن `master`): جدول `PlatformPricing` + صف seed 60/20/40، `PricingConfig`/`getPricingConfig` مع كاش 30ث، توحيد حصص التسويات لكل طلب (`splitShares`)، أعمدة `customFee` مع قيد CHECK، مسارات `GET/PUT /admin/pricing` و`fee-preview`، وشاشتا الأدمن. |
 | 2026-10-05 | **6A-3.1b (الخطوة الأخيرة)** — ربط `getPricingConfig` بمسارات الإنتاج الأربعة `createOrder` · `approveOrder` · `recalculateFee` · `previewFee` (القرارات **D21/D22/D23**). +9 اختبارات وحدة و+6 اختبارات تكامل (S2) ⇒ **355 وحدة + 44 تكامل ناجح**. `cleanDatabase` في `test/integration/setup.ts` يعيد صف الأسعار إلى خط الأساس. **تحذير D20 أصبح محققاً: تعديل الأسعار مؤثّر فعلي الآن.** لا الدمج ولا النشر بعد — المالك فقط (`prisma migrate deploy` قبل تشغيل الـ API الجديد). |
-
-| 2026-10-05 | **سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid)** — رفع MAX_CUSTOM_FEE إلى 500، إضافة customFee/customFeeReason لـ customer-web (OrderDetail) و runner-pwa (ActiveOrder) و Android (DTO + PricingCard + strings.xml)، وحمولة order:assigned WebSocket carrying customFee. 4 semantic commits: 4fe7cb (shared types) · aaf2d8 (backend) · 86ac39a (frontends) · 7b4ae2 (tests). pnpm build + 	ypecheck + lint ناجح (6/6). ✅ مُكتمل — الدمج git merge --no-ff معلّق على مالك. |
+| 2026-10-05 | **سبرنت 6B (أسطح الزبون والمندوب وAndroid)** — رفع MAX_CUSTOM_FEE إلى 500، إضافة customFee/customFeeReason لـ customer-web (OrderDetail) و runner-pwa (ActiveOrder) و Android (DTO + PricingCard + strings.xml)، وحمولة order:assigned WebSocket carrying customFee. 4 semantic commits: 64fe7cb (shared types) · baaf2d8 (backend) · 86ac39a (frontends) · a7b4ae2 (tests). pnpm build + typecheck + lint ناجح (6/6). مدموج في `master`. |
 | 2026-10-06 | إلغاء نظام الحصص (D25–D28) نُشر على الإنتاج: merge `af6ae4e` · 12 commits · API/Admin/Runner Ready · Customer Web لم يتغيّر. |
 | 2026-10-06 | S5 ميداني ناجح (FW-000093) · LedgerEntry واحد ORDER_FEE_TOTAL=100 · M-1 مغلق. |
 | 2026-10-06 | توقيع المراجعة الأمنية الإصدار 3 على `7787553` · 5 بنود مفتوحة مقبولة كدين تقني · 28 مُغلقة · 0 حرجة. |
@@ -340,7 +339,7 @@ fawrun/
 1. **عند أي خطأ، ابحث في جدول Playbook أولًا** (بند 4).
 2. **انسخ نص الخطأ كاملًا** — لا تلخّصه.
 3. **افحص `schema.prisma` قبل أي كتابة FK.**
-4. **استخدم أوامر التشخيص السريقة** (بند 4) بدلًا من الاستنتاجات.
+4. **استخدم أوامر التشخيص السريعة** (بند 4) بدلًا من الاستنتاجات.
 5. **بعد كل حل، حدّث بند 4 وبند 9.**
 6. **احفظ screenshots لـ Railway Variables + Vercel Settings** في `docs/screenshots/`.
 
@@ -481,7 +480,6 @@ fawrun/
 - **⚠️ خطر معروف (D23):** في نشر متعدد النسخ (أكثر من نسخة API) قد تعرض المعاينة سعرًا سابقًا للحظة لمدة تصل إلى 30 ثانية بعد التعديل، لأن تفريغ الكاش محلي لكل نسخة. **التخفيف:** `updatePlatformPricing` يفرّغ كاش العملية نفسها؛ إن لزم الأمر لاحقًا يمكن إبطاء TTL أو استخدام invalidation مشترك.
 - **⚠️ سلوك الصف المفقود:** صف `PlatformPricing` غير موجود أو غير صالح ⇒ ارتداد صامت إلى `DEFAULT_PRICING_CONFIG` (60/20/40) مع `Logger.warn`/`Logger.error` — **بلا 5xx**. مُغطّى باختبار تكامل (S2 بند 5). تعديل الصف مباشرة بالـ DB يتجاوز `AuditLog`؛ المسار المعتمد والمرئي هو `PUT /admin/pricing` فقط.
 
-
 ### D25–D28 — إلغاء نظام الحصص واعتماد الراتب الثابت للمندوب (Phase 1)
 - **الخلفية والسياق:** نموذج عمل المنصة يعتمد مندوبين برواتب شهرية ثابتة خارج التطبيق، ولا يحصل المندوب على نسبة 75% من قيمة الرسوم. لذلك تم إلغاء توزيع الحصص البرمجي في الـ MVP.
 - **D25 — حصر قيود التسليم في قيد واحد:** عند تسليم الطلب (`deliverOrder`)، يتم كتابة قيد مالي وحيد في `LedgerEntry` بنوع `ORDER_FEE_TOTAL` وقيمة `totalFee`. تم إيقاف كتابة قيدي `RUNNER_SHARE` و`PLATFORM_SHARE`. القيود التاريخية تظل محفوظة في قاعدة البيانات (Append-only).
@@ -503,4 +501,3 @@ fawrun/
 ---
 
 **نهاية الملف.**
-
