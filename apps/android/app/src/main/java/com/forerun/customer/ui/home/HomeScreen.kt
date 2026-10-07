@@ -99,10 +99,13 @@ fun HomeScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToCreateOrder: () -> Unit = {},
     onNavigateToOrderDetail: (String) -> Unit = {},
+    onNavigateToRoute: (String) -> Unit = {},
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    bannerViewModel: BannerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val bannerUiState by bannerViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
         viewModel.navigateToLogin.collect {
@@ -141,7 +144,10 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(Dimens.Space16))
                     Button(
-                        onClick = { viewModel.handleIntent(HomeIntent.Refresh) },
+                        onClick = {
+                            viewModel.handleIntent(HomeIntent.Refresh)
+                            bannerViewModel.loadBanners()
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = ForerunGreen)
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
@@ -154,14 +160,19 @@ fun HomeScreen(
             is HomeUiState.Success -> {
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
-                    onRefresh = { viewModel.onIntent(HomeIntent.Refresh) },
+                    onRefresh = {
+                        viewModel.onIntent(HomeIntent.Refresh)
+                        bannerViewModel.loadBanners()
+                    },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     HomeContent(
                         profile = state.profile,
                         activeOrder = state.activeOrder,
+                        bannerUiState = bannerUiState,
                         onNewOrderClick = onNavigateToCreateOrder,
-                        onOrderDetailClick = onNavigateToOrderDetail
+                        onOrderDetailClick = onNavigateToOrderDetail,
+                        onNavigateToRoute = onNavigateToRoute
                     )
                 }
             }
@@ -173,8 +184,10 @@ fun HomeScreen(
 private fun HomeContent(
     profile: CustomerProfile,
     activeOrder: ActiveOrder?,
+    bannerUiState: BannerUiState,
     onNewOrderClick: () -> Unit,
-    onOrderDetailClick: (String) -> Unit
+    onOrderDetailClick: (String) -> Unit,
+    onNavigateToRoute: (String) -> Unit
 ) {
     var showServiceDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -321,6 +334,12 @@ private fun HomeContent(
         }
 
         Spacer(modifier = Modifier.height(Dimens.Space16))
+
+        // Banners Carousel (HorizontalPager 16:7)
+        BannersSection(
+            uiState = bannerUiState,
+            onNavigateToRoute = onNavigateToRoute
+        )
 
         // 2. Hero Gradient CTA Card (#7DDDD4 -> #3ABFB5, 20dp corners)
         Card(

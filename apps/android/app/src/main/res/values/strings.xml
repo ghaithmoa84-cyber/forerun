@@ -426,4 +426,8 @@
     <!-- Notification channels -->
     <string name="channel_name_orders">FORERUN — تحديثات الطلبات</string>
     <string name="channel_desc_orders">إشعارات تحديث حالة الطلبات والتوصيل</string>
+
+    <!-- Promotional Banners -->
+    <string name="banner_whatsapp_inquiry">مرحباً، أود الاستفسار بخصوص العرض المتاح في تطبيق فوراً</string>
+    <string name="banner_image_description">شريحة العرض</string>
 </resources>

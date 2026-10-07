@@ -227,6 +227,20 @@ fun ForerunNavGraph(
                 },
                 onNavigateToOrderDetail = { orderId ->
                     navController.navigate(Routes.orderDetail(orderId))
+                },
+                onNavigateToRoute = { route ->
+                    if (route == Routes.HOME) {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.HOME) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    } else {
+                        navController.navigate(route) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 }
             )
         }
