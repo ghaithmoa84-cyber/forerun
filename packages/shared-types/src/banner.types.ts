@@ -284,8 +284,6 @@ export interface AdminBannerResponse {
   updatedAt: string;
 }
 
-export type BannerAdminResponse = AdminBannerResponse;
-
 export interface ActiveBannerResponse {
   id: string;
   headline: string | null;

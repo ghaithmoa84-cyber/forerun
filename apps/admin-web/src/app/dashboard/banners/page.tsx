@@ -12,7 +12,7 @@ import {
   type BannerInAppRoute,
 } from '@forerun/shared-constants';
 import type {
-  BannerAdminResponse,
+  AdminBannerResponse,
   CreateBannerDto,
   UpdateBannerDto,
 } from '@forerun/shared-types';
@@ -58,21 +58,35 @@ const INITIAL_FORM_DATA: BannerFormData = {
   isActive: true,
 };
 
+const DAMASCUS_OFFSET_HOURS = 3;
+
+/**
+ * تحويل تاريخ UTC ISO إلى صيغة datetime-local بتوقيت دمشق (UTC+3) حصراً
+ * بغض النظر عن المنطقة الزمنية لمتصفح الأدمن
+ */
 function toDateTimeLocalString(isoString?: string | null): string {
   if (!isoString) return '';
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return '';
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
+  // إضافة إزاحة دمشق (UTC+3) الثابتة
+  const damascusTime = new Date(d.getTime() + DAMASCUS_OFFSET_HOURS * 3600 * 1000);
+  const year = damascusTime.getUTCFullYear();
+  const month = String(damascusTime.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(damascusTime.getUTCDate()).padStart(2, '0');
+  const hours = String(damascusTime.getUTCHours()).padStart(2, '0');
+  const minutes = String(damascusTime.getUTCMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+/**
+ * تحويل مدخلات datetime-local (بتوقيت دمشق) إلى UTC ISO String
+ * بإضافة إزاحة +03:00 صريحة لتفادي أي انحراف بسبب توقيت متصفح المستخدم
+ */
 function fromDateTimeLocalToUtc(dateTimeLocal: string): string | null {
-  if (!dateTimeLocal) return null;
-  const d = new Date(dateTimeLocal);
+  if (!dateTimeLocal || !dateTimeLocal.trim()) return null;
+  const normalized =
+    dateTimeLocal.length === 16 ? `${dateTimeLocal}:00+03:00` : `${dateTimeLocal}+03:00`;
+  const d = new Date(normalized);
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
@@ -109,7 +123,7 @@ function isFutureDate(isoString?: string | null): boolean {
 export default function BannersManagementPage() {
   const { showToast } = useToast();
 
-  const [banners, setBanners] = useState<BannerAdminResponse[]>([]);
+  const [banners, setBanners] = useState<AdminBannerResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [hasOrderChanges, setHasOrderChanges] = useState<boolean>(false);
@@ -122,12 +136,12 @@ export default function BannersManagementPage() {
   const [formImageError, setFormImageError] = useState<boolean>(false);
 
   // Delete Confirm State
-  const [deleteConfirmBanner, setDeleteConfirmBanner] = useState<BannerAdminResponse | null>(null);
+  const [deleteConfirmBanner, setDeleteConfirmBanner] = useState<AdminBannerResponse | null>(null);
 
   const fetchBanners = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get<BannerAdminResponse[]>('/admin/banners');
+      const res = await api.get<AdminBannerResponse[]>('/admin/banners');
       setBanners(res.data);
       setHasOrderChanges(false);
     } catch {
@@ -157,7 +171,7 @@ export default function BannersManagementPage() {
   };
 
   // Open Edit Modal
-  const handleOpenEdit = (banner: BannerAdminResponse) => {
+  const handleOpenEdit = (banner: AdminBannerResponse) => {
     setEditingBannerId(banner.id);
     setFormData({
       title: banner.title,
@@ -293,7 +307,7 @@ export default function BannersManagementPage() {
   };
 
   // Toggle Active Switch with Proactive Cap Guard
-  const handleToggleActive = async (banner: BannerAdminResponse) => {
+  const handleToggleActive = async (banner: AdminBannerResponse) => {
     if (!banner.isActive && activeBannersCount >= MAX_ACTIVE_BANNERS) {
       showToast(
         `لا يمكن التفعيل: تم الوصول للحد الأقصى (${MAX_ACTIVE_BANNERS} شرائح نشطة). عطل شريحة أخرى أولاً.`,
