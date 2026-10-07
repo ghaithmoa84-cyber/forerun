@@ -193,6 +193,7 @@ model OrderStore {
   receipts    Receipt[]
 
   @@index([orderId, status])
+  @@index([orderId, isDeleted])
 }
 
 model Receipt {
@@ -236,8 +237,8 @@ model LedgerEntry {
   description String
   meta        Json?
   createdAt   DateTime        @default(now())
-  order       Order?          @relation(fields: [orderId], references: [id])
-  runner      Runner?         @relation(fields: [runnerId], references: [id])
+  order       Order?          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  runner      Runner?         @relation(fields: [runnerId], references: [id], onDelete: Restrict)
 
   @@index([orderId])
   @@index([runnerId, type])
@@ -247,7 +248,7 @@ model LedgerEntry {
 model Settlement {
   id              String           @id @default(cuid())
   runnerId        String
-  operationalDate String
+  operationalDate String           @db.VarChar(10)
   status          SettlementStatus @default(PENDING)
   totalOrders     Int
   totalFees       Int
