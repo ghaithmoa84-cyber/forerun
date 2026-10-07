@@ -30,8 +30,11 @@ googleServicesPlugin = "4.4.2"
 robolectric = "4.13"
 androidxTestCore = "1.6.1"
 androidxTestExtJunit = "1.2.1"
+coil = "3.0.4"
 
 [libraries]
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 socketio-client = { module = "io.socket:socket.io-client", version.ref = "socketio" }
 
 maplibre-android = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }

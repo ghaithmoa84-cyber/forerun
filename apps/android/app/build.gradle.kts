@@ -98,6 +98,10 @@ dependencies {
     implementation(libs.androidx.compose.preview)
     debugImplementation(libs.androidx.compose.tooling)
 
+    // Image Loading (MASTER-SPEC.md §Image Loading)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
