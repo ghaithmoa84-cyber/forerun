@@ -6,6 +6,15 @@
 
 ---
 
+## مسار الشرائح الإعلانية (Sprint 7A — Banners)
+
+- [x] Sprint 7A — Banners (admin + backend) — مكتمل ومدموج 2026-10-07. انظر PROJECT_STATUS.md §12 D29.
+- [ ] C-4 (دَين تقني، أولوية منخفضة): معالجة انحراف migrate diff التاريخي في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل — خارج نطاق 7A، اكتُشف عبر shadow-database prisma migrate diff.
+- [ ] C-5: بناء طبقة تحويل (mapping) في Android من مسارات البانرات المخزَّنة (`/create-order`, `/orders`, `/account`, `/support`, `/home`) إلى ثوابت Routes الفعلية (`Routes.CREATE_ORDER = "create_order"` إلخ) — مطلوب عند تنفيذ سبرنت استهلاك العميل (banners-client-ui) اللاحق.
+- [ ] C-6 (فحص الـ Drift غير متاح في بيئة الإنتاج): فحص انحراف المخطط ضد قاعدة الإنتاج يتطلب تشغيل الفحص من داخل Railway أو توفير قناة اتصال آمنة.
+
+---
+
 ## مسار إلغاء نظام الحصص واعتماد الراتب الثابت (القرارات D25–D28)
 
 > ⚠️ **Release Blocker:** كسر عقد `FeePreviewResponse` (بحذف حقول الحصص `runnerShare` و `platformShare`) يتطلب إطلاق المرحلة 1 (Backend) والمرحلة 3 (admin-web) معاً في **نفس الإصدار (Same Release)**، ويُحظر نشر الـ Backend منفرداً قبل تحديث أسطح الأدمن.
@@ -38,6 +47,7 @@
 | C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ⏳ معلّق | @android-dev | تنظيف لاحق لـ Sprint 9 |
 | C-4 | معالجة انحراف الـ migrations التاريخية في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل لما بعد 7A | منخفضة | ⏳ مؤجل لما بعد 7A | @code-architect | دَين تقني موروث على master أظهره أمر shadow-database prisma migrate diff؛ خارج نطاق 7A لتجنب مس الجداول المالية. |
 | C-5 | طبقة تحويل (Mapping Layer) في Android من مسارات الويب المخزَّنة (مثل '/create-order') إلى ثوابت Routes (مثل 'create_order') عند تنفيذ سبرنت 'banners-client-ui' | متوسطة | ⏳ مؤجل لـ banners-client-ui | @android-dev | قيم actionValue المخزنة في البانر تتبع صيغة الويب (/); يحتاج تطبيق أندرويد تحويلها لثوابت Routes المقابلة عند معالجة النقر. |
+| C-6 | فحص الـ Drift غير متاح في بيئة الإنتاج | منخفضة | ⏳ معلّق | Ops / @code-architect | فحص انحراف المخطط ضد قاعدة الإنتاج يتطلب تشغيل الفحص من داخل Railway أو توفير قناة اتصال آمنة. |
 | P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)
