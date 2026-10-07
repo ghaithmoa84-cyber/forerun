@@ -220,6 +220,7 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 8 | Vercel Agent Skill plugin | ✅ مكتملة ومختبرة على الإنتاج | اكتمل الإغلاق |
 | 9 | **سبرنت 6B (أسطح الزبون والمندوب وAndroid) — إضافة customFee/customFeeReason إلى الـ frontends ورفع MAX_CUSTOM_FEE إلى 500** | ✅ مكتملة ومختبرة | 4 commits: 64fe7cb · baaf2d8 · 86ac39a · a7b4ae2. pnpm build + typecheck + lint ناجح (6/6). مدموج في `master`. |
 | 10 | **Sprint 7A — شرائح الشاشة الرئيسية (Banners admin + backend، روابط https فقط)** | ✅ مكتملة ومختبرة | فرع `feature/sprint-7a-banners-admin` مدموج بـ `git merge --no-ff` إلى `master`. 390 اختبار وحدة (+33) · 53 تكامل (+7) · migration مطبَّقة على الإنتاج وDrift = 0. انظر [§12 القرار D29](#12-سجل-القرارات). |
+| 11 | **استهلاك الشرائح في Android (Banners Client UI — فرع وصفي)** | ✅ مكتملة ومختبرة | فرع `feature/banners-client-android` مدموج بـ `git merge --no-ff` إلى `master`. 290 اختبار وحدة (+14) · Coil 3.0.4 · 16:7 pager مع auto-scroll وتوقف عند السحب · اعتماد D30 وإغلاق C-5. |
 
 ---
 
