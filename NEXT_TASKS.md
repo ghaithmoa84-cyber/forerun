@@ -37,6 +37,7 @@
 | C-2 | تنظيف عمودَي `runnerShare` و `platformShare` من جدولي `Settlement` و `SettlementItem` في migration مستقل بعد MVP | منخفضة | ⏳ مؤجل لما بعد MVP | @code-architect | حقول إرثية (Legacy) أصبحت ثابتة (0 و totalFees) بموجب D26 لتجنب تعديل schema في MVP |
 | C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ⏳ معلّق | @android-dev | تنظيف لاحق لـ Sprint 9 |
 | C-4 | معالجة انحراف الـ migrations التاريخية في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل لما بعد 7A | منخفضة | ⏳ مؤجل لما بعد 7A | @code-architect | دَين تقني موروث على master أظهره أمر shadow-database prisma migrate diff؛ خارج نطاق 7A لتجنب مس الجداول المالية. |
+| C-5 | طبقة تحويل (Mapping Layer) في Android من مسارات الويب المخزَّنة (مثل '/create-order') إلى ثوابت Routes (مثل 'create_order') عند تنفيذ سبرنت 'banners-client-ui' | متوسطة | ⏳ مؤجل لـ banners-client-ui | @android-dev | قيم actionValue المخزنة في البانر تتبع صيغة الويب (/); يحتاج تطبيق أندرويد تحويلها لثوابت Routes المقابلة عند معالجة النقر. |
 | P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)
