@@ -119,7 +119,7 @@ describe('BannersService (Sprint 7A)', () => {
       expect(result.createdByAdminId).toBe(mockAdminId);
     });
 
-    it('throws BadRequestException if active count reached MAX_ACTIVE_BANNERS (5)', async () => {
+    it('throws BadRequestException if active count reached MAX_ACTIVE_BANNERS (10)', async () => {
       prisma.banner.count.mockResolvedValue(MAX_ACTIVE_BANNERS);
 
       await expect(
@@ -334,7 +334,7 @@ describe('BannersService (Sprint 7A)', () => {
 
     it('enforces MAX_ACTIVE_BANNERS when activating a previously inactive banner', async () => {
       prisma.banner.findFirst.mockResolvedValue(existingBanner); // isActive: false
-      prisma.banner.count.mockResolvedValue(MAX_ACTIVE_BANNERS); // Already 5 active
+      prisma.banner.count.mockResolvedValue(MAX_ACTIVE_BANNERS); // Already 10 active
 
       await expect(
         service.updateBanner('ban-up', { isActive: true }, mockUserId, mockAdminId),

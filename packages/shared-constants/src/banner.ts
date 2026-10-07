@@ -7,7 +7,7 @@ export const BANNER_ACTION_TYPES = {
 
 export type BannerActionType = typeof BANNER_ACTION_TYPES[keyof typeof BANNER_ACTION_TYPES];
 
-export const MAX_ACTIVE_BANNERS = 5;
+export const MAX_ACTIVE_BANNERS = 10;
 
 export const BANNER_IN_APP_ROUTES = [
   '/home',
