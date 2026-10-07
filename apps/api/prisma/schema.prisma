@@ -109,6 +109,7 @@ model Admin {
   createdAt   DateTime     @default(now())
   user        User         @relation(fields: [userId], references: [id])
   settlements Settlement[]
+  banners     Banner[]
 }
 
 model Order {
@@ -351,4 +352,33 @@ enum LedgerEntryType {
 enum SettlementStatus {
   PENDING
   SETTLED
+}
+
+model Banner {
+  id               String           @id @default(cuid())
+  title            String
+  headline         String?
+  subtitle         String?
+  imageUrl         String
+  actionType       BannerActionType @default(NONE)
+  actionValue      String?
+  ctaLabel         String?
+  sortOrder        Int              @default(0)
+  isActive         Boolean          @default(true)
+  isDeleted        Boolean          @default(false)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdByAdminId String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  createdBy        Admin            @relation(fields: [createdByAdminId], references: [id])
+
+  @@index([isDeleted, isActive, sortOrder])
+}
+
+enum BannerActionType {
+  NONE
+  EXTERNAL_URL
+  IN_APP_ROUTE
+  WHATSAPP_ADMIN
 }

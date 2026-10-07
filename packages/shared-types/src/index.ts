@@ -10,3 +10,4 @@ export * from './pagination.types.js';
 export * from './telegram.types.js';
 export * from './device-token.types.js';
 export * from './pricing.types.js';
+export * from './banner.types.js';

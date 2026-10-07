@@ -132,6 +132,8 @@ Sprints 1-8C منجز ومدمج. المتبقي هو: إغلاق الديون �
 
 **ملاحظة على 8F و10:** لا يمكن للوكيل-alone إكمالهما. كل ما سبق (8D، 8E، 9) يمكن تنفيذه بدون مدخلات خارجية.
 
+> ℹ️ **اعتماد سبرنت `banners-client-ui` القادم:** قيم `actionValue` المخزَّنة في البانرات (Sprint 7A) تتبع نمط Web Paths (`/create-order`، `/orders`، إلخ). سيتطلب تنفيذ واجهات الأندرويد في `banners-client-ui` طبقة تحويل (`mapping`) تربط بين هذه المسارات وثوابت `Routes` المقابلة (`Routes.CREATE_ORDER = "create_order"`). (انظر `NEXT_TASKS.md` بند C-5).
+
 ---
 
 **End of ROADMAP.md**
