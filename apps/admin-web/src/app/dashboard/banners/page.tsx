@@ -270,9 +270,9 @@ export default function BannersManagementPage() {
       const payload: CreateBannerDto | UpdateBannerDto = {
         title: formData.title.trim(),
         headline: formData.headline.trim(),
-        subtitle: formData.subtitle.trim() || undefined,
+        subtitle: formData.subtitle.trim() || null,
         imageUrl: formData.imageUrl.trim(),
-        ctaLabel: formData.ctaLabel.trim() || undefined,
+        ctaLabel: formData.ctaLabel.trim() || null,
         actionType: formData.actionType,
         actionValue:
           formData.actionType === BANNER_ACTION_TYPES.EXTERNAL_URL ||
