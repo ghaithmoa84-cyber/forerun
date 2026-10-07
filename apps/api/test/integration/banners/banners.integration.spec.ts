@@ -30,22 +30,17 @@ describe('Banners Endpoints Integration (Sprint 7A)', () => {
   });
 
   describe('GET /api/v1/banners/active', () => {
-    it('does NOT return expired, inactive, or soft-deleted banners', async () => {
-      const now = new Date();
+    it('excludes expired banners where endsAt is in the past', async () => {
       const past = new Date(Date.now() - 3600 * 1000);
       const wayPast = new Date(Date.now() - 7200 * 1000);
       const future = new Date(Date.now() + 3600 * 1000);
 
-      // 1. Valid Active Banner
       const validBanner = await prisma.banner.create({
         data: {
-          title: 'شريحة فعالة حالياً',
-          headline: 'عرض الأسبوع',
-          subtitle: 'توفير حقيقي',
+          title: 'شريحة صالحة',
+          headline: 'عرض ساري',
           imageUrl: 'https://example.com/banner-valid.png',
-          actionType: 'IN_APP_ROUTE',
-          actionValue: '/create-order',
-          ctaLabel: 'اطلب الآن',
+          actionType: 'NONE',
           sortOrder: 0,
           isActive: true,
           isDeleted: false,
@@ -55,10 +50,9 @@ describe('Banners Endpoints Integration (Sprint 7A)', () => {
         },
       });
 
-      // 2. Expired Banner (endsAt in the past)
       await prisma.banner.create({
         data: {
-          title: 'شريحة منتهية الصلاحية',
+          title: 'شريحة منتهية',
           headline: 'عرض منتهي',
           imageUrl: 'https://example.com/banner-expired.png',
           actionType: 'NONE',
@@ -71,57 +65,121 @@ describe('Banners Endpoints Integration (Sprint 7A)', () => {
         },
       });
 
-      // 3. Inactive Banner (isActive: false)
+      const res = await request.get('/api/v1/banners/active');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe(validBanner.id);
+      expect(res.body[0].headline).toBe('عرض ساري');
+    });
+
+    it('excludes future banners where startsAt is in the future', async () => {
+      const past = new Date(Date.now() - 3600 * 1000);
+      const future = new Date(Date.now() + 3600 * 1000);
+      const wayFuture = new Date(Date.now() + 7200 * 1000);
+
+      const validBanner = await prisma.banner.create({
+        data: {
+          title: 'شريحة حالية',
+          headline: 'عرض حالي',
+          imageUrl: 'https://example.com/banner-valid.png',
+          actionType: 'NONE',
+          sortOrder: 0,
+          isActive: true,
+          isDeleted: false,
+          startsAt: past,
+          endsAt: future,
+          createdByAdminId: adminUser.admin.id,
+        },
+      });
+
       await prisma.banner.create({
         data: {
-          title: 'شريحة معطلة',
-          headline: 'عرض موقوف',
+          title: 'شريحة مستقبلية لم تبدأ بعد',
+          headline: 'عرض قادم',
+          imageUrl: 'https://example.com/banner-future.png',
+          actionType: 'NONE',
+          sortOrder: 1,
+          isActive: true,
+          isDeleted: false,
+          startsAt: future,
+          endsAt: wayFuture,
+          createdByAdminId: adminUser.admin.id,
+        },
+      });
+
+      const res = await request.get('/api/v1/banners/active');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe(validBanner.id);
+      expect(res.body[0].headline).toBe('عرض حالي');
+    });
+
+    it('excludes inactive banners where isActive is false', async () => {
+      const validBanner = await prisma.banner.create({
+        data: {
+          title: 'شريحة نشطة',
+          headline: 'عرض نشط',
+          imageUrl: 'https://example.com/banner-valid.png',
+          actionType: 'NONE',
+          sortOrder: 0,
+          isActive: true,
+          isDeleted: false,
+          createdByAdminId: adminUser.admin.id,
+        },
+      });
+
+      await prisma.banner.create({
+        data: {
+          title: 'شريحة معطلة يدوياً',
+          headline: 'عرض معطل',
           imageUrl: 'https://example.com/banner-inactive.png',
           actionType: 'NONE',
-          sortOrder: 2,
+          sortOrder: 1,
           isActive: false,
           isDeleted: false,
           createdByAdminId: adminUser.admin.id,
         },
       });
 
-      // 4. Soft-deleted Banner (isDeleted: true)
+      const res = await request.get('/api/v1/banners/active');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe(validBanner.id);
+      expect(res.body[0].headline).toBe('عرض نشط');
+    });
+
+    it('excludes soft-deleted banners where isDeleted is true', async () => {
+      const validBanner = await prisma.banner.create({
+        data: {
+          title: 'شريحة غير محذوفة',
+          headline: 'عرض حي',
+          imageUrl: 'https://example.com/banner-valid.png',
+          actionType: 'NONE',
+          sortOrder: 0,
+          isActive: true,
+          isDeleted: false,
+          createdByAdminId: adminUser.admin.id,
+        },
+      });
+
       await prisma.banner.create({
         data: {
-          title: 'شريحة محذوفة',
+          title: 'شريحة محذوفة ناعماً',
           headline: 'عرض محذوف',
           imageUrl: 'https://example.com/banner-deleted.png',
           actionType: 'NONE',
-          sortOrder: 3,
-          isActive: false,
+          sortOrder: 1,
+          isActive: true,
           isDeleted: true,
           createdByAdminId: adminUser.admin.id,
         },
       });
 
-      // 5. Future Banner (startsAt in the future)
-      await prisma.banner.create({
-        data: {
-          title: 'شريحة مستقبلية',
-          headline: 'عرض قادم',
-          imageUrl: 'https://example.com/banner-future.png',
-          actionType: 'NONE',
-          sortOrder: 4,
-          isActive: true,
-          isDeleted: false,
-          startsAt: future,
-          createdByAdminId: adminUser.admin.id,
-        },
-      });
-
-      // Public call without auth header
       const res = await request.get('/api/v1/banners/active');
-
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
       expect(res.body).toHaveLength(1);
       expect(res.body[0].id).toBe(validBanner.id);
-      expect(res.body[0].headline).toBe('عرض الأسبوع');
+      expect(res.body[0].headline).toBe('عرض حي');
     });
 
     it('ensures ActiveBannerResponse strictly omits all administrative fields in JSON payload', async () => {
