@@ -9,9 +9,9 @@
 ## مسار الشرائح الإعلانية (Sprint 7A — Banners)
 
 - [x] Sprint 7A — Banners (admin + backend) — مكتمل ومدموج 2026-10-07. انظر PROJECT_STATUS.md §12 D29.
-- [ ] C-4 (دَين تقني، أولوية منخفضة): معالجة انحراف migrate diff التاريخي في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل — خارج نطاق 7A، اكتُشف عبر shadow-database prisma migrate diff.
+- [x] C-4 — مكتمل ومدموج 2026-10-07. انظر PROJECT_STATUS.md §5.
 - [x] C-5: بناء طبقة تحويل (mapping) في Android عبر `BannerRouteMapper` مع 7 اختبارات وحدة وربطها بالواجهة — مُنجَز ومدموج في `master` (فرع `feature/banners-client-android`).
-- [ ] C-6 (فحص الـ Drift غير متاح في بيئة الإنتاج): فحص انحراف المخطط ضد قاعدة الإنتاج يتطلب تشغيل الفحص من داخل Railway أو توفير قناة اتصال آمنة.
+- [x] C-6 — مكتمل ومدموج 2026-10-07. endpoint GET /admin/system/schema-drift. انظر PROJECT_STATUS.md §5.
 
 ---
 
@@ -45,9 +45,9 @@
 | C-1 | مراجعة `getEntriesByRunner` (`ledger.service.ts:145`) — إما rename أو حذف | منخفضة | ⏳ معلّق | @code-architect | إدراج `ORDER_FEE_TOTAL` فيها يخالف D25 مفهوميًا |
 | C-2 | تنظيف عمودَي `runnerShare` و `platformShare` من جدولي `Settlement` و `SettlementItem` في migration مستقل بعد MVP | منخفضة | ⏳ مؤجل لما بعد MVP | @code-architect | حقول إرثية (Legacy) أصبحت ثابتة (0 و totalFees) بموجب D26 لتجنب تعديل schema في MVP |
 | C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ⏳ معلّق | @android-dev | تنظيف لاحق لـ Sprint 9 |
-| C-4 | معالجة انحراف الـ migrations التاريخية في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل لما بعد 7A | منخفضة | ⏳ مؤجل لما بعد 7A | @code-architect | دَين تقني موروث على master أظهره أمر shadow-database prisma migrate diff؛ خارج نطاق 7A لتجنب مس الجداول المالية. |
+| C-4 | معالجة انحراف الـ migrations التاريخية في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل لما بعد 7A | منخفضة | ✅ مُنجَز | @code-architect | تم إنشاء الهجرة 20261007120000_reconcile_token_defaults ومطابقة schema.prisma مع التاريخ (D31). |
 | C-5 | طبقة تحويل (Mapping Layer) في Android عبر `BannerRouteMapper` مع 7 اختبارات وحدة وربطها بالواجهة | متوسطة | ✅ مُنجَز | @android-dev | تم التنفيذ في `BannerRouteMapper` والدمج في `master` من `feature/banners-client-android` |
-| C-6 | فحص الـ Drift غير متاح في بيئة الإنتاج | منخفضة | ⏳ معلّق | Ops / @code-architect | فحص انحراف المخطط ضد قاعدة الإنتاج يتطلب تشغيل الفحص من داخل Railway أو توفير قناة اتصال آمنة. |
+| C-6 | فحص الـ Drift عبر نقطة تشخيصية في بيئة الإنتاج | منخفضة | ✅ مُنجَز | Ops / @code-architect | تم بناء GET /admin/system/schema-drift مع Throttle مزدوج وAuditLog وتحديث runbook. |
 | P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)

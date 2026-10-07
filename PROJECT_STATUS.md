@@ -221,6 +221,7 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 9 | **سبرنت 6B (أسطح الزبون والمندوب وAndroid) — إضافة customFee/customFeeReason إلى الـ frontends ورفع MAX_CUSTOM_FEE إلى 500** | ✅ مكتملة ومختبرة | 4 commits: 64fe7cb · baaf2d8 · 86ac39a · a7b4ae2. pnpm build + typecheck + lint ناجح (6/6). مدموج في `master`. |
 | 10 | **Sprint 7A — شرائح الشاشة الرئيسية (Banners admin + backend، روابط https فقط)** | ✅ مكتملة ومختبرة | فرع `feature/sprint-7a-banners-admin` مدموج بـ `git merge --no-ff` إلى `master`. 390 اختبار وحدة (+33) · 53 تكامل (+7) · migration مطبَّقة على الإنتاج وDrift = 0. انظر [§12 القرار D29](#12-سجل-القرارات). |
 | 11 | **استهلاك الشرائح في Android (Banners Client UI — فرع وصفي)** | ✅ مكتملة ومختبرة | فرع `feature/banners-client-android` مدموج بـ `git merge --no-ff` إلى `master`. 290 اختبار وحدة (+14) · Coil 3.0.4 · 16:7 pager مع auto-scroll وتوقف عند السحب · اعتماد D30 وإغلاق C-5. |
+| 12 | **C-4 — Baseline Reconciliation Migration + C-6 — Schema Drift Diagnostic Endpoint** | ✅ مكتملة ومختبرة | فرعان مدموجان بـ `git merge --no-ff`: `feature/baseline-migrations-c4` (708f4d2) و`feature/c6-schema-drift-endpoint` (dcd958b). 398 اختبار وحدة (+8) · 59 تكامل (+6) · migration مطبَّقة على الإنتاج وDrift = 0. GET /admin/system/schema-drift محمي بـ JWT+RBAC+Throttle مزدوج (IP وadminId). |
 
 ---
 
@@ -333,6 +334,7 @@ fawrun/
 | 2026-10-06 | `2088b51` — **Sprint 9 (Android UI Polish)** مُدمج في `master` · 269 اختباراً · 0 lint · صفر نص عربي في `.kt` · مراجعة بصرية ناجحة. |
 | 2026-10-07 | Sprint 7A (Banners) مُدمج في `master`: جدول `Banner` + وحدة إدارة كاملة (CRUD + reorder) + لوحة أدمن (معاينة 16:7، جدولة بتوقيت دمشق). قرار D29: صور بروابط https فقط في هذه المرحلة، R2 لم يُفعَّل (D5 ساري). |
 | 2026-10-07 | بدء استهلاك الشرائح في Android (فرع `feature/banners-client-android` وصفي): اعتماد قرار D30 (سياسة عامة: حصر تطوير أسطح العميل بـ Android وتجميد customer-web)، إضافة Coil 3.0.4 عبر Version Catalog، وإنجاز طبقة التحويل C-5 (`BannerRouteMapper` مع 7 اختبارات وحدة ناجحة بنسبة 100%). |
+| 2026-10-07 | إغلاق C-4 وC-6: مطابقة schema.prisma مع سجل migrations التاريخي (LedgerEntry onDelete:Restrict، OrderStore index، Settlement VarChar(10))، وإضافة endpoint تشخيصي محمي لفحص Schema Drift من الإنتاج مباشرة. |
 
 ---
 
