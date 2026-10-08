@@ -8,6 +8,8 @@ import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunOrange
+import com.forerun.customer.ui.theme.ForerunOrangeLight
 
 /**
  * Unified badge color scheme for an order status.
@@ -49,7 +51,9 @@ fun getOrderStatusColors(status: String?): OrderStatusColors {
             OrderStatusColors(Color(0xFFFFF8E1), Color(0xFFB78103))
         OrderStatus.AWAITING_RUNNER, OrderStatus.AWAITING_PREFERRED_RUNNER ->
             OrderStatusColors(Color(0xFFE3F2FD), Color(0xFF1565C0))
-        OrderStatus.ASSIGNED, OrderStatus.IN_PROGRESS, OrderStatus.OUT_FOR_DELIVERY ->
+        OrderStatus.OUT_FOR_DELIVERY ->
+            OrderStatusColors(ForerunOrangeLight, ForerunOrange)
+        OrderStatus.ASSIGNED, OrderStatus.IN_PROGRESS ->
             OrderStatusColors(ForerunGreenLight, ForerunGreenDark)
         OrderStatus.DRAFT, OrderStatus.UNKNOWN ->
             OrderStatusColors(Color(0xFFEEEEEE), Color(0xFF616161))

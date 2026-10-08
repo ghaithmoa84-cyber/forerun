@@ -181,7 +181,7 @@ fun SupportScreen(
                             shape = RoundedCornerShape(Dimens.RadiusMedium),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = WhatsAppGreen,
-                                contentColor = ForerunTextOnPrimary
+                                contentColor = Color.White
                             )
                         ) {
                             Icon(

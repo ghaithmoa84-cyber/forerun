@@ -27,6 +27,7 @@ import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunNavy
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextPrimary
 
@@ -99,9 +100,9 @@ fun ForerunBottomNavBar(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = ForerunGreen,
-                    selectedTextColor = ForerunGreen,
-                    indicatorColor = ForerunGreenLight,
+                    selectedIconColor = ForerunNavy,
+                    selectedTextColor = ForerunNavy,
+                    indicatorColor = ForerunGreen,
                     unselectedIconColor = ForerunTextMuted,
                     unselectedTextColor = ForerunTextMuted
                 )

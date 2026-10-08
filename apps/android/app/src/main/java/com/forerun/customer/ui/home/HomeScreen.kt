@@ -84,6 +84,7 @@ import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSuccess
 import com.forerun.customer.ui.theme.ForerunSuccessLight
@@ -375,7 +376,7 @@ private fun HomeContent(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                .background(Color.White.copy(alpha = 0.22f))
+                                .background(ForerunOrange)
                                 .padding(horizontal = Dimens.Space8, vertical = Dimens.Space2)
                         ) {
                             Text(

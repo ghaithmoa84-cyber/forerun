@@ -11,13 +11,18 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 
 private val ForerunColorScheme = lightColorScheme(
-    primary = ForerunGreen,
-    onPrimary = ForerunTextOnPrimary,
-    primaryContainer = ForerunGreenLight,
-    onPrimaryContainer = ForerunGreenDark,
+    primary = ForerunMint,
+    onPrimary = ForerunNavy,
+    primaryContainer = ForerunMintLight,
+    onPrimaryContainer = ForerunMintDark,
 
-    secondary = WhatsAppGreen,
-    onSecondary = ForerunTextOnPrimary,
+    secondary = ForerunOrange,
+    onSecondary = Color.White,
+    secondaryContainer = ForerunOrangeLight,
+    onSecondaryContainer = ForerunOrangeDark,
+
+    tertiary = ForerunNavy,
+    onTertiary = Color.White,
 
     background = ForerunBackground,
     onBackground = ForerunTextPrimary,
@@ -31,7 +36,7 @@ private val ForerunColorScheme = lightColorScheme(
     outlineVariant = ForerunBorder,
 
     error = ForerunDanger,
-    onError = ForerunTextOnPrimary,
+    onError = Color.White,
     errorContainer = ForerunDangerLight,
     onErrorContainer = ForerunDanger
 )
