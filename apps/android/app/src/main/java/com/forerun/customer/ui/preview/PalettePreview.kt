@@ -102,7 +102,7 @@ fun ColorCard(
     }
 }
 
-@Preview(name = "لوحة الألوان الجديدة - FAWRUN Brand Palette", showBackground = true, widthDp = 390)
+@Preview(name = "لوحة الألوان المحدثة - البرتقالي هو اللون الأساسي للتفاعل", showBackground = true, widthDp = 390)
 @Composable
 fun BrandPalettePreview() {
     ForerunTheme {
@@ -118,13 +118,13 @@ fun BrandPalettePreview() {
             ) {
                 // Header
                 Text(
-                    text = "هوية فور رن البصرية الجديدة",
-                    fontSize = 22.sp,
+                    text = "هوية فور رن - البرتقالي هو لون التفاعل الأساسي",
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = ForerunTextPrimary
                 )
                 Text(
-                    text = "الألوان المعتمدة الثلاثة وتطبيقاتها على العناصر",
+                    text = "البرتقالي للأزرار والإجراءات، النعناعي للعلامة والدوائر، الكحلي للنصوص",
                     fontSize = 13.sp,
                     color = ForerunTextMuted
                 )
@@ -141,23 +141,23 @@ fun BrandPalettePreview() {
                 Spacer(modifier = Modifier.height(Dimens.Space8))
 
                 ColorCard(
-                    name = "Fresh Mint (الأساسي)",
-                    hex = "#86ECE6",
-                    description = "الأزرار الرئيسية، الأيقونات، العناصر التفاعلية",
-                    color = ForerunMint,
-                    textColor = ForerunNavy
-                )
-
-                ColorCard(
-                    name = "Vibrant Orange (الثانوي)",
+                    name = "Vibrant Orange (الأساسي للإجراءات)",
                     hex = "#FF751F",
-                    description = "التوصيل النشط، الشارات، العروض، الطاقة",
+                    description = "الأزرار الرئيسية، الإجراءات، المؤشرات النشطة، الطاقة",
                     color = ForerunOrange,
                     textColor = Color.White
                 )
 
                 ColorCard(
-                    name = "Deep Slate Navy (الداكن)",
+                    name = "Fresh Mint (هوية العلامة والدوائر)",
+                    hex = "#86ECE6",
+                    description = "شعار التطبيق، الدوائر التوضيحية، الشارات والبطاقات",
+                    color = ForerunMint,
+                    textColor = ForerunNavy
+                )
+
+                ColorCard(
+                    name = "Deep Slate Navy (العناوين والتباين)",
                     hex = "#2D3B4D",
                     description = "العناوين، النصوص، شريط الحالة، التباين العالي",
                     color = ForerunNavy,
@@ -175,82 +175,66 @@ fun BrandPalettePreview() {
                 )
                 Spacer(modifier = Modifier.height(Dimens.Space8))
 
-                // Mint Button with Dark Navy text
+                // Orange CTA Button (Pill)
                 Button(
                     onClick = {},
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dimens.ButtonHeight),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ForerunGreen,
-                        contentColor = ForerunTextOnPrimary
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingBag,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.Space8))
-                    Text(
-                        text = "زر رئيسي (#86ECE6 مع نص #2D3B4D)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(Dimens.Space8))
-
-                // Orange Action Button
-                Button(
-                    onClick = {},
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(Dimens.ButtonHeight),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium),
+                        .height(54.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = ForerunOrange,
                         contentColor = Color.White
-                    )
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.DeliveryDining,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.Space8))
-                    Text(
-                        text = "إجراء تفاعلي نشط (#FF751F)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "التالي",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
+                        Icon(
+                            imageVector = Icons.Default.DeliveryDining,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(Dimens.Space8))
 
-                // Outlined Button
-                OutlinedButton(
+                // Mint Secondary Button
+                Button(
                     onClick = {},
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dimens.ButtonHeight),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium),
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, ForerunNavy)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ForerunMint,
+                        contentColor = ForerunNavy
+                    )
                 ) {
                     Text(
-                        text = "زر محدد بإطار (#2D3B4D)",
-                        fontWeight = FontWeight.SemiBold,
-                        color = ForerunNavy,
-                        fontSize = 15.sp
+                        text = "زر ثانوي نعناعي (#86ECE6)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = ForerunNavy
                     )
                 }
 
                 Spacer(modifier = Modifier.height(Dimens.Space20))
 
-                // 3. Status Badges
+                // 3. Status & Dots Indicator Showcase
                 Text(
-                    text = "3. شارات الحالات والطلبات",
+                    text = "3. مؤشرات الصفحات (مثل شاشات الترحيب)",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = ForerunTextPrimary
@@ -259,120 +243,30 @@ fun BrandPalettePreview() {
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Delivering (Orange)
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Dimens.RadiusPill))
-                            .background(ForerunOrangeLight)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "جاري التوصيل",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunOrange
-                        )
-                    }
-
-                    // Delivered (Mint)
+                            .width(28.dp)
+                            .height(8.dp)
+                            .clip(CircleShape)
+                            .background(ForerunOrange)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(Dimens.RadiusPill))
-                            .background(ForerunGreenLight)
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "تم التسليم",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunNavy
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(Dimens.Space20))
-
-                // 4. Sample Order Card
-                Text(
-                    text = "4. بطاقة طلب نموذجية",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ForerunTextPrimary
-                )
-                Spacer(modifier = Modifier.height(Dimens.Space8))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = ForerunSoftSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, ForerunBorder)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "طلب #FW-00124",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = ForerunTextPrimary
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                    .background(ForerunOrangeLight)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "جاري التوصيل",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ForerunOrange
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(Dimens.Space12))
-
-                        Text(
-                            text = "سوبرماركت المدينة • 4 مواد",
-                            fontSize = 13.sp,
-                            color = ForerunTextMuted
-                        )
-
-                        Spacer(modifier = Modifier.height(Dimens.Space12))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "المجموع: 4,500 ل.س",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = ForerunTextPrimary
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(ForerunGreen),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.LocalShipping,
-                                    contentDescription = null,
-                                    tint = ForerunNavy,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(ForerunMint)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(ForerunMint)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(Dimens.Space24))

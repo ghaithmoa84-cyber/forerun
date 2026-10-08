@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -62,6 +63,7 @@ import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunDangerLight
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextOnPrimary
@@ -257,16 +259,16 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(Dimens.ButtonHeight),
-            shape = RoundedCornerShape(Dimens.RadiusMedium),
+            shape = RoundedCornerShape(Dimens.RadiusPill),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ForerunGreen,
-                contentColor = ForerunTextOnPrimary
+                containerColor = ForerunOrange,
+                contentColor = Color.White
             )
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    color = ForerunTextOnPrimary,
+                    color = Color.White,
                     strokeWidth = 2.5.dp
                 )
             } else {

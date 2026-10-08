@@ -3,26 +3,39 @@ package com.forerun.customer.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // =========================================================================
-// Brand Colors (الألوان المعتمدة الجديدة)
+// Brand Colors (الألوان المعتمدة الثلاثة)
 // =========================================================================
-// 1. Fresh Mint / Turquoise (#86ece6) - الهوية الرئيسية والانتعاش
-val ForerunMint = Color(0xFF86ECE6)
-val ForerunMintDark = Color(0xFF2EA59D)
-val ForerunMintLight = Color(0xFFE8FAF9)
-
-// 2. Vibrant Orange (#ff751f) - الحيوية والإجراءات التفاعلية وحالة التوصيل
+// 1. Vibrant Orange (#FF751F) - اللون الأساسي للإجراءات والأزرار والطاقة (Primary Action & CTA)
 val ForerunOrange = Color(0xFFFF751F)
 val ForerunOrangeDark = Color(0xFFE05E0D)
 val ForerunOrangeLight = Color(0xFFFFF2E8)
+val ForerunOrangeSoft = Color(0xFFFFEAD9)
 
-// 3. Deep Slate Navy (#2d3b4d) - الفخامة وتباين النصوص والعناصر الداكنة
+// 2. Fresh Mint / Turquoise (#86ECE6) - هوية العلامة التجارية والخلفيات والدوائر والانتعاش
+val ForerunMint = Color(0xFF86ECE6)
+val ForerunMintDark = Color(0xFF2EA59D)
+val ForerunMintLight = Color(0xFFE8FAF9)
+val ForerunMintSoft = Color(0xFFD6F7F5)
+
+// 3. Deep Slate Navy (#2D3B4D) - العناوين والنصوص والفخامة والتباين العالي
 val ForerunNavy = Color(0xFF2D3B4D)
 val ForerunNavyDark = Color(0xFF1E2835)
 val ForerunNavyLight = Color(0xFF43546A)
 
 // =========================================================================
-// Brand Aliases (للتوافق الفوري والشامل مع جميع الواجهات الحالية)
+// Semantic Roles
 // =========================================================================
+// البرتقالي هو لون الأزرار والإجراءات التفاعلية الأساسية (CTA)
+val ForerunPrimary = ForerunOrange
+val ForerunPrimaryDark = ForerunOrangeDark
+val ForerunPrimaryLight = ForerunOrangeLight
+
+// النعناعي هو اللون المميز للعلامة والدوائر التوضيحية وشارات الهوية
+val ForerunSecondary = ForerunMint
+val ForerunSecondaryDark = ForerunMintDark
+val ForerunSecondaryLight = ForerunMintLight
+
+// للتوافق العكسي مع الكود القائم:
 val ForerunGreen = ForerunMint
 val ForerunGreenDark = ForerunMintDark
 val ForerunGreenLight = ForerunMintLight
@@ -35,15 +48,16 @@ val WhatsAppGreen = Color(0xFF25D366)
 // =========================================================================
 val ForerunBackground = Color(0xFFFFFFFF)
 val ForerunSurface = Color(0xFFFFFFFF)
-val ForerunSoftSurface = Color(0xFFF4F7F9)
+val ForerunSoftSurface = Color(0xFFF6F9FA)
 val ForerunBorder = Color(0xFFE2E8F0)
 
 // =========================================================================
 // Typography & Text Contrasts
 // =========================================================================
-val ForerunTextPrimary = ForerunNavy        // #2D3B4D للنصوص الرئيسية يمنح هوية واضحة ومميزة
-val ForerunTextMuted = Color(0xFF677788)     // رمادي كحلي متناسق مع النص الأساسي
-val ForerunTextOnPrimary = ForerunNavy      // تباين عالي ومقروء بنسبة 8:1 على النعناعي #86ECE6
+val ForerunTextPrimary = ForerunNavy        // #2D3B4D للنصوص الرئيسية
+val ForerunTextMuted = Color(0xFF677788)     // رمادي كحلي متناسق
+val ForerunTextOnPrimary = Color(0xFFFFFFFF)// أبيض ناصع عالي التباين على الزر البرتقالي (#FF751F)
+val ForerunTextOnSecondary = ForerunNavy   // كحلي داكن على النعناعي (#86ECE6)
 val ForerunTextOnDark = Color(0xFFFFFFFF)   // أبيض على الخلفيات الداكنة
 val ForerunTextOnOrange = Color(0xFFFFFFFF) // أبيض على البرتقالي
 

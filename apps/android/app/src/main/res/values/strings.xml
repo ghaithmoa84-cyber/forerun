@@ -9,12 +9,24 @@
     <string name="onboarding_skip">تخطي</string>
     <string name="onboarding_next">التالي</string>
     <string name="onboarding_start">ابدأ الآن</string>
-    <string name="onboarding_title_1">طلبات البقالة في دقائق</string>
-    <string name="onboarding_desc_1">اكتب طلبك بالشكل الذي يناسبك، وسيتولى الكابتن شراء وتوصيل كل ما تحتاجه.</string>
-    <string name="onboarding_title_2">كباتن موثوقون وأسعار واضحة</string>
-    <string name="onboarding_desc_2">أسعار المنتجات كما هي في المحل تماماً مع رسوم توصيل ثابتة وشفافة.</string>
-    <string name="onboarding_title_3">تتبع مباشر وتواصل سريع</string>
-    <string name="onboarding_desc_3">تتبع حالة طلبك لحظة بلحظة وتواصل مع الكابتن مباشرة عبر الواتساب أو الاتصال.</string>
+    <string name="onboarding_title_1">اطلب، وريّحك من التعب</string>
+    <string name="onboarding_desc_1">فَوْراً يوميّتك كل اللي تحتاجه من أقرب محل بسرعة وسهولة وبأفضل جودة.</string>
+    <string name="onboarding_badge_speed">توصيل برق</string>
+    <string name="onboarding_badge_speed_sub">خلال دقائق</string>
+    <string name="onboarding_badge_stores">دكاكين حارتك</string>
+    <string name="onboarding_badge_stores_sub">كل مستلزماتك</string>
+
+    <string name="onboarding_title_2">اختار أي محل تحب</string>
+    <string name="onboarding_desc_2">نروح نشتريك ونوصلك طلبك بأسرع وقت لباب بيتك بكل أمان وراحة بال.</string>
+    <string name="onboarding_steps_badge">خطوات بسيطة وواضحة</string>
+    <string name="onboarding_step_1">١. اطلب</string>
+    <string name="onboarding_step_2">٢. نشتريك</string>
+    <string name="onboarding_step_3">٣. نوصلك</string>
+
+    <string name="onboarding_title_3">جاهز تبدأ؟</string>
+    <string name="onboarding_desc_3">سجّل حسابك وابدأ أول طلب بثواني، وخلّي مشاويرك ومشترياتك علينا.</string>
+    <string name="onboarding_already_have_account">عندي حساب بالفعل؟</string>
+    <string name="onboarding_login_action">تسجيل الدخول</string>
 
     <!-- Auth Common -->
     <string name="phone_number_label">رقم الواتساب</string>
