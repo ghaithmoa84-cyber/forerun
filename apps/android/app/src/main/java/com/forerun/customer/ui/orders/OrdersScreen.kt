@@ -70,6 +70,8 @@ import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunNavy
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
@@ -335,8 +337,8 @@ private fun OrderFilterChip(
         },
         shape = RoundedCornerShape(Dimens.RadiusPill),
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = ForerunGreen,
-            selectedLabelColor = ForerunTextOnPrimary,
+            selectedContainerColor = ForerunNavy,
+            selectedLabelColor = Color.White,
             containerColor = ForerunSoftSurface,
             labelColor = ForerunTextPrimary
         ),
@@ -580,7 +582,7 @@ private fun OrdersErrorState(onRetryClick: () -> Unit) {
             onClick = onRetryClick,
             shape = RoundedCornerShape(Dimens.RadiusPill),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ForerunGreen,
+                containerColor = ForerunOrange,
                 contentColor = ForerunTextOnPrimary
             ),
             contentPadding = PaddingValues(horizontal = Dimens.Space24, vertical = Dimens.Space12)

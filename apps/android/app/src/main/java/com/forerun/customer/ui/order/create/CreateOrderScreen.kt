@@ -76,6 +76,7 @@ import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSuccess
 import com.forerun.customer.ui.theme.ForerunSurface
@@ -216,7 +217,7 @@ fun CreateOrderScreen(
                             .height(Dimens.ButtonHeight),
                         shape = RoundedCornerShape(Dimens.RadiusMedium),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ForerunGreenDark,
+                            containerColor = ForerunOrange,
                             contentColor = ForerunTextOnPrimary
                         )
                     ) {

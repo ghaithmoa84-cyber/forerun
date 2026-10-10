@@ -25,8 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.forerun.customer.R
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunMintSoft
 import com.forerun.customer.ui.theme.ForerunNavy
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextPrimary
@@ -102,7 +101,7 @@ fun ForerunBottomNavBar(
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = ForerunNavy,
                     selectedTextColor = ForerunNavy,
-                    indicatorColor = ForerunGreen,
+                    indicatorColor = ForerunMintSoft,
                     unselectedIconColor = ForerunTextMuted,
                     unselectedTextColor = ForerunTextMuted
                 )

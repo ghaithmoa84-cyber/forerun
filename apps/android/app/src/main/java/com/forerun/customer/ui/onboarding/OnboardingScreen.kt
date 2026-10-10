@@ -1,6 +1,7 @@
 package com.forerun.customer.ui.onboarding
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,8 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.PhoneIphone
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -43,9 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,13 +62,11 @@ import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunMint
 import com.forerun.customer.ui.theme.ForerunMintDark
 import com.forerun.customer.ui.theme.ForerunMintLight
-import com.forerun.customer.ui.theme.ForerunMintSoft
 import com.forerun.customer.ui.theme.ForerunNavy
 import com.forerun.customer.ui.theme.ForerunOrange
-import com.forerun.customer.ui.theme.ForerunOrangeLight
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
-import com.forerun.customer.ui.theme.ForerunTextPrimary
+import com.forerun.customer.ui.theme.ForerunTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -71,14 +75,28 @@ fun OnboardingScreen(
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
-    val coroutineScope = rememberCoroutineScope()
-
     LaunchedEffect(viewModel) {
         viewModel.navigateToLogin.collect {
             onNavigateToLogin()
         }
     }
+
+    OnboardingContent(
+        onComplete = { viewModel.completeOnboarding() },
+        onSkip = { viewModel.completeOnboarding() },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun OnboardingContent(
+    onComplete: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+    initialPage: Int = 0
+) {
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -86,43 +104,26 @@ fun OnboardingScreen(
             .background(ForerunBackground)
             .padding(horizontal = Dimens.ScreenMargin, vertical = Dimens.Space16)
     ) {
-        // 1. Top Bar: Branding on right, Skip button on left
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = Dimens.Space8),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // 1. Top Bar: Centered Brand Logo (130.dp) & Skip Button
+        Box(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Right / Brand: "فَوْراً" with mint icon circle
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(ForerunMint),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(ForerunNavy)
-                    )
-                }
-                Spacer(modifier = Modifier.width(Dimens.Space8))
-                Text(
-                    text = stringResource(R.string.app_name),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = ForerunNavy
-                )
-            }
+            // Centered Brand Logo (130.dp) positioned lower down towards the illustration
+            Image(
+                painter = painterResource(R.drawable.logo),
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = Dimens.Space24)
+                    .size(130.dp),
+                contentScale = ContentScale.Fit
+            )
 
-            // Left / Action: Skip
+            // Skip action at the top level
             if (pagerState.currentPage < 2) {
                 TextButton(
-                    onClick = { viewModel.completeOnboarding() }
+                    onClick = onSkip,
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Text(
                         text = stringResource(R.string.onboarding_skip),
@@ -131,12 +132,10 @@ fun OnboardingScreen(
                         fontWeight = FontWeight.Medium
                     )
                 }
-            } else {
-                Spacer(modifier = Modifier.size(40.dp))
             }
         }
 
-        Spacer(modifier = Modifier.height(Dimens.Space8))
+        Spacer(modifier = Modifier.height(Dimens.Space4))
 
         // 2. Pager Content
         HorizontalPager(
@@ -179,7 +178,7 @@ fun OnboardingScreen(
 
         Spacer(modifier = Modifier.height(Dimens.Space12))
 
-        // 4. Primary CTA Button (Vibrant Orange with White text and Arrow)
+        // 4. Primary CTA Button (Strict Orange action color)
         Button(
             onClick = {
                 if (pagerState.currentPage < 2) {
@@ -187,7 +186,7 @@ fun OnboardingScreen(
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
                 } else {
-                    viewModel.completeOnboarding()
+                    onComplete()
                 }
             },
             modifier = Modifier
@@ -222,7 +221,7 @@ fun OnboardingScreen(
             }
         }
 
-        // 5. Bottom Login Link (Shown on page 3)
+        // 5. Bottom Login Link (Only on Page 3)
         if (pagerState.currentPage == 2) {
             Spacer(modifier = Modifier.height(Dimens.Space12))
             Row(
@@ -241,7 +240,7 @@ fun OnboardingScreen(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = ForerunNavy,
-                    modifier = Modifier.clickable { viewModel.completeOnboarding() }
+                    modifier = Modifier.clickable { onComplete() }
                 )
             }
         } else {
@@ -253,67 +252,60 @@ fun OnboardingScreen(
 }
 
 /**
- * Screen 1: "اطلب، وريّحك من التعب" (Feature highlights: توصيل برق + دكاكين حارتك)
+ * Standard illustration container keeping identical proportion and scaling across all 3 pages
  */
 @Composable
-private fun OnboardingPageOne() {
+private fun IllustrationContainer(
+    imageResId: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(230.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(ForerunMintLight.copy(alpha = 0.5f))
+            .border(1.dp, ForerunMint.copy(alpha = 0.4f), RoundedCornerShape(32.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(imageResId),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .clip(RoundedCornerShape(26.dp)),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+/**
+ * Screen 1: "كل مستلزماتك من دكاكين حارتك"
+ */
+@Composable
+fun OnboardingPageOne(modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(horizontal = Dimens.Space8),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Mint Illustration Container
-        Box(
-            modifier = Modifier
-                .size(210.dp)
-                .clip(CircleShape)
-                .background(ForerunMintSoft),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LocalShipping,
-                    contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = ForerunNavy
-                )
-                Spacer(modifier = Modifier.height(Dimens.Space8))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(Dimens.RadiusPill))
-                        .background(ForerunOrange)
-                        .padding(horizontal = 10.dp, vertical = 3.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.ElectricBolt,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = "سريع وآمن",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-        }
+        IllustrationContainer(imageResId = R.drawable.onboarding_shopping)
 
-        Spacer(modifier = Modifier.height(Dimens.Space24))
+        Spacer(modifier = Modifier.height(Dimens.Space16))
 
-        // Title
+        CategoryBadge(
+            icon = Icons.Default.Storefront,
+            text = stringResource(R.string.onboarding_badge_1),
+            accentDot = true // Single subtle orange accent dot
+        )
+
+        Spacer(modifier = Modifier.height(Dimens.Space12))
+
         Text(
             text = stringResource(R.string.onboarding_title_1),
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = ForerunNavy,
             textAlign = TextAlign.Center
@@ -321,32 +313,31 @@ private fun OnboardingPageOne() {
 
         Spacer(modifier = Modifier.height(Dimens.Space8))
 
-        // Subtitle
         Text(
             text = stringResource(R.string.onboarding_desc_1),
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             color = ForerunTextMuted,
             textAlign = TextAlign.Center,
-            lineHeight = 22.sp
+            lineHeight = 21.sp,
+            modifier = Modifier.padding(horizontal = Dimens.Space4)
         )
 
         Spacer(modifier = Modifier.height(Dimens.Space20))
 
-        // Two feature pill cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             FeaturePillCard(
-                icon = Icons.Default.ElectricBolt,
-                title = stringResource(R.string.onboarding_badge_speed),
-                subtitle = stringResource(R.string.onboarding_badge_speed_sub),
+                icon = Icons.Default.Storefront,
+                title = stringResource(R.string.onboarding_feat1_title),
+                subtitle = stringResource(R.string.onboarding_feat1_sub),
                 modifier = Modifier.weight(1f)
             )
             FeaturePillCard(
-                icon = Icons.Default.Storefront,
-                title = stringResource(R.string.onboarding_badge_stores),
-                subtitle = stringResource(R.string.onboarding_badge_stores_sub),
+                icon = Icons.Default.ShoppingBag,
+                title = stringResource(R.string.onboarding_feat2_title),
+                subtitle = stringResource(R.string.onboarding_feat2_sub),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -354,79 +345,32 @@ private fun OnboardingPageOne() {
 }
 
 /**
- * Screen 2: "اختار أي محل تحب" (Steps: ١. اطلب، ٢. نشتريك، ٣. نوصلك)
+ * Screen 2: "كابتن فَوْراً يوصلك ع السريع"
  */
 @Composable
-private fun OnboardingPageTwo() {
+fun OnboardingPageTwo(modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(horizontal = Dimens.Space8),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Mint Illustration Container
-        Box(
-            modifier = Modifier
-                .size(210.dp)
-                .clip(CircleShape)
-                .background(ForerunMintSoft),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Storefront,
-                    contentDescription = null,
-                    modifier = Modifier.size(68.dp),
-                    tint = ForerunNavy
-                )
-                Spacer(modifier = Modifier.height(Dimens.Space6))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(ForerunMintDark))
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(ForerunOrange))
-                    Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(ForerunNavy))
-                }
-            }
-        }
+        IllustrationContainer(imageResId = R.drawable.onboarding_delivery)
 
         Spacer(modifier = Modifier.height(Dimens.Space16))
 
-        // Badge: خطوات بسيطة وواضحة
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(Dimens.RadiusPill))
-                .background(ForerunMintLight)
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.TaskAlt,
-                    contentDescription = null,
-                    tint = ForerunMintDark,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = stringResource(R.string.onboarding_steps_badge),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ForerunNavy
-                )
-            }
-        }
+        CategoryBadge(
+            icon = Icons.Default.ElectricBolt,
+            text = stringResource(R.string.onboarding_badge_2),
+            iconTint = ForerunOrange // Single subtle orange accent
+        )
 
-        Spacer(modifier = Modifier.height(Dimens.Space10))
+        Spacer(modifier = Modifier.height(Dimens.Space12))
 
-        // Title
         Text(
             text = stringResource(R.string.onboarding_title_2),
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = ForerunNavy,
             textAlign = TextAlign.Center
@@ -434,18 +378,17 @@ private fun OnboardingPageTwo() {
 
         Spacer(modifier = Modifier.height(Dimens.Space8))
 
-        // Subtitle
         Text(
             text = stringResource(R.string.onboarding_desc_2),
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             color = ForerunTextMuted,
             textAlign = TextAlign.Center,
-            lineHeight = 22.sp
+            lineHeight = 21.sp,
+            modifier = Modifier.padding(horizontal = Dimens.Space4)
         )
 
         Spacer(modifier = Modifier.height(Dimens.Space20))
 
-        // Three Step Mini Cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -470,62 +413,31 @@ private fun OnboardingPageTwo() {
 }
 
 /**
- * Screen 3: "جاهز تبدأ؟" (Final CTA with Handover graphic & Orange Checkmark)
+ * Screen 3: "طلبك لعندك.. طازج ومرتاح"
  */
 @Composable
-private fun OnboardingPageThree() {
+fun OnboardingPageThree(modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(horizontal = Dimens.Space8),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Mint Illustration Container with Orange Checkmark
-        Box(
-            modifier = Modifier
-                .size(210.dp)
-                .clip(CircleShape)
-                .background(ForerunMintSoft),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ShoppingBag,
-                    contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = ForerunNavy
-                )
-            }
+        IllustrationContainer(imageResId = R.drawable.onboarding_arrival)
 
-            // Orange Checkmark Pill in top-right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(14.dp)
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(ForerunOrange),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(Dimens.Space16))
 
-        Spacer(modifier = Modifier.height(Dimens.Space24))
+        CategoryBadge(
+            icon = Icons.Default.TaskAlt,
+            text = stringResource(R.string.onboarding_badge_3)
+        )
 
-        // Title
+        Spacer(modifier = Modifier.height(Dimens.Space12))
+
         Text(
             text = stringResource(R.string.onboarding_title_3),
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = ForerunNavy,
             textAlign = TextAlign.Center
@@ -533,23 +445,90 @@ private fun OnboardingPageThree() {
 
         Spacer(modifier = Modifier.height(Dimens.Space8))
 
-        // Subtitle
         Text(
             text = stringResource(R.string.onboarding_desc_3),
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             color = ForerunTextMuted,
             textAlign = TextAlign.Center,
-            lineHeight = 22.sp
+            lineHeight = 21.sp,
+            modifier = Modifier.padding(horizontal = Dimens.Space4)
         )
+
+        Spacer(modifier = Modifier.height(Dimens.Space20))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            FeaturePillCard(
+                icon = Icons.Default.CheckCircle,
+                title = stringResource(R.string.onboarding_feat3_title),
+                subtitle = stringResource(R.string.onboarding_feat3_sub),
+                iconTint = ForerunOrange, // Single subtle orange accent
+                modifier = Modifier.weight(1f)
+            )
+            FeaturePillCard(
+                icon = Icons.Default.Home,
+                title = stringResource(R.string.onboarding_feat4_title),
+                subtitle = stringResource(R.string.onboarding_feat4_sub),
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryBadge(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    iconTint: Color = ForerunMintDark,
+    accentDot: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(Dimens.RadiusPill))
+            .background(ForerunMintLight)
+            .border(1.dp, ForerunMint.copy(alpha = 0.5f), RoundedCornerShape(Dimens.RadiusPill))
+            .padding(horizontal = 12.dp, vertical = 5.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = ForerunNavy
+            )
+            if (accentDot) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(ForerunOrange)
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun FeaturePillCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    iconTint: Color = ForerunMintDark
 ) {
     Card(
         modifier = modifier,
@@ -563,7 +542,7 @@ private fun FeaturePillCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(ForerunMintLight),
                 contentAlignment = Alignment.Center
@@ -571,7 +550,7 @@ private fun FeaturePillCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = ForerunMintDark,
+                    tint = iconTint,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -596,12 +575,12 @@ private fun FeaturePillCard(
 @Composable
 private fun StepMiniCard(
     stepText: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = ForerunSoftSurface),
         border = androidx.compose.foundation.BorderStroke(1.dp, ForerunBorder)
     ) {
@@ -611,20 +590,74 @@ private fun StepMiniCard(
                 .padding(vertical = 10.dp, horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = ForerunOrange,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(ForerunMintLight),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = ForerunNavy,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = stepText,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = ForerunNavy
+                color = ForerunNavy,
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
+// =========================================================================
+// Previews for Android Studio
+// =========================================================================
+
+@Preview(name = "Onboarding - Full Flow (RTL Arabic)", showBackground = true, widthDp = 390, heightDp = 844, locale = "ar")
+@Composable
+private fun OnboardingScreenPreview() {
+    ForerunTheme {
+        OnboardingContent(
+            initialPage = 0,
+            onComplete = {},
+            onSkip = {}
+        )
+    }
+}
+
+@Preview(name = "Page 1 - Local Stores (RTL Arabic)", showBackground = true, widthDp = 390, heightDp = 640, locale = "ar")
+@Composable
+private fun OnboardingPageOnePreview() {
+    ForerunTheme {
+        Box(modifier = Modifier.fillMaxSize().background(ForerunBackground)) {
+            OnboardingPageOne()
+        }
+    }
+}
+
+@Preview(name = "Page 2 - Runner Delivery (RTL Arabic)", showBackground = true, widthDp = 390, heightDp = 640, locale = "ar")
+@Composable
+private fun OnboardingPageTwoPreview() {
+    ForerunTheme {
+        Box(modifier = Modifier.fillMaxSize().background(ForerunBackground)) {
+            OnboardingPageTwo()
+        }
+    }
+}
+
+@Preview(name = "Page 3 - Doorstep Arrival (RTL Arabic)", showBackground = true, widthDp = 390, heightDp = 640, locale = "ar")
+@Composable
+private fun OnboardingPageThreePreview() {
+    ForerunTheme {
+        Box(modifier = Modifier.fillMaxSize().background(ForerunBackground)) {
+            OnboardingPageThree()
+        }
+    }
+}

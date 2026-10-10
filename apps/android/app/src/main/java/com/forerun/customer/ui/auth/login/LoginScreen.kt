@@ -61,8 +61,7 @@ import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunDangerLight
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenDark
+import com.forerun.customer.ui.theme.ForerunNavy
 import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
@@ -121,7 +120,7 @@ fun LoginScreen(
             text = stringResource(R.string.app_name),
             fontSize = 30.sp,
             fontWeight = FontWeight.Bold,
-            color = ForerunGreenDark
+            color = ForerunNavy
         )
 
         Spacer(modifier = Modifier.height(Dimens.Space8))
@@ -190,7 +189,7 @@ fun LoginScreen(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ForerunGreen,
+                focusedBorderColor = ForerunOrange,
                 unfocusedBorderColor = ForerunBorder,
                 focusedContainerColor = ForerunSoftSurface,
                 unfocusedContainerColor = ForerunSoftSurface
@@ -240,7 +239,7 @@ fun LoginScreen(
                 }
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ForerunGreen,
+                focusedBorderColor = ForerunOrange,
                 unfocusedBorderColor = ForerunBorder,
                 focusedContainerColor = ForerunSoftSurface,
                 unfocusedContainerColor = ForerunSoftSurface
@@ -295,7 +294,7 @@ fun LoginScreen(
             TextButton(onClick = viewModel::onRegisterClicked) {
                 Text(
                     text = stringResource(R.string.register_action),
-                    color = ForerunGreenDark,
+                    color = ForerunOrange,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )

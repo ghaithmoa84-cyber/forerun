@@ -81,6 +81,8 @@ import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunMint
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSuccess
 import com.forerun.customer.ui.theme.ForerunSurface
@@ -232,7 +234,7 @@ fun OrderDetailScreen(
                             Spacer(modifier = Modifier.height(Dimens.Space16))
                             Button(
                                 onClick = { viewModel.onIntent(OrderDetailIntent.Load) },
-                                colors = ButtonDefaults.buttonColors(containerColor = ForerunGreen)
+                                colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange)
                             ) {
                                 Text(stringResource(R.string.order_detail_retry))
                             }
@@ -473,7 +475,7 @@ private fun DeliveredRatingCard(
                 if (canRate) {
                     Button(
                         onClick = onRateClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = ForerunGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange),
                         shape = RoundedCornerShape(Dimens.RadiusMedium)
                     ) {
                         Text(
@@ -616,8 +618,8 @@ private fun TimelineNodeItem(
         ) {
             val circleColor = when {
                 isCancelledNode -> ForerunDanger
-                step.isCompleted -> ForerunGreen
-                step.isCurrent -> ForerunGreenDark
+                step.isCompleted -> ForerunMint
+                step.isCurrent -> ForerunOrange
                 else -> ForerunSoftSurface
             }
             val iconTint = when {
@@ -661,7 +663,7 @@ private fun TimelineNodeItem(
                     modifier = Modifier
                         .width(2.dp)
                         .height(30.dp)
-                        .background(if (step.isCompleted) ForerunGreen else ForerunBorder)
+                        .background(if (step.isCompleted) ForerunMint else ForerunBorder)
                 )
             }
         }

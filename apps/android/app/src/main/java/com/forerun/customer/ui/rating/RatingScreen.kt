@@ -60,6 +60,7 @@ import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
@@ -313,7 +314,7 @@ fun RatingScreen(
                             },
                             shape = RoundedCornerShape(Dimens.RadiusMedium),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ForerunGreen,
+                                focusedBorderColor = ForerunOrange,
                                 unfocusedBorderColor = ForerunSoftSurface
                             )
                         )
@@ -328,7 +329,7 @@ fun RatingScreen(
                         .fillMaxWidth()
                         .height(Dimens.ButtonHeightLarge),
                     shape = RoundedCornerShape(Dimens.RadiusPill),
-                    colors = ButtonDefaults.buttonColors(containerColor = ForerunGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange)
                 ) {
                     if (uiState.isSubmitting) {
                         CircularProgressIndicator(
