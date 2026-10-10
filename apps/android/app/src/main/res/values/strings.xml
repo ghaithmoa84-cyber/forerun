@@ -9,22 +9,33 @@
     <string name="onboarding_skip">تخطي</string>
     <string name="onboarding_next">التالي</string>
     <string name="onboarding_start">ابدأ الآن</string>
-    <string name="onboarding_title_1">اطلب، وريّحك من التعب</string>
-    <string name="onboarding_desc_1">فَوْراً يوميّتك كل اللي تحتاجه من أقرب محل بسرعة وسهولة وبأفضل جودة.</string>
-    <string name="onboarding_badge_speed">توصيل برق</string>
-    <string name="onboarding_badge_speed_sub">خلال دقائق</string>
-    <string name="onboarding_badge_stores">دكاكين حارتك</string>
-    <string name="onboarding_badge_stores_sub">كل مستلزماتك</string>
 
-    <string name="onboarding_title_2">اختار أي محل تحب</string>
-    <string name="onboarding_desc_2">نروح نشتريك ونوصلك طلبك بأسرع وقت لباب بيتك بكل أمان وراحة بال.</string>
-    <string name="onboarding_steps_badge">خطوات بسيطة وواضحة</string>
-    <string name="onboarding_step_1">١. اطلب</string>
+    <!-- Page 1: Local Stores & Shopping -->
+    <string name="onboarding_badge_1">دكاكين حارتك</string>
+    <string name="onboarding_title_1">كل مستلزماتك من دكاكين حارتك</string>
+    <string name="onboarding_desc_1">تصفّح بقاليات ومحلات منطقتك واطلب كل اللي ناقصك للبيت بسهولة وسرعة وبأفضل جودة.</string>
+    <string name="onboarding_feat1_title">متجرك المفضل</string>
+    <string name="onboarding_feat1_sub">من أقرب دكان لبيتك</string>
+    <string name="onboarding_feat2_title">بضغطة زر</string>
+    <string name="onboarding_feat2_sub">سلة سريعة وسهلة</string>
+
+    <!-- Page 2: Swift Runner Delivery -->
+    <string name="onboarding_badge_2">توصيل فَوْري</string>
+    <string name="onboarding_title_2">كابتن فَوْراً يوصلك ع السريع</string>
+    <string name="onboarding_desc_2">كباتنّا بالحي جاهزون لشراء كل طلباتك والانطلاق فوراً لباب بيتك بكل أمان واهتمام.</string>
+    <string name="onboarding_step_1">١. اختر طلبك</string>
     <string name="onboarding_step_2">٢. نشتريك</string>
     <string name="onboarding_step_3">٣. نوصلك</string>
 
-    <string name="onboarding_title_3">جاهز تبدأ؟</string>
-    <string name="onboarding_desc_3">سجّل حسابك وابدأ أول طلب بثواني، وخلّي مشاويرك ومشترياتك علينا.</string>
+    <!-- Page 3: Doorstep Arrival & Cash on Delivery -->
+    <string name="onboarding_badge_3">لعند باب بيتك</string>
+    <string name="onboarding_title_3">طلبك لعندك.. طازج ومرتاح</string>
+    <string name="onboarding_desc_3">وفّر مشاويرك وتعبك، استلم أغراضك عند الباب طازجة وادفع براحتك كاش عند الاستلام.</string>
+    <string name="onboarding_feat3_title">دفع عند الاستلام</string>
+    <string name="onboarding_feat3_sub">كاش بكل أمان</string>
+    <string name="onboarding_feat4_title">وفّر مشوارك</string>
+    <string name="onboarding_feat4_sub">راحتك هي الأساس</string>
+
     <string name="onboarding_already_have_account">عندي حساب بالفعل؟</string>
     <string name="onboarding_login_action">تسجيل الدخول</string>
 
@@ -316,6 +327,8 @@
     <string name="service_rides_title">مشاوير ركاب</string>
     <string name="service_rides_desc">القنجرة ↔ اللاذقية</string>
     <string name="service_rides_tag">توصيلة</string>
+    <string name="service_tag_coming_soon">قريباً</string>
+    <string name="service_card_whatsapp_coord">تنسيق عبر واتساب</string>
     <string name="service_in_dev_dialog_title">خدمة الطرود والمشاوير</string>
     <string name="service_in_dev_dialog_desc">هذه الخدمة قيد التطوير داخل التطبيق حالياً، ويسعدنا خدمتك وتنسيق طلبك فوراً عبر واتساب الإدارة.</string>
     <string name="service_in_dev_dialog_btn">مراسلة الإدارة عبر واتساب</string>
@@ -364,6 +377,39 @@
     <string name="home_step_on_the_way">في الطريق</string>
     <string name="home_step_delivered">تم التسليم</string>
     <string name="home_items_fee_summary">%1$d مواد • %2$d %3$s</string>
+    <string name="home_greeting_user">أهلاً بك، %1$s 👋</string>
+    <string name="home_location_default">القنجرة</string>
+    <string name="home_quick_services_title">خدمات فَوْراً</string>
+    <string name="home_quick_services_subtitle">توصيل سريع وموثوق في القنجرة</string>
+    <string name="home_service_grocery_title">طلب بقالية ومشتريات</string>
+    <string name="home_service_grocery_subtitle">حدد طلبك وسيتولى الكابتن شراءه وتوصيله فوراً</string>
+    <string name="home_service_grocery_btn">+ اطلب الآن</string>
+    <string name="home_service_orders_title">طلباتي السابقة</string>
+    <string name="home_service_orders_subtitle">استعرض طلباتك وأعد طلب قائمتك المفضلة</string>
+    <string name="home_service_orders_btn">سجل الطلبات</string>
+    <string name="home_service_support_title">الدعم والمساعدة</string>
+    <string name="home_service_support_subtitle">تواصل مباشرة مع إدارة فَوْراً عبر واتساب</string>
+    <string name="home_service_support_btn">تواصل الآن</string>
+    <string name="home_awaiting_runner">جاري البحث عن كابتن متاح في الحي…</string>
+    <string name="home_order_summary_format">%1$d مواد • الإجمالي: %2$d ل.س</string>
+    <string name="home_stats_heading">ملخص حسابك مع فَوْراً</string>
+    <string name="home_stats_month">خلال هذا الشهر</string>
+    <string name="home_stats_completed_label">طلباتك المكتملة</string>
+    <string name="home_stats_orders_count">%1$d طلب</string>
+    <string name="home_stats_savings_label">إجمالي الرسوم</string>
+    <string name="home_stats_savings_value">%1$s ل.س</string>
+    <string name="home_fab_new_order">+ طلب فَوْري</string>
+    <string name="home_active_order_heading">الطلب الجاري #%1$s</string>
+    <string name="home_active_order_status_delivery">🛵 قيد التوصيل</string>
+    <string name="home_captain_bike">دراجة نارية • تقييم %1$s ★</string>
+    <string name="home_btn_whatsapp">واتساب</string>
+    <string name="home_btn_call">اتصال</string>
+    <string name="home_step_confirmed">تم التأكيد</string>
+    <string name="home_step_preparing">قيد التجهيز</string>
+    <string name="home_banner_badge_instant">توصيل فَوْري</string>
+    <string name="home_banner_location_tag">القنجرة 📍</string>
+    <string name="home_banner_promo_title">طلب بقالية ومشتريات طازجة\nكابتن فَوْراً يوصلك ع السريع</string>
+    <string name="home_runner_role">كابتن فَوْراً</string>
     <string name="error_home_data_load_failed">تعذر تحميل البيانات</string>
 
     <!-- Support (FAQ + default WhatsApp message) -->
