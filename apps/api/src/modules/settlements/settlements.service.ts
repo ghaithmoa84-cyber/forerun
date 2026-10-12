@@ -87,12 +87,13 @@ export class SettlementsService {
     tx: Prisma.TransactionClient,
     operationalDate: string,
   ) {
-    const { start, end } = getUtcRangeForOperationalDate(operationalDate);
+    const { end } = getUtcRangeForOperationalDate(operationalDate);
 
     const orders = await tx.order.findMany({
       where: {
         status: 'DELIVERED',
-        createdAt: { gte: start, lte: end },
+        deliveredAt: { lte: end },
+        settlementItem: null,
       },
       include: { runner: true },
     });
@@ -267,11 +268,43 @@ export class SettlementsService {
           operationalDate,
         );
 
+        const existingSettlementsForDate = await tx.settlement.count({
+          where: { operationalDate },
+        });
+
+        // Explicit rejection if day was already closed and there are no unsettled orders
+        if (existingSettlementsForDate > 0 && orders.length === 0) {
+          throw new ConflictException(
+            `Operational day ${operationalDate} has already been closed for settlements`,
+          );
+        }
+
+        if (orders.length === 0 && existingSettlementsForDate === 0) {
+          await this.recordCloseDayAuditLog(tx, {
+            userId,
+            operationalDate,
+            runnerCount: 0,
+            orderCount: 0,
+          });
+          return { settlements: [], runnerCount: 0 };
+        }
+
         const existingRunnerIds = await this.validateDayNotAlreadyClosed(
           tx,
           operationalDate,
           [...runnerOrderMap.keys()],
         );
+
+        // If every single runner in this batch was already settled, reject re-closing
+        const allRunnersAlreadySettled =
+          runnerOrderMap.size > 0 &&
+          [...runnerOrderMap.keys()].every((rId) => existingRunnerIds.has(rId));
+
+        if (allRunnersAlreadySettled) {
+          throw new ConflictException(
+            `Operational day ${operationalDate} has already been closed for settlements`,
+          );
+        }
 
         const settlements: CloseDayResult['settlements'] = [];
 

@@ -1,6 +1,6 @@
 # FORERUN — Handoff
 
-> **آخر تحديث:** 2026-10-01
+> **آخر تحديث:** 2026-10-12
 > **نطاق هذا الملف:** قواعد التعامل ومسار العمل فقط. **ليس** مرجع الحقيقة الوحيد.
 > **خريطة التوثيق (أي ملف يملك أي حقيقة):** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
@@ -19,10 +19,10 @@ git log -1 --stat
 | Admin Dashboard | ✅ نشر | Vercel |
 | Runner PWA | ✅ نشر | Vercel |
 | Customer Web | ✅ نشر | Vercel |
-| Android App | ✅ APK موقَّع (v2 · 3 ABI) · جاهز للنشر | APK مباشر — مفتاح التوقيع موجود ومربوط بـ Firebase project `forerun-c819d`. تم إكمال Sprint 8D/8E/8F. |
-| قاعدة البيانات | ✅ نشطة | PostgreSQL على Railway — 7 migrations مُطبَّقة — Schema Drift = 0 |
+| Android App | ✅ APK موقَّع (v2 · 3 ABI) · جاهز للنشر | APK مباشر — مفتاح التوقيع موجود ومربوط بـ Firebase project `forerun-c819d`. تم إكمال Sprint 8D/8E/8F/9. |
+| قاعدة البيانات | ✅ نشطة | PostgreSQL على Railway — 8 migrations مُطبَّقة (مع هجرة `20261012230000_add_user_previous_status`) — Schema Drift = 0 |
 
-**E2E:** نجح كاملًا على الإنتاج.
+**E2E & Audit:** نجح التدقيق الأمني والمعماري الشامل (المراحل 1-4) بنسبة 100%، وسُدّت ثغرات ترقية الصلاحيات والتسويات مع دورة حياة E2E بصفر انحراف.
 
 ---
 
@@ -41,15 +41,14 @@ git log -1 --stat
 |---|---|---|
 | `pnpm lint` | ✅ نجح | 6/6 packages — 0 أخطاء |
 | `pnpm typecheck` | ✅ نجح | 6/6 packages |
-| `pnpm test` | ✅ نجح | 14 ملفات اختبار، 192 اختبارًا نجحوا جميعها (**وحدة فقط** — تشمل اختبارات `telegram.service.spec.ts` و`fcm.service.spec.ts`) |
-| Android Gradle `test` | ✅ نجح | **261 `@Test`** في 36 ملف اختبار · 0 lint errors — مشروع Gradle مستقل، لا يشمله `pnpm test` |
+| `pnpm test` | ✅ نجح | 26 ملف اختبار، 398 اختبارًا نجحوا جميعها (API وحده: 398 اختبار بنسبة 100%) |
+| Audit Integration Tests | ✅ نجح | اختبارات التدقيق الـ 4 في `apps/api/test/integration/_audit/` تجريبياً وحياً |
+| Android Gradle `test` | ✅ نجح | **269 `@Test`** في 37 ملف اختبار · 0 lint errors |
 
 ## الخطوة التالية (Next Action)
-1. ✅ تشغيل `pnpm lint` + `pnpm typecheck` + `pnpm test` محليًا — مكتمل.
-2. ⏭️ **Sprint 9 (Android UI Polish)** — المرجع: [docs/android/ROADMAP.md](docs/android/ROADMAP.md) (نقل 81 نصاً إلى `strings.xml`، توحيد ترجمة الحالات، معالجة الدوران وحقول الإدخال). وبشكل موازٍ: بنود Sprint 6 الـ backend المتبقية (اختبارات تكامل التسعير، مراجعة أمنية، خط أساس أداء، Sentry) — [docs/sprints/Sprint 6 Brief.md](docs/sprints/Sprint%206%20Brief.md).
-3. ⏔ **R2 والإيصالات مؤجَّلة لما بعد MVP** بقرار 2026-09-30 — ليست عائقاً. المرجع: [PROJECT_STATUS.md §12 · D5](PROJECT_STATUS.md#12-سجل-القرارات).
-
-> **ملاحظة:** أُلغي بند «اختبار يدوي لكل الشاشات» كخطوة أولى — 261 اختبار Android + 192 اختبار وحدة غطّتاه آليًا. المتبقّي هو **اختبار ميداني** بعميل حقيقي 1–2 (بند Sprint 6 غير المُنجَز).
+1. ✅ اكتمال التدقيق المعماري والأمني الشامل (Phase 4 Remediation) وسد الثغرات الحرجة.
+2. ⏭️ دمج الفرع `feature/audit-remediation-phase4` إلى `master` عبر `git merge --no-ff`.
+3. 🚀 تشغيل `prisma migrate deploy` على بيئة الإنتاج في Railway لتطبيق هجرة `previousStatus`.
 
 ---
 

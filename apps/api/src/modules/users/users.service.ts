@@ -1,12 +1,15 @@
 import {
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { UserStateMachine } from '../../state-machine/user-state-machine.js';
 
 @Injectable()
 export class UsersService {
@@ -16,6 +19,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly userStateMachine: UserStateMachine,
   ) {}
 
   async findLeanById(id: string): Promise<{ id: string; role: string; status: string; isDeleted: boolean } | null> {
@@ -207,10 +211,23 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
 
-      await tx.user.update({
-        where: { id },
-        data: { status: 'SUSPENDED' },
+      if (user.status === UserStatus.SUSPENDED) {
+        throw new UnprocessableEntityException('Account is already suspended');
+      }
+
+      this.userStateMachine.transition(user.status, UserStatus.SUSPENDED, 'ADMIN');
+
+      const updateResult = await tx.user.updateMany({
+        where: { id, status: user.status, isDeleted: false },
+        data: {
+          status: UserStatus.SUSPENDED,
+          previousStatus: user.status,
+        },
       });
+
+      if (updateResult.count !== 1) {
+        throw new ConflictException('Concurrent update detected on user status');
+      }
 
       await tx.refreshToken.updateMany({
         where: { userId: id, isRevoked: false },
@@ -222,8 +239,8 @@ export class UsersService {
         actorRole: 'ADMIN',
         event: 'USER_SUSPENDED',
         fromStatus: user.status,
-        toStatus: 'SUSPENDED',
-        meta: { userId: id },
+        toStatus: UserStatus.SUSPENDED,
+        meta: { userId: id, previousStatus: user.status },
       }, tx);
     });
 
@@ -234,54 +251,80 @@ export class UsersService {
   }
 
   async unsuspend(id: string, actorId: string) {
-    await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id, isDeleted: false },
-      });
+    const restoredStatus: UserStatus = await this.prisma.$transaction(
+      async (tx): Promise<UserStatus> => {
+        const user = await tx.user.findUnique({
+          where: { id, isDeleted: false },
+        });
 
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
+        if (!user) {
+          throw new NotFoundException('User not found');
+        }
 
-      if (user.status !== 'SUSPENDED' && user.status !== 'REJECTED') {
-        throw new UnprocessableEntityException(
-          'Account is not in suspended or rejected state',
+        if (user.status !== UserStatus.SUSPENDED) {
+          throw new UnprocessableEntityException('Account is not in suspended state');
+        }
+
+        if (user.previousStatus === UserStatus.REJECTED) {
+          throw new UnprocessableEntityException(
+            'Cannot unsuspend account that was rejected prior to suspension',
+          );
+        }
+
+        const targetStatus: UserStatus =
+          user.previousStatus ?? UserStatus.PENDING_VERIFICATION;
+
+        this.userStateMachine.transition(
+          UserStatus.SUSPENDED,
+          targetStatus,
+          'ADMIN',
+          { previousStatus: user.previousStatus },
         );
+
+        const updateResult = await tx.user.updateMany({
+          where: { id, status: UserStatus.SUSPENDED, isDeleted: false },
+          data: {
+            status: targetStatus,
+            previousStatus: null,
+          },
+        });
+
+        if (updateResult.count !== 1) {
+          throw new ConflictException('Concurrent update detected on user status');
+        }
+
+        await tx.refreshToken.updateMany({
+          where: { userId: id, isRevoked: false },
+          data: { isRevoked: true, revokedAt: new Date() },
+        });
+
+        await this.auditService.log(
+          {
+            actorId,
+            actorRole: 'ADMIN',
+            event: 'USER_UNSUSPENDED',
+            fromStatus: UserStatus.SUSPENDED,
+            toStatus: targetStatus,
+            meta: { userId: id, restoredStatus: targetStatus },
+          },
+          tx,
+        );
+
+        return targetStatus;
+      },
+    );
+
+    if (restoredStatus === UserStatus.VERIFIED) {
+      try {
+        await this.notificationsService.emitToCustomer(id, 'account:verified', {
+          message: 'تم إعادة تفعيل حسابك بنجاح',
+        });
+      } catch (err) {
+        this.logger.warn('[unsuspend] customer notification failed silently', {
+          error: err instanceof Error ? err.message : String(err),
+          userId: id,
+        });
       }
-
-      await tx.user.update({
-        where: { id },
-        data: { status: 'VERIFIED' },
-      });
-
-      await tx.refreshToken.updateMany({
-        where: { userId: id, isRevoked: false },
-        data: { isRevoked: true, revokedAt: new Date() },
-      });
-
-      await this.auditService.log(
-        {
-          actorId,
-          actorRole: 'ADMIN',
-          event: 'USER_UNSUSPENDED',
-          fromStatus: user.status,
-          toStatus: 'VERIFIED',
-          meta: { userId: id },
-        },
-        tx,
-      );
-    });
-
-    try {
-      await this.notificationsService.emitToCustomer(id, 'account:verified', {
-        message: 'تم إعادة تفعيل حسابك بنجاح',
-      });
-    } catch (err) {
-      // WebSocket emit is best-effort
-      this.logger.warn('[unsuspend] customer notification failed silently', {
-        error: err instanceof Error ? err.message : String(err),
-        userId: id,
-      });
     }
 
     return {
