@@ -79,7 +79,7 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 1. code-architect runs /pre-sprint (runs pre-sprint-checklist)
 2. feature-dev implements endpoints
 3. test-engineer runs full local checklist + DTO Privacy & Lifecycle Masking check (Rule 7) for any endpoint exposing third-party data
-4. فرع لكل سبرنت ثم `git merge --no-ff` إلى `master`
+4. فرع لكل سبرنت ثم `git merge --no-ff` إلى `master` (إلزامي: الدمج إلى `master` يتطلب تأكيداً صريحاً من الشخص الموجّه بعد اكتمال واختبار الفرع ولا ينفذه الوكيل تلقائياً، ما لم يُطلب صراحة "نفّذ الدمج أيضاً" ضمن نفس التعليمة)
 
 ### Git Rules
 - Semantic commits: feat:, fix:, refactor:, etc.
@@ -87,6 +87,7 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 - فرع لكل سبرنت ثم `git merge --no-ff` إلى `master` (لا fast-forward — يبقي سجل الدمج مرئيًا)
 - Android branch strategy: نفس القاعدة بلا استثناء — **الأندرويد مدمج في `master` منذ `e5bfbc1`** (السبرنتات 1–8B في `3fc4119`، و8C في `e5bfbc1`)
 - التوثيق في docs/android/ قبل أي sprint جديد
+- فروع العمل المعلقة (Dangling Branches): أي فرع عمل يبقى مفتوحاً لأكثر من بضعة أيام دون دمج يجب تسجيله صراحة في NEXT_TASKS.md كـ "عمل معلّق بانتظار الدمج" لتجنب نسيانه أو تفرّع فروع لاحقة من كود قديم (القرار D36 و D37).
 
 ### Security Rules
 - No hardcoded secrets
