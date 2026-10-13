@@ -16,6 +16,7 @@ model User {
   name            String
   role            UserRole
   status          UserStatus        @default(PENDING_VERIFICATION)
+  previousStatus  UserStatus?
   isDeleted       Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

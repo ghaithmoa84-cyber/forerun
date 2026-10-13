@@ -1,8 +1,26 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-06
+> **آخر تحديث:** 2026-10-12
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
+
+---
+
+## مسار التدقيق الأمني والمعماري الشامل (Audit Phase 1–4 Remediation) — ✅ مُنجَز (2026-10-12)
+
+- [x] **الخطوة 0: مسح IDOR التجريبي الحي:** فحص 16 مساراً بمستخدمين حقيقيين عبر `audit-idor-endpoints.integration.spec.ts` وإثبات عودة 404 لمنع تسريب الموارد.
+- [x] **الفئة 1: كشف وتصحيح الاختبار المزوّر:** تصحيح `users.service.spec.ts` وحذف التجاوزات الوهمية.
+- [x] **الفئة 2: حماية آلة حالة المستخدم وترقية الصلاحيات:**
+  - بناء `UserStateMachine` وإضافة هجرة `previousStatus` في قاعدة البيانات.
+  - قفل تفاؤلي `where: { id, status: SUSPENDED }` لمنع سباق الحالات المتزامنة.
+  - إثبات الحماية بـ 5 حالات تكامل في `audit-user-state-escalation-fixed.integration.spec.ts`.
+- [x] **الفئة 3: تحصين التسويات اليومية `closeDay`:**
+  - الانتقال إلى `deliveredAt` (توقيت دمشق) مع ترحيل الطلبات غير المسواة المتأخرة عبر `settlementItem: null`.
+  - منع تكرار الإغلاق بـ `409 ConflictException`، وإثباته باختبار تكامل `audit-close-day-fixed.integration.spec.ts`.
+- [x] **اختبار دورة الحياة الكاملة والتزامن المتعدد (E2E Lifecycle & Concurrency):**
+  - دورة كاملة للطلب من الإنشاء إلى التسوية مع صفر انحراف (Zero Drift).
+  - اختبار التزامن المتوازي لـ `closeDay` يرفض الاستدعاء المزدوج بـ 409 Conflict.
+- [x] **التقرير النهائي وحكم الجاهزية:** إصدار تقرير المرحلة 4 الشامل وتوثيق القرار D31.
 
 ---
 

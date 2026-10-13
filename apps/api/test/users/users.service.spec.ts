@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { UserStatus } from '@prisma/client';
 
 vi.mock('@prisma/client', () => ({
   PrismaClient: class {},
   Prisma: {},
+  UserStatus: {
+    PENDING_VERIFICATION: 'PENDING_VERIFICATION',
+    VERIFIED: 'VERIFIED',
+    REJECTED: 'REJECTED',
+    SUSPENDED: 'SUSPENDED',
+  },
 }));
 
 vi.mock('../../src/database/prisma.service.js', () => ({
@@ -11,6 +18,8 @@ vi.mock('../../src/database/prisma.service.js', () => ({
 }));
 
 import { UsersService } from '../../src/modules/users/users.service';
+import { UserStateMachine } from '../../src/state-machine/user-state-machine';
+import { USER_TRANSITIONS } from '../../src/state-machine/user-transitions';
 import type { PrismaService } from '../../src/database/prisma.service';
 import type { AuditService } from '../../src/modules/audit/audit.service';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service';
@@ -20,6 +29,7 @@ interface MockPrisma {
   user: {
     findUnique: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
   };
   refreshToken: {
     updateMany: ReturnType<typeof vi.fn>;
@@ -31,6 +41,7 @@ describe('UsersService - unsuspend', () => {
   let mockPrisma: MockPrisma;
   let mockAudit: { log: ReturnType<typeof vi.fn> };
   let mockNotifications: { emitToCustomer: ReturnType<typeof vi.fn> };
+  let userStateMachine: UserStateMachine;
 
   beforeEach(() => {
     mockPrisma = {
@@ -40,6 +51,7 @@ describe('UsersService - unsuspend', () => {
       user: {
         findUnique: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       refreshToken: {
         updateMany: vi.fn(),
@@ -54,23 +66,24 @@ describe('UsersService - unsuspend', () => {
       emitToCustomer: vi.fn().mockResolvedValue(undefined),
     };
 
+    userStateMachine = new UserStateMachine(USER_TRANSITIONS);
+
     usersService = new UsersService(
       mockPrisma as unknown as PrismaService,
       mockAudit as unknown as AuditService,
       mockNotifications as unknown as NotificationsService,
+      userStateMachine,
     );
   });
 
   it('successfully unsuspends a SUSPENDED user and logs USER_UNSUSPENDED', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
       id: 'usr_1',
-      status: 'SUSPENDED',
+      status: UserStatus.SUSPENDED,
+      previousStatus: UserStatus.VERIFIED,
       isDeleted: false,
     });
-    mockPrisma.user.update.mockResolvedValue({
-      id: 'usr_1',
-      status: 'VERIFIED',
-    });
+    mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
     mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 2 });
 
     const result = await usersService.unsuspend('usr_1', 'admin_1');
@@ -80,9 +93,9 @@ describe('UsersService - unsuspend', () => {
       message: 'Account unsuspended successfully',
     });
 
-    expect(mockPrisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'usr_1' },
-      data: { status: 'VERIFIED' },
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'usr_1', status: UserStatus.SUSPENDED, isDeleted: false },
+      data: { status: UserStatus.VERIFIED, previousStatus: null },
     });
 
     expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
@@ -95,36 +108,25 @@ describe('UsersService - unsuspend', () => {
         actorId: 'admin_1',
         actorRole: 'ADMIN',
         event: 'USER_UNSUSPENDED',
-        fromStatus: 'SUSPENDED',
-        toStatus: 'VERIFIED',
-        meta: { userId: 'usr_1' },
+        fromStatus: UserStatus.SUSPENDED,
+        toStatus: UserStatus.VERIFIED,
+        meta: { userId: 'usr_1', restoredStatus: UserStatus.VERIFIED },
       }),
       mockPrisma,
     );
   });
 
-  it('successfully unsuspends a REJECTED user', async () => {
+  it('rejects unsuspending a REJECTED user (prevents unlawful privilege escalation)', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
       id: 'usr_2',
-      status: 'REJECTED',
+      status: UserStatus.REJECTED,
       isDeleted: false,
     });
-    mockPrisma.user.update.mockResolvedValue({
-      id: 'usr_2',
-      status: 'VERIFIED',
-    });
-    mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 0 });
 
-    const result = await usersService.unsuspend('usr_2', 'admin_1');
-
-    expect(result).toEqual({
-      statusCode: 200,
-      message: 'Account unsuspended successfully',
-    });
-    expect(mockPrisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'usr_2' },
-      data: { status: 'VERIFIED' },
-    });
+    await expect(usersService.unsuspend('usr_2', 'admin_1')).rejects.toThrow(
+      UnprocessableEntityException,
+    );
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException if user not found', async () => {
@@ -138,7 +140,7 @@ describe('UsersService - unsuspend', () => {
   it('throws UnprocessableEntityException if user is already VERIFIED', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
       id: 'usr_3',
-      status: 'VERIFIED',
+      status: UserStatus.VERIFIED,
       isDeleted: false,
     });
 
@@ -150,7 +152,7 @@ describe('UsersService - unsuspend', () => {
   it('throws UnprocessableEntityException if user is PENDING_VERIFICATION', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
       id: 'usr_4',
-      status: 'PENDING_VERIFICATION',
+      status: UserStatus.PENDING_VERIFICATION,
       isDeleted: false,
     });
 

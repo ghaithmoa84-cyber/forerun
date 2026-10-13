@@ -16,6 +16,7 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       findMany: ReturnType<typeof vi.fn>;
     };
     settlement: {
+      count: ReturnType<typeof vi.fn>;
       findMany: ReturnType<typeof vi.fn>;
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
@@ -44,6 +45,7 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
         findMany: vi.fn(),
       },
       settlement: {
+        count: vi.fn().mockResolvedValue(0),
         findMany: vi.fn(),
         findUnique: vi.fn(),
         create: vi.fn(),
@@ -162,12 +164,13 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       });
     });
 
-    it('skips already settled runners (idempotency)', async () => {
+    it('rejects already settled runners with ConflictException (no silent omission)', async () => {
       const orders = [
         { id: 'o-1', runnerId: 'runner-1', totalFee: 60 },
         { id: 'o-2', runnerId: 'runner-2', totalFee: 100 },
       ];
       txClient.order.findMany.mockResolvedValue(orders);
+      txClient.settlement.count.mockResolvedValue(2);
 
       // Both runners are already in the settlement table for this operationalDate
       txClient.settlement.findMany.mockResolvedValue([
@@ -175,18 +178,12 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
         { runnerId: 'runner-2' },
       ]);
 
-      const result = await service.closeDay(operationalDate, 'notes', userId, adminId);
+      await expect(
+        service.closeDay(operationalDate, 'notes', userId, adminId),
+      ).rejects.toThrow(ConflictException);
 
-      expect(result).toEqual({
-        settlements: [],
-        runnerCount: 0,
-      });
       expect(txClient.settlement.create).not.toHaveBeenCalled();
       expect(txClient.settlementItem.createMany).not.toHaveBeenCalled();
-      expect(notificationsService.emitToAdmin).toHaveBeenCalledWith('settlement:closed', {
-        date: operationalDate,
-        runnerCount: 0,
-      });
     });
 
     it('creates settlement and breakdown records for 3 runners with 5 orders', async () => {
