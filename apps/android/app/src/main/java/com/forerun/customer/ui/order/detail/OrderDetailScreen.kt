@@ -770,7 +770,8 @@ private fun RunnerCard(
             ) {
                 // WhatsApp Button
                 Button(
-                    onClick = { onWhatsAppClick(runner.whatsapp) },
+                    onClick = { runner.whatsapp?.let { onWhatsAppClick(it) } },
+                    enabled = runner.whatsapp != null,
                     modifier = Modifier
                         .weight(1f)
                         .height(Dimens.ButtonHeight),
@@ -788,7 +789,8 @@ private fun RunnerCard(
                 // Call Button
                 val phone = runner.phone ?: runner.whatsapp
                 OutlinedButton(
-                    onClick = { onCallClick(phone) },
+                    onClick = { phone?.let { onCallClick(it) } },
+                    enabled = phone != null,
                     modifier = Modifier
                         .weight(1f)
                         .height(Dimens.ButtonHeight),

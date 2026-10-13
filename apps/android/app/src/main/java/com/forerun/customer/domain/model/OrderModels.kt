@@ -122,7 +122,7 @@ data class OrderRunnerDetail(
     val avgRating: Double? = null,
     val totalRatings: Int? = null,
     val status: String = "AVAILABLE",
-    val whatsapp: String,
+    val whatsapp: String? = null,
     val phone: String? = null
 )
 
