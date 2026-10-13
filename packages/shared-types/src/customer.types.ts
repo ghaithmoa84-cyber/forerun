@@ -106,7 +106,7 @@ export type CustomerOrderListItem = {
   runner?: {
     id: string;
     name: string;
-    whatsapp: string;
+    whatsapp?: string | null;
     phone?: string | null;
   } | null;
 };
