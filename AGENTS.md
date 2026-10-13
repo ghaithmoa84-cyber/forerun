@@ -66,12 +66,19 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 - Environment variables for all secrets
 - Standardized error responses (spec section 9.0)
 
+### 7. DTO Data Privacy & Lifecycle Masking
+- Every DTO or API response returned to an external actor (Customer or Runner) must undergo two mandatory checks:
+  1. **Least Privilege Data Exposure:** Is every field in the response strictly necessary for this actor in this context?
+  2. **Lifecycle Masking:** Does any sensitive field (personal contact details, granular financial internals, third-party data) depend on an active operational state? If so, it MUST be masked (`null`) once the active lifecycle ends (e.g., `DELIVERED`, `CANCELLED`).
+- **Silent Leak Invariant:** Functional tests, state machine audits, and financial ledger checks DO NOT catch DTO over-exposure (an endpoint can operate functionally 100% while leaking private third-party data). Any endpoint exposing third-party info requires a dedicated privacy & lifecycle test suite.
+- **Reference:** Documented real-world incident and remediation in [PROJECT_STATUS.md §12 D35](PROJECT_STATUS.md#d35--فرض-قيد-دورة-الحياة-على-بيانات-تواصل-المندوب-الشخصية-2026-10-13).
+
 ## Workflow
 
 ### Sprint Flow
 1. code-architect runs /pre-sprint (runs pre-sprint-checklist)
 2. feature-dev implements endpoints
-3. test-engineer runs full local checklist
+3. test-engineer runs full local checklist + DTO Privacy & Lifecycle Masking check (Rule 7) for any endpoint exposing third-party data
 4. فرع لكل سبرنت ثم `git merge --no-ff` إلى `master`
 
 ### Git Rules
