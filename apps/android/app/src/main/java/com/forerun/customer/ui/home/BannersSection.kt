@@ -46,7 +46,7 @@ import com.forerun.customer.data.remote.dto.banner.BannerActionType
 import com.forerun.customer.data.remote.dto.banner.BannerDto
 import com.forerun.customer.ui.navigation.BannerRouteMapper
 import com.forerun.customer.ui.theme.Dimens
-import com.forerun.customer.ui.theme.ForerunGreen
+import com.forerun.customer.ui.theme.ForerunOrange
 import kotlinx.coroutines.delay
 
 /**
@@ -128,7 +128,7 @@ fun BannersSection(
                                 .size(if (isSelected) 7.dp else 5.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isSelected) ForerunGreen else Color.White.copy(alpha = 0.6f)
+                                    if (isSelected) ForerunOrange else Color.White.copy(alpha = 0.6f)
                                 )
                         )
                     }
@@ -219,9 +219,9 @@ private fun BannerCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.70f)
-                                ),
-                                startY = 80f
+                                    Color.Black.copy(alpha = 0.25f),
+                                    Color.Black.copy(alpha = 0.65f)
+                                )
                             )
                         )
                 )
@@ -258,7 +258,7 @@ private fun BannerCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                .background(ForerunGreen)
+                                .background(ForerunOrange)
                                 .padding(horizontal = Dimens.Space8, vertical = Dimens.Space2)
                         ) {
                             Text(

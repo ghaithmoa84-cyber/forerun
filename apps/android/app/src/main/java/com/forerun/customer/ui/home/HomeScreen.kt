@@ -930,19 +930,19 @@ private fun HomeOrderStepper(status: String) {
                 modifier = Modifier
                     .weight(1f)
                     .height(3.dp)
-                    .background(if (stepIndex > 1) ForerunMint else ForerunBorder)
+                    .background(if (stepIndex > 1) ForerunOrange else ForerunBorder)
             )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(3.dp)
-                    .background(if (stepIndex > 2) ForerunMint else ForerunBorder)
+                    .background(if (stepIndex > 2) ForerunOrange else ForerunBorder)
             )
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(3.dp)
-                    .background(if (stepIndex > 3) ForerunMint else ForerunBorder)
+                    .background(if (stepIndex > 3) ForerunOrange else ForerunBorder)
             )
             Spacer(modifier = Modifier.weight(0.5f))
         }
@@ -968,7 +968,7 @@ private fun HomeOrderStepper(status: String) {
                             .clip(CircleShape)
                             .background(
                                 when {
-                                    isDone -> ForerunMint
+                                    isDone -> ForerunOrange
                                     isCurrent -> ForerunOrange
                                     else -> ForerunSoftSurface
                                 }
