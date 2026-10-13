@@ -488,4 +488,14 @@
     <!-- Promotional Banners -->
     <string name="banner_whatsapp_inquiry">مرحباً، أود الاستفسار بخصوص العرض المتاح في تطبيق فوراً</string>
     <string name="banner_image_description">شريحة العرض</string>
+    <!-- Admin Support & Runner Coordination -->
+    <string name="home_admin_support_title">الدعم الفني والإدارة</string>
+    <string name="home_admin_support_subtitle">تواصل مباشر لتنسيق أو تعديل طلبك</string>
+    <string name="home_awaiting_runner_badge">بانتظار كابتن</string>
+    <string name="tag_via_admin">عبر الإدارة</string>
+    <string name="tag_direct_coord">تنسيق مباشر</string>
+    <string name="order_detail_awaiting_runner_title">بانتظار تعيين كابتن للطلب</string>
+    <string name="order_detail_awaiting_runner_desc">طلبك قيد المتابعة وجاري تعيين كابتن متاح، يمكنك التنسيق مع الإدارة مباشرة</string>
+    <string name="order_detail_admin_support_title">الدعم الفني وإدارة فَوْراً</string>
+    <string name="order_detail_admin_support_desc">لأي استفسار أو تعديل في تفاصيل الطلب</string>
 </resources>

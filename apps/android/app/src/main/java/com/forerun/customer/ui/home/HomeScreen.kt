@@ -298,6 +298,11 @@ fun HomeContent(
             )
         }
 
+        Spacer(modifier = Modifier.height(Dimens.Space14))
+
+        // Admin Support & Direct Coordination Card
+        HomeAdminContactCard()
+
         Spacer(modifier = Modifier.height(Dimens.Space20))
 
         // 4. Core FORERUN Services (Grocery Delivery + Secondary Services)
@@ -782,29 +787,86 @@ private fun ActiveOrderCard(
                         .clip(RoundedCornerShape(14.dp))
                         .background(ForerunMintLight.copy(alpha = 0.35f))
                         .padding(horizontal = Dimens.Space12, vertical = Dimens.Space10),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(ForerunMintSoft),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(ForerunMintSoft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = ForerunMintDark,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = stringResource(R.string.home_awaiting_runner_badge),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForerunNavy
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                        .background(ForerunMintSoft)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.tag_direct_coord),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForerunMintDark
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.home_awaiting_runner),
+                                fontSize = 10.sp,
+                                color = ForerunTextMuted
+                            )
+                        }
+                    }
+
+                    // Contact Admin button when awaiting runner
+                    Button(
+                        onClick = {
+                            val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (_: Exception) {}
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                        shape = RoundedCornerShape(Dimens.RadiusPill),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.height(30.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Person,
+                            imageVector = Icons.AutoMirrored.Filled.Chat,
                             contentDescription = null,
-                            tint = ForerunMintDark,
-                            modifier = Modifier.size(16.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = stringResource(R.string.tag_via_admin),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(Dimens.Space8))
-                    Text(
-                        text = stringResource(R.string.home_awaiting_runner),
-                        fontSize = 11.sp,
-                        color = ForerunNavy,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
 
@@ -1478,6 +1540,129 @@ private fun HomeStatsSection(
                             modifier = Modifier.size(18.dp)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Admin Support and Direct Coordination Card
+ */
+@Composable
+fun HomeAdminContactCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, ForerunBorder.copy(alpha = 0.6f), RoundedCornerShape(20.dp)),
+        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space16),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(ForerunOrangeLight.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = ForerunOrange,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Column {
+                    Text(
+                        text = stringResource(R.string.home_admin_support_title),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Text(
+                        text = stringResource(R.string.home_admin_support_subtitle),
+                        fontSize = 11.sp,
+                        color = ForerunTextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space6)) {
+                // WhatsApp Admin Button
+                Button(
+                    onClick = {
+                        val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: Exception) {}
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.home_btn_whatsapp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                // Call Admin Button
+                OutlinedButton(
+                    onClick = {
+                        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_SUPPORT_PHONE}"))
+                        try {
+                            context.startActivity(dialIntent)
+                        } catch (_: Exception) {}
+                    },
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ForerunBorder),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ForerunNavy),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,
+                        tint = ForerunNavy,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.home_btn_call),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
                 }
             }
         }

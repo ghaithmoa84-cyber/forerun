@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -73,10 +74,15 @@ import com.forerun.customer.domain.model.CancelOrderError
 import com.forerun.customer.domain.model.CustomerOrderDetail
 import com.forerun.customer.domain.model.OrderRunnerDetail
 import com.forerun.customer.domain.model.OrderStoreDetail
+import com.forerun.customer.core.config.AppConfig
 import com.forerun.customer.domain.model.OrderTimeline
 import com.forerun.customer.ui.theme.Dimens
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
+import com.forerun.customer.ui.theme.ForerunMintDark
+import com.forerun.customer.ui.theme.ForerunMintSoft
+import com.forerun.customer.ui.theme.ForerunNavy
+import com.forerun.customer.ui.theme.ForerunOrangeLight
 import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
@@ -269,12 +275,12 @@ fun OrderDetailScreen(
                             cancelReason = order.cancelReason
                         )
 
-                        // 4. Runner Card
+                        // 4. Runner Card or Awaiting Runner Card
                         if (order.runner != null && uiState.canContactRunner) {
                             RunnerCard(
                                 runner = order.runner,
                                 onWhatsAppClick = { phone ->
-                                    val url = com.forerun.customer.core.config.AppConfig.buildRunnerWhatsAppUrl(phone)
+                                    val url = AppConfig.buildRunnerWhatsAppUrl(phone)
                                     try {
                                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                                     } catch (_: Exception) {}
@@ -285,6 +291,8 @@ fun OrderDetailScreen(
                                     } catch (_: Exception) {}
                                 }
                             )
+                        } else if (order.status !in setOf("DELIVERED", "CANCELLED")) {
+                            OrderDetailAwaitingRunnerCard()
                         }
 
                         // 5. Stores and Items Card
@@ -299,7 +307,10 @@ fun OrderDetailScreen(
                         // 7. Delivery Address & Notes Card
                         DeliveryInfoCard(order = order)
 
-                        // 8. Cancel Order Button (Only for PENDING_REVIEW / ASSIGNED)
+                        // 8. Admin Support Card
+                        OrderDetailAdminSupportCard()
+
+                        // 9. Cancel Order Button (Only for PENDING_REVIEW / ASSIGNED)
                         if (uiState.canCancel) {
                             CancelOrderSection(
                                 isCancelling = uiState.isCancelling,
@@ -805,6 +816,258 @@ private fun RunnerCard(
                     Spacer(modifier = Modifier.width(Dimens.Space4))
                     Text(
                         text = stringResource(R.string.order_detail_runner_call),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ForerunTextPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderDetailAwaitingRunnerCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.RadiusLarge),
+        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space16)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(ForerunMintSoft),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = ForerunMintDark,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(Dimens.Space12))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.order_detail_awaiting_runner_title),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForerunNavy
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                .background(ForerunMintSoft)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tag_direct_coord),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunMintDark
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.order_detail_awaiting_runner_desc),
+                        fontSize = 12.sp,
+                        color = ForerunTextMuted,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.Space12))
+            HorizontalDivider(color = ForerunSoftSurface, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(Dimens.Space12))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+            ) {
+                Button(
+                    onClick = {
+                        val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(Dimens.ButtonHeight),
+                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space4))
+                    Text(
+                        text = stringResource(R.string.home_btn_whatsapp),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_SUPPORT_PHONE}")))
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(Dimens.ButtonHeight),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = ForerunTextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space4))
+                    Text(
+                        text = stringResource(R.string.home_btn_call),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ForerunTextPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderDetailAdminSupportCard(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.RadiusLarge),
+        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space16)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(ForerunOrangeLight.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = ForerunOrange,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(Dimens.Space12))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.order_detail_admin_support_title),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Text(
+                        text = stringResource(R.string.order_detail_admin_support_desc),
+                        fontSize = 11.sp,
+                        color = ForerunTextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.Space12))
+            HorizontalDivider(color = ForerunSoftSurface, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(Dimens.Space12))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+            ) {
+                Button(
+                    onClick = {
+                        val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(Dimens.ButtonHeight),
+                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space4))
+                    Text(
+                        text = stringResource(R.string.home_btn_whatsapp),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_SUPPORT_PHONE}")))
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(Dimens.ButtonHeight),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = ForerunTextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space4))
+                    Text(
+                        text = stringResource(R.string.home_btn_call),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = ForerunTextPrimary
