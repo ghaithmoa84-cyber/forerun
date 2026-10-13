@@ -43,14 +43,8 @@ data class OrderDetailUiState(
 
     val canContactRunner: Boolean
         get() {
-            val status = order?.status ?: return false
-            val hasRunner = order.runner != null
-            return hasRunner && status in setOf(
-                "ASSIGNED",
-                "IN_PROGRESS",
-                "OUT_FOR_DELIVERY",
-                "DELIVERED"
-            )
+            val runner = order?.runner ?: return false
+            return runner.whatsapp != null || runner.phone != null
         }
 
     val canRate: Boolean
