@@ -62,7 +62,7 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 
 ### 6. API Standards
 - All endpoints under /api/v1/
-- Zod validation on every input
+- Zod validation on every input (sanitizes and strips unknown keys via result.data)
 - Environment variables for all secrets
 - Standardized error responses (spec section 9.0)
 
@@ -85,7 +85,7 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 - No hardcoded secrets
 - Authorization on every endpoint
 - Rate limiting configured per endpoint
-- Zod input validation everywhere
+- Zod input validation everywhere (sanitizes and strips unknown keys via result.data)
 - See test-engineer agent for full security checklist
 
 ### Rollback Plans
