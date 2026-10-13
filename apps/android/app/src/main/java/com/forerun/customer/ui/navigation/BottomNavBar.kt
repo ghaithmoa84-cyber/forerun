@@ -1,6 +1,7 @@
 package com.forerun.customer.ui.navigation
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -27,6 +29,7 @@ import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextPrimary
 
@@ -69,43 +72,45 @@ fun ForerunBottomNavBar(
     onNavigateToRoute: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    NavigationBar(
-        modifier = modifier,
-        containerColor = ForerunBackground,
-        contentColor = ForerunTextPrimary,
-        tonalElevation = 8.dp
-    ) {
-        BottomNavItem.items.forEach { item ->
-            val isSelected = currentRoute == item.route
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        onNavigateToRoute(item.route)
-                    }
-                },
-                icon = {
-                    Icon(
-                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = stringResource(item.titleRes),
-                        modifier = Modifier.size(24.dp)
+    Column(modifier = modifier) {
+        HorizontalDivider(color = ForerunBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+        NavigationBar(
+            containerColor = ForerunSurface,
+            contentColor = ForerunTextPrimary,
+            tonalElevation = 0.dp
+        ) {
+            BottomNavItem.items.forEach { item ->
+                val isSelected = currentRoute == item.route
+                NavigationBarItem(
+                    selected = isSelected,
+                    onClick = {
+                        if (currentRoute != item.route) {
+                            onNavigateToRoute(item.route)
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = stringResource(item.titleRes),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(item.titleRes),
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = ForerunGreen,
+                        selectedTextColor = ForerunGreen,
+                        indicatorColor = ForerunGreenLight,
+                        unselectedIconColor = ForerunTextMuted,
+                        unselectedTextColor = ForerunTextMuted
                     )
-                },
-                label = {
-                    Text(
-                        text = stringResource(item.titleRes),
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = ForerunGreen,
-                    selectedTextColor = ForerunGreen,
-                    indicatorColor = ForerunGreenLight,
-                    unselectedIconColor = ForerunTextMuted,
-                    unselectedTextColor = ForerunTextMuted
                 )
-            )
+            }
         }
     }
 }

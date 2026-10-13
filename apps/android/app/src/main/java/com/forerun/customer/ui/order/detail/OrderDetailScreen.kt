@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -267,7 +268,7 @@ fun OrderDetailScreen(
                             cancelReason = order.cancelReason
                         )
 
-                        // 4. Runner Card
+                        // 4. Runner Card OR Awaiting Runner Card
                         if (order.runner != null && uiState.canContactRunner) {
                             RunnerCard(
                                 runner = order.runner,
@@ -280,6 +281,21 @@ fun OrderDetailScreen(
                                 onCallClick = { phone ->
                                     try {
                                         context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
+                                    } catch (_: Exception) {}
+                                }
+                            )
+                        } else if (uiState.isAwaitingRunner) {
+                            AwaitingRunnerCard(
+                                onWhatsAppAdminClick = {
+                                    val msg = context.getString(R.string.order_inquiry_whatsapp_msg, order.orderNumber)
+                                    val url = com.forerun.customer.core.config.AppConfig.buildWhatsAppUrl(msg)
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                    } catch (_: Exception) {}
+                                },
+                                onCallAdminClick = {
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${com.forerun.customer.core.config.AppConfig.ADMIN_PHONE_DIAL}")))
                                     } catch (_: Exception) {}
                                 }
                             )
@@ -758,7 +774,127 @@ private fun RunnerCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(Dimens.Space16))
+            val hasWhatsApp = !runner.whatsapp.isNullOrBlank()
+            val phoneToCall = runner.phone?.takeIf { it.isNotBlank() } ?: runner.whatsapp?.takeIf { it.isNotBlank() }
+            val hasPhone = !phoneToCall.isNullOrBlank()
+
+            if (hasWhatsApp || hasPhone) {
+                Spacer(modifier = Modifier.height(Dimens.Space16))
+                HorizontalDivider(color = ForerunSoftSurface, thickness = 1.dp)
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+                ) {
+                    // WhatsApp Button
+                    if (hasWhatsApp) {
+                        Button(
+                            onClick = { onWhatsAppClick(runner.whatsapp!!) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(Dimens.ButtonHeight),
+                            colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                            shape = RoundedCornerShape(Dimens.RadiusMedium)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(Dimens.Space4))
+                            Text(
+                                text = stringResource(R.string.order_detail_runner_whatsapp),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // Call Button
+                    if (hasPhone) {
+                        OutlinedButton(
+                            onClick = { onCallClick(phoneToCall!!) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(Dimens.ButtonHeight),
+                            shape = RoundedCornerShape(Dimens.RadiusMedium)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = ForerunTextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(Dimens.Space4))
+                            Text(
+                                text = stringResource(R.string.order_detail_runner_call),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ForerunTextPrimary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AwaitingRunnerCard(
+    onWhatsAppAdminClick: () -> Unit,
+    onCallAdminClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.RadiusLarge),
+        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space16)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFF3E0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = Color(0xFFE65100),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(Dimens.Space12))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.order_awaiting_runner_title),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunTextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.order_awaiting_runner_desc),
+                        fontSize = 12.sp,
+                        color = ForerunTextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.Space14))
             HorizontalDivider(color = ForerunSoftSurface, thickness = 1.dp)
             Spacer(modifier = Modifier.height(Dimens.Space12))
 
@@ -766,27 +902,31 @@ private fun RunnerCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
             ) {
-                // WhatsApp Button
                 Button(
-                    onClick = { onWhatsAppClick(runner.whatsapp) },
+                    onClick = onWhatsAppAdminClick,
                     modifier = Modifier
                         .weight(1f)
                         .height(Dimens.ButtonHeight),
                     colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
                     shape = RoundedCornerShape(Dimens.RadiusMedium)
                 ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space4))
                     Text(
-                        text = stringResource(R.string.order_detail_runner_whatsapp),
+                        text = stringResource(R.string.order_admin_contact_whatsapp),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
 
-                // Call Button
-                val phone = runner.phone ?: runner.whatsapp
                 OutlinedButton(
-                    onClick = { onCallClick(phone) },
+                    onClick = onCallAdminClick,
                     modifier = Modifier
                         .weight(1f)
                         .height(Dimens.ButtonHeight),
@@ -800,7 +940,7 @@ private fun RunnerCard(
                     )
                     Spacer(modifier = Modifier.width(Dimens.Space4))
                     Text(
-                        text = stringResource(R.string.order_detail_runner_call),
+                        text = stringResource(R.string.order_admin_contact_call),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = ForerunTextPrimary

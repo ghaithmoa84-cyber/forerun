@@ -219,9 +219,9 @@ private fun BannerCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.70f)
-                                ),
-                                startY = 80f
+                                    Color.Black.copy(alpha = 0.35f),
+                                    Color.Black.copy(alpha = 0.85f)
+                                )
                             )
                         )
                 )
@@ -229,7 +229,12 @@ private fun BannerCard(
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(horizontal = Dimens.Space16, vertical = Dimens.Space12)
+                        .padding(
+                            start = Dimens.Space16,
+                            end = Dimens.Space16,
+                            top = Dimens.Space12,
+                            bottom = 26.dp
+                        )
                 ) {
                     if (!banner.headline.isNullOrBlank()) {
                         Text(

@@ -30,10 +30,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalTaxi
 import androidx.compose.material.icons.filled.LocationOn
@@ -50,6 +51,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -70,6 +72,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -223,7 +226,7 @@ private fun HomeContent(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Chat,
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(18.dp)
@@ -679,7 +682,12 @@ private fun HomeContent(
 
         Spacer(modifier = Modifier.height(Dimens.Space20))
 
-        // 5. Account Stats Summary Card
+        // 5. Admin Quick Contact (Direct WhatsApp + Call)
+        HomeAdminContactCard()
+
+        Spacer(modifier = Modifier.height(Dimens.Space20))
+
+        // 6. Account Stats Summary Card
         StatsCard(profile = profile)
 
         Spacer(modifier = Modifier.height(Dimens.Space24))
@@ -766,7 +774,8 @@ private fun ActiveOrderCard(
             OrderStepper(status = order.status)
 
             // Runner Information & Direct Action Buttons (WhatsApp + Call)
-            if (!order.runnerName.isNullOrBlank()) {
+            val hasRunnerContact = !order.runnerWhatsapp.isNullOrBlank() || !order.runnerPhone.isNullOrBlank()
+            if (!order.runnerName.isNullOrBlank() && hasRunnerContact) {
                 Spacer(modifier = Modifier.height(Dimens.Space12))
                 Row(
                     modifier = Modifier
@@ -779,7 +788,8 @@ private fun ActiveOrderCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
+                        modifier = Modifier.weight(1f)
                     ) {
                         Box(
                             modifier = Modifier
@@ -815,7 +825,7 @@ private fun ActiveOrderCard(
                         if (!order.runnerWhatsapp.isNullOrBlank()) {
                             IconButton(
                                 onClick = {
-                                    val waUrl = "https://wa.me/${order.runnerWhatsapp}"
+                                    val waUrl = AppConfig.buildRunnerWhatsAppUrl(order.runnerWhatsapp)
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
                                     context.startActivity(intent)
                                 },
@@ -825,7 +835,7 @@ private fun ActiveOrderCard(
                                     .background(WhatsAppGreen)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Chat,
+                                    imageVector = Icons.AutoMirrored.Filled.Chat,
                                     contentDescription = stringResource(R.string.label_runner_whatsapp),
                                     tint = Color.White,
                                     modifier = Modifier.size(16.dp)
@@ -833,7 +843,7 @@ private fun ActiveOrderCard(
                             }
                         }
 
-                        val phoneToCall = order.runnerPhone ?: order.runnerWhatsapp
+                        val phoneToCall = order.runnerPhone?.takeIf { it.isNotBlank() } ?: order.runnerWhatsapp?.takeIf { it.isNotBlank() }
                         if (!phoneToCall.isNullOrBlank()) {
                             IconButton(
                                 onClick = {
@@ -852,6 +862,101 @@ private fun ActiveOrderCard(
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
+                        }
+                    }
+                }
+            } else if (order.runnerName.isNullOrBlank() || !hasRunnerContact) {
+                // Awaiting Runner state: Direct contact channels with Admin
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFFF3E0))
+                        .padding(Dimens.Space10),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFE0B2)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFE65100),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                text = stringResource(R.string.order_awaiting_runner_title),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunTextPrimary
+                            )
+                            Text(
+                                text = stringResource(R.string.order_awaiting_runner_desc),
+                                fontSize = 11.sp,
+                                color = ForerunTextMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(Dimens.Space8))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space6)) {
+                        IconButton(
+                            onClick = {
+                                val msg = context.getString(R.string.order_inquiry_whatsapp_msg, order.orderNumber)
+                                val waUrl = AppConfig.buildWhatsAppUrl(msg)
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(WhatsAppGreen)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = stringResource(R.string.order_admin_contact_whatsapp),
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                try {
+                                    val callIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_PHONE_DIAL}"))
+                                    context.startActivity(callIntent)
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(ForerunGreenDark)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Call,
+                                contentDescription = stringResource(R.string.order_admin_contact_call),
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
@@ -960,20 +1065,31 @@ private fun OrderStepper(status: String) {
         stringResource(R.string.home_step_delivered)
     )
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        steps.forEachIndexed { index, stepLabel ->
-            val stepNumber = index + 1
-            val isDone = stepNumber < stepIndex
-            val isCurrent = stepNumber == stepIndex
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Connected Stepper Track (Circles + Connecting Lines)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.Space12),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            steps.forEachIndexed { index, _ ->
+                val stepNumber = index + 1
+                val isDone = stepNumber < stepIndex
+                val isCurrent = stepNumber == stepIndex
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
+                if (index > 0) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(2.5.dp)
+                            .clip(RoundedCornerShape(Dimens.RadiusPill))
+                            .background(
+                                if (stepNumber <= stepIndex) ForerunGreenDark else ForerunSoftSurface
+                            )
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .size(24.dp)
@@ -1003,15 +1119,26 @@ private fun OrderStepper(status: String) {
                         )
                     }
                 }
+            }
+        }
 
-                Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(Dimens.Space6))
 
+        // Stepper Step Labels
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            steps.forEachIndexed { index, stepLabel ->
+                val stepNumber = index + 1
+                val isCurrent = stepNumber == stepIndex
                 Text(
                     text = stepLabel,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                     color = if (isCurrent) ForerunGreenDark else ForerunTextMuted,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -1079,6 +1206,126 @@ private fun StatsCard(profile: CustomerProfile) {
                         text = stringResource(R.string.home_total_fees),
                         fontSize = 12.sp,
                         color = ForerunTextMuted
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeAdminContactCard() {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space16)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ForerunGreenLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,
+                        tint = ForerunGreenDark,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(Dimens.Space12))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.home_admin_contact_title),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunTextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.home_admin_contact_desc),
+                        fontSize = 12.sp,
+                        color = ForerunTextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.Space14))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+            ) {
+                // WhatsApp Admin Button
+                Button(
+                    onClick = {
+                        val msg = context.getString(R.string.home_admin_order_whatsapp_msg)
+                        val waUrl = AppConfig.buildWhatsAppUrl(msg)
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+                            context.startActivity(intent)
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(Dimens.ButtonHeight),
+                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space6))
+                    Text(
+                        text = stringResource(R.string.home_admin_whatsapp_btn),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                // Call Admin Button
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_PHONE_DIAL}"))
+                            context.startActivity(intent)
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(Dimens.ButtonHeight),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = ForerunTextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(Dimens.Space6))
+                    Text(
+                        text = stringResource(R.string.home_admin_call_btn),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ForerunTextPrimary
                     )
                 }
             }

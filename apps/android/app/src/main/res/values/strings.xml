@@ -76,7 +76,7 @@
     <string name="home_completed_orders">طلبات منجزة</string>
     <string name="home_total_fees">إجمالي الرسوم</string>
     <string name="home_retry">إعادة المحاولة</string>
-    <string name="home_order_num">طلب رقم: %1$s</string>
+    <string name="home_order_num">طلب رقم: \u200E#%1$s</string>
     <string name="home_items_count">%1$d مواد</string>
     <string name="home_currency">ل.س</string>
     <string name="home_runner_label">الكابتن:</string>
@@ -220,7 +220,7 @@
 
     <!-- Order Detail Screen -->
     <string name="order_detail_title">تفاصيل الطلب</string>
-    <string name="order_detail_number">طلب #%1$s</string>
+    <string name="order_detail_number">طلب \u200E#%1$s</string>
     <string name="order_detail_retry">إعادة المحاولة</string>
     <string name="order_detail_loading">جاري تحميل تفاصيل الطلب…</string>
     <string name="order_detail_error_loading">تعذر تحميل تفاصيل الطلب، يرجى المحاولة ثانية</string>
@@ -299,11 +299,11 @@
     <string name="service_grocery_title">حاجيات البقالة</string>
     <string name="service_grocery_desc">من أي متجر أو سوبرماركت في القنجرة</string>
     <string name="service_parcels_title">طرود وأمانات</string>
-    <string name="service_parcels_desc">القنجرة ↔ اللاذقية</string>
-    <string name="service_parcels_tag">سريع</string>
+    <string name="service_parcels_desc">القنجرة ↔ اللاذقية (تنسيق مباشر)</string>
+    <string name="service_parcels_tag">عبر الإدارة</string>
     <string name="service_rides_title">مشاوير ركاب</string>
-    <string name="service_rides_desc">القنجرة ↔ اللاذقية</string>
-    <string name="service_rides_tag">توصيلة</string>
+    <string name="service_rides_desc">القنجرة ↔ اللاذقية (تنسيق مباشر)</string>
+    <string name="service_rides_tag">عبر الإدارة</string>
     <string name="service_in_dev_dialog_title">خدمة الطرود والمشاوير</string>
     <string name="service_in_dev_dialog_desc">هذه الخدمة قيد التطوير داخل التطبيق حالياً، ويسعدنا خدمتك وتنسيق طلبك فوراً عبر واتساب الإدارة.</string>
     <string name="service_in_dev_dialog_btn">مراسلة الإدارة عبر واتساب</string>
@@ -347,7 +347,7 @@
     <string name="home_verified_runner">مندوب معتمد ✓</string>
     <string name="label_runner_whatsapp">واتساب الكابتن</string>
     <string name="label_runner_call">اتصال بالكابتن</string>
-    <string name="home_step_picked_up">تم الاستلام</string>
+    <string name="home_step_picked_up">تم التأكيد</string>
     <string name="home_step_purchasing">جاري الشراء</string>
     <string name="home_step_on_the_way">في الطريق</string>
     <string name="home_step_delivered">تم التسليم</string>
@@ -430,4 +430,16 @@
     <!-- Promotional Banners -->
     <string name="banner_whatsapp_inquiry">مرحباً، أود الاستفسار بخصوص العرض المتاح في تطبيق فوراً</string>
     <string name="banner_image_description">شريحة العرض</string>
+
+    <!-- Admin & Support Contact Channels -->
+    <string name="home_admin_contact_title">طلب جديد أو مساعدة مباشرة؟</string>
+    <string name="home_admin_contact_desc">تواصل مع إدارة فَوْراً مباشرة للطلب أو الاستفسار</string>
+    <string name="home_admin_whatsapp_btn">واتساب الإدارة</string>
+    <string name="home_admin_call_btn">اتصال بالإدارة</string>
+    <string name="order_awaiting_runner_title">بانتظار تعيين كابتن</string>
+    <string name="order_awaiting_runner_desc">طلبك قيد المتابعة والتجهيز — يمكنك التواصل مع الإدارة لأي استفسار</string>
+    <string name="order_admin_contact_whatsapp">واتساب الإدارة</string>
+    <string name="order_admin_contact_call">اتصال بالإدارة</string>
+    <string name="home_admin_order_whatsapp_msg">مرحباً إدارة فَوْراً، أود الاستفسار والتنسيق لطلب جديد.</string>
+    <string name="order_inquiry_whatsapp_msg">مرحباً إدارة فَوْراً، أستفسر عن طلبي رقم: %1$s</string>
 </resources>
