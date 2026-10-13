@@ -74,6 +74,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -485,6 +486,8 @@ private fun HomeBannersSection(
                                 modifier = Modifier.weight(1f)
                             )
 
+                            Spacer(modifier = Modifier.width(Dimens.Space8))
+
                             Button(
                                 onClick = onNewOrderClick,
                                 colors = ButtonDefaults.buttonColors(
@@ -500,7 +503,9 @@ private fun HomeBannersSection(
                                         text = stringResource(R.string.home_cta_button),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
@@ -591,7 +596,10 @@ private fun ActiveOrderCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
                             .size(38.dp)
@@ -612,22 +620,28 @@ private fun ActiveOrderCard(
                             text = stringResource(R.string.home_active_order_heading, order.orderNumber),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ForerunNavy
+                            color = ForerunNavy,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(R.string.home_order_summary_format, order.itemCount, order.totalFee),
                             fontSize = 11.sp,
-                            color = ForerunTextMuted
+                            color = ForerunTextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(Dimens.Space8))
 
                 // Dynamic Status pill
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Dimens.RadiusPill))
                         .background(statusColors.background)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -641,7 +655,9 @@ private fun ActiveOrderCard(
                             text = stringResource(statusLabelRes),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = statusColors.text
+                            color = statusColors.text,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -1061,6 +1077,7 @@ private fun QuickServicesSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
                 ) {
@@ -1084,15 +1101,21 @@ private fun QuickServicesSection(
                             text = stringResource(R.string.service_grocery_title),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ForerunNavy
+                            color = ForerunNavy,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(R.string.service_grocery_desc),
                             fontSize = 11.sp,
-                            color = ForerunTextMuted
+                            color = ForerunTextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(Dimens.Space8))
 
                 // Orange Action Button (+ اطلب الآن)
                 Button(
@@ -1108,7 +1131,9 @@ private fun QuickServicesSection(
                         text = stringResource(R.string.home_service_grocery_btn),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
