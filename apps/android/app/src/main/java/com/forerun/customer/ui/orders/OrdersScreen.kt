@@ -393,7 +393,7 @@ private fun OrderCard(
                     }
                     Spacer(modifier = Modifier.width(Dimens.Space8))
                     Text(
-                        text = "#${order.orderNumber}",
+                        text = "\u200E#${order.orderNumber}\u200E",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = ForerunTextPrimary

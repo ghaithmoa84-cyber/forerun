@@ -229,7 +229,7 @@
     <string name="orders_status_under_review">تحت المراجعة</string>
     <string name="orders_status_awaiting_runner">بانتظار كابتن</string>
     <string name="orders_status_awaiting_preferred">بانتظار الكابتن المفضل</string>
-    <string name="orders_status_assigned">تم تعيين كابتن</string>
+    <string name="orders_status_assigned">تم التأكيد</string>
     <string name="orders_status_in_progress">قيد الشراء</string>
     <string name="orders_status_out_for_delivery">في طريق التوصيل</string>
     <string name="orders_status_delivered">تم التسليم بنجاح</string>
@@ -243,7 +243,7 @@
 
     <!-- Order Detail Screen -->
     <string name="order_detail_title">تفاصيل الطلب</string>
-    <string name="order_detail_number">طلب #%1$s</string>
+    <string name="order_detail_number">طلب \u200E#%1$s\u200E</string>
     <string name="order_detail_retry">إعادة المحاولة</string>
     <string name="order_detail_loading">جاري تحميل تفاصيل الطلب…</string>
     <string name="order_detail_error_loading">تعذر تحميل تفاصيل الطلب، يرجى المحاولة ثانية</string>
@@ -254,7 +254,7 @@
     <string name="order_detail_timeline_title">مراحل الطلب</string>
     <string name="order_detail_step_created">تم إنشاء الطلب</string>
     <string name="order_detail_step_review">المراجعة والتدقيق</string>
-    <string name="order_detail_step_assigned">تعيين الكابتن</string>
+    <string name="order_detail_step_assigned">تم التأكيد</string>
     <string name="order_detail_step_in_progress">قيد الشراء والتجهيز</string>
     <string name="order_detail_step_out_for_delivery">في طريق التوصيل</string>
     <string name="order_detail_step_delivered">تم التسليم</string>
@@ -399,7 +399,7 @@
     <string name="home_stats_savings_label">إجمالي الرسوم</string>
     <string name="home_stats_savings_value">%1$s ل.س</string>
     <string name="home_fab_new_order">+ طلب فَوْري</string>
-    <string name="home_active_order_heading">الطلب الجاري #%1$s</string>
+    <string name="home_active_order_heading">الطلب الجاري \u200E#%1$s\u200E</string>
     <string name="home_active_order_status_delivery">🛵 قيد التوصيل</string>
     <string name="home_captain_bike">دراجة نارية • تقييم %1$s ★</string>
     <string name="home_btn_whatsapp">واتساب</string>

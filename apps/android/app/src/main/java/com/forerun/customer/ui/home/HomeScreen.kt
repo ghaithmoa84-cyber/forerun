@@ -622,7 +622,7 @@ private fun ActiveOrderCard(
                     Spacer(modifier = Modifier.width(Dimens.Space10))
                     Column {
                         Text(
-                            text = stringResource(R.string.home_active_order_heading, order.orderNumber),
+                            text = stringResource(R.string.home_active_order_heading, "\u200E${order.orderNumber}\u200E"),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = ForerunNavy,
