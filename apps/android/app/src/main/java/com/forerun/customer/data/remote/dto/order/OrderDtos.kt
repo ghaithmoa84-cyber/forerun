@@ -7,7 +7,7 @@ import com.squareup.moshi.JsonClass
 data class OrderRunnerDto(
     @Json(name = "id") val id: String,
     @Json(name = "name") val name: String,
-    @Json(name = "whatsapp") val whatsapp: String,
+    @Json(name = "whatsapp") val whatsapp: String? = null,
     @Json(name = "phone") val phone: String? = null
 )
 

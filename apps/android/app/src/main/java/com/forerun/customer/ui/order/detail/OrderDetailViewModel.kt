@@ -43,14 +43,15 @@ data class OrderDetailUiState(
 
     val canContactRunner: Boolean
         get() {
+            val r = order?.runner ?: return false
+            return !r.whatsapp.isNullOrBlank() || !r.phone.isNullOrBlank()
+        }
+
+    val isAwaitingRunner: Boolean
+        get() {
             val status = order?.status ?: return false
-            val hasRunner = order.runner != null
-            return hasRunner && status in setOf(
-                "ASSIGNED",
-                "IN_PROGRESS",
-                "OUT_FOR_DELIVERY",
-                "DELIVERED"
-            )
+            return (order?.runner == null || (!canContactRunner && status in setOf("PENDING_REVIEW", "AWAITING_RUNNER", "AWAITING_PREFERRED_RUNNER"))) &&
+                status in setOf("PENDING_REVIEW", "AWAITING_RUNNER", "AWAITING_PREFERRED_RUNNER")
         }
 
     val canRate: Boolean

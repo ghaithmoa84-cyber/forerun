@@ -89,7 +89,7 @@ data class OrderRunnerDetailDto(
     @Json(name = "avgRating") val avgRating: Double? = null,
     @Json(name = "totalRatings") val totalRatings: Int? = null,
     @Json(name = "status") val status: String = "AVAILABLE",
-    @Json(name = "whatsapp") val whatsapp: String,
+    @Json(name = "whatsapp") val whatsapp: String? = null,
     @Json(name = "phone") val phone: String? = null
 )
 
