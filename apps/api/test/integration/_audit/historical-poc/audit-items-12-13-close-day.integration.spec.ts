@@ -1,10 +1,19 @@
+/**
+ * ⚠️ HISTORICAL PROOF OF CONCEPT (PoC) — DEFECT DEMONSTRATION
+ *
+ * الغرض: هذا الملف يثبت تاريخياً عيب تجميع التسويات بـ createdAt وضياع الطلبات المسلمة لاحقاً قبل الإصلاح.
+ * فشل هذا الاختبار الآن متوقَّع ومطلوب كدليل سلبي (Negative Proof) على نجاح وسريان الإصلاح البرمجي بـ deliveredAt و 409 Conflict.
+ * لا يُدرج هذا الملف ضمن مجموعة الاختبارات التي يجب أن تنجح في CI، ويُشغَّل يدوياً فقط عند تدقيق تاريخ الثغرات.
+ * الاختبار المعتمد لإثبات نجاح الإصلاح هو: audit-close-day-fixed.integration.spec.ts
+ */
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient, OrderStatus } from '@prisma/client';
 import supertest from 'supertest';
-import { createTestApp, closeTestApp } from '../helpers/app.helper';
-import { seedAdmin, seedRunner, seedCustomer, loginAs } from '../helpers/seed.helper';
-import { cleanDatabase } from '../setup';
+import { createTestApp, closeTestApp } from '../../helpers/app.helper';
+import { seedAdmin, seedRunner, seedCustomer, loginAs } from '../../helpers/seed.helper';
+import { cleanDatabase } from '../../setup';
 
 describe('Audit #12 & #13: Settlement closeDay Date Filtering & Re-closing Defect', () => {
   let app: INestApplication;
