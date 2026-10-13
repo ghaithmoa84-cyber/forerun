@@ -34,7 +34,7 @@
 | منصة الإنتاج وقاعدة البيانات | **Railway** — وليس Supabase |
 | Schema Drift | **0**، آخر فحص: **2026-10-13** |
 | سجل `_prisma_migrations` (في الكود) | **8 migrations** مُسجَّلة في `schema.prisma` و `master` (آخرها `20261012230000_add_user_previous_status`) |
-| Migration الحالية في إنتاج Railway | **7 migrations** مُطبَّقة فعلياً في قاعدة الإنتاج (`20261001160600_add_device_token` وما قبلها)؛ الهجرة الثامنة تنتظر تشغيل `prisma migrate deploy` يدوياً من قِبل المالك |
+| Migration الحالية في إنتاج Railway | **8 migrations** مُطبَّقة بنجاح 100% في قاعدة الإنتاج بعد تشغيل المالك لهجرة `20261012230000_add_user_previous_status` في 2026-10-13 |
 | آلية نشر الـ migrations | `prisma migrate deploy` يُنفَّذ يدويًا من Railway Console؛ لا يوجد auto-migrate في Dockerfile |
 
 ### 1.2 إصدارات وإصلاحات مكتملة — 2026-09-23

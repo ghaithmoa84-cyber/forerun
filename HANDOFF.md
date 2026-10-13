@@ -21,20 +21,14 @@ git log -1 --stat
 | Runner PWA | ✅ نشر | Vercel |
 | Customer Web | ✅ نشر | Vercel |
 | Android App | ✅ APK موقَّع (v2 · 3 ABI) · جاهز للنشر | APK مباشر — مفتاح التوقيع موجود ومربوط بـ Firebase project `forerun-c819d`. تم إكمال Sprint 8D/8E/8F/9. |
-| قاعدة البيانات الإنتاجية | ⏸️ بانتظار هجرة المالك | PostgreSQL على Railway — 7 migrations سارية في الإنتاج، والهجرة الثامنة (`20261012230000_add_user_previous_status`) بانتظار تشغيل المالك يدوياً. |
+| قاعدة البيانات الإنتاجية | ✅ نشطة ومُهجّرة 100% | PostgreSQL على Railway — تم تطبيق الهجرة الثامنة (`20261012230000_add_user_previous_status`) بنجاح واكتمال كافة الهجرات الـ 8 دون أي انحراف (Zero Drift). |
 
 ---
 
-## ⚠️ خطوة تنتظر المالك (Manual Action Required by Owner)
-نظراً لأن آلية النشر لا تحتوي على `auto-migrate` داخل Dockerfile حمايةً للإنتاج:
-1. **أخذ نسخة احتياطية (Database Backup):** يجب أخذ نسخة احتياطية من قاعدة بيانات الإنتاج عبر لوحة تحكم Railway قبل تنفيذ أي أمر، لكون الهجرة مرتبطة بنموذج وحالة المستخدمين (`User`).
-2. **أمر التنفيذ:** قم بتشغيل الأمر التالي من Railway Console الخاص بخدمة API أو بيئة الاتصال بقاعدة البيانات:
-   ```bash
-   prisma migrate deploy
-   ```
-3. **الهجرة المنتظرة:** `20261012230000_add_user_previous_status` (تضيف عمود `previousStatus` إلى جدول `User` لتمكين آلة الحالة `UserStateMachine` من استعادة حالة الحساب الصحيحة ومنع ترقية الحسابات المرفوضة).
-
----
+## ✅ اكتمال هجرة قاعدة البيانات الإنتاجية (Production DB Migration Completed)
+تم تطبيق الهجرة الثامنة يدوياً بنجاح عبر Railway Console في 2026-10-13:
+- **الهجرة:** `20261012230000_add_user_previous_status` (إضافة عمود `previousStatus` إلى جدول `User` وتأمين آلة الحالة `UserStateMachine`).
+- **الحالة:** `All migrations have been successfully applied` (قاعدة الإنتاج متطابقة 100% مع الكود).
 
 ## الفحص المحلي على master (Local Checks on master)
 | الفحص | الحالة | التفاصيل |
