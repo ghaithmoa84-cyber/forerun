@@ -281,38 +281,42 @@ export function HomeScreen() {
                 </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <a
-                    href={formatWhatsappUrl(runner.whatsapp, `مرحباً كابتن ${runner.name}، بخصوص طلبي رقم ${order.orderNumber}`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-outline"
-                    style={{
-                      borderColor: '#25D366',
-                      color: '#25D366',
-                      backgroundColor: '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      textAlign: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    واتساب المندوب
-                  </a>
-                  <a
-                    href={formatTelUrl(runner.phone || runner.whatsapp)}
-                    className="btn btn-outline"
-                    style={{
-                      borderColor: 'var(--primary)',
-                      color: 'var(--primary)',
-                      backgroundColor: '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      textAlign: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    اتصال بالمندوب
-                  </a>
+                  {runner.whatsapp && (
+                    <a
+                      href={formatWhatsappUrl(runner.whatsapp, `مرحباً كابتن ${runner.name}، بخصوص طلبي رقم ${order.orderNumber}`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline"
+                      style={{
+                        borderColor: '#25D366',
+                        color: '#25D366',
+                        backgroundColor: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        textAlign: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      واتساب المندوب
+                    </a>
+                  )}
+                  {(runner.phone || runner.whatsapp) && (
+                    <a
+                      href={formatTelUrl(runner.phone || runner.whatsapp!)}
+                      className="btn btn-outline"
+                      style={{
+                        borderColor: 'var(--primary)',
+                        color: 'var(--primary)',
+                        backgroundColor: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        textAlign: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      اتصال بالمندوب
+                    </a>
+                  )}
                 </div>
               </div>
             );
