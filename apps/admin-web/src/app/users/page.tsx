@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
 
@@ -70,13 +71,38 @@ export default function UsersPage() {
         showToast(`تم تعليق حساب العميل "${name}"`, 'info');
       } else if (action === 'unsuspend') {
         await api.put(`/admin/users/${id}/unsuspend`);
-        showToast(`تم إعادة تفعيل حساب العميل "${name}" بنجاح`, 'success');
+        showToast(`تم فك تعليق حساب العميل "${name}" بنجاح`, 'success');
       }
 
       setConfirmModal({ isOpen: false, action: null, user: null });
       fetchUsers(meta.page);
-    } catch {
-      showToast(`فشل في تنفيذ العملية على حساب "${name}"`, 'error');
+    } catch (err: unknown) {
+      let errorMsg = `فشل في تنفيذ العملية على حساب "${name}"`;
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const resData = err.response?.data as { message?: string | string[] } | undefined;
+        const msg = Array.isArray(resData?.message)
+          ? resData.message.join('، ')
+          : resData?.message;
+
+        if (action === 'unsuspend' && status === 422) {
+          if (
+            msg?.includes('rejected prior to suspension') ||
+            msg?.includes('Cannot unsuspend account that was rejected')
+          ) {
+            errorMsg = `لا يمكن فك تعليق حساب العميل "${name}"؛ لأن الحساب كان مرفوضاً (REJECTED) قبل التعليق حفاظاً على أمان النظام.`;
+          } else if (msg) {
+            errorMsg = `تعذر فك تعليق الحساب: ${msg}`;
+          } else {
+            errorMsg = `تعذر فك تعليق الحساب: حالة الحساب الحالية لا تسمح بهذا الإجراء.`;
+          }
+        } else if (status === 409) {
+          errorMsg = `تعارض في العملية: قد تكون حالة الحساب قد تغيرت بالتزامن بواسطة مسؤول آخر.`;
+        } else if (msg) {
+          errorMsg = `خطأ: ${msg}`;
+        }
+      }
+      showToast(errorMsg, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -235,14 +261,20 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                     </button>
                   )}
 
-                  {(u.status === 'SUSPENDED' || u.status === 'REJECTED') && (
+                  {u.status === 'SUSPENDED' && (
                     <button
                       type="button"
                       onClick={() => setConfirmModal({ isOpen: true, action: 'unsuspend', user: u })}
                       className="w-full py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors text-center inline-flex items-center justify-center"
                     >
-                      إعادة تفعيل الحساب
+                      فك تعليق الحساب
                     </button>
+                  )}
+
+                  {u.status === 'REJECTED' && (
+                    <div className="text-center text-slate-400 text-xs py-1">
+                      حساب مرفوض (حالة نهائية)
+                    </div>
                   )}
                 </div>
               </div>
@@ -321,15 +353,21 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                           </button>
                         )}
 
-                        {(u.status === 'REJECTED' || u.status === 'SUSPENDED') && (
+                        {u.status === 'SUSPENDED' && (
                           <button
                             onClick={() =>
                               setConfirmModal({ isOpen: true, action: 'unsuspend', user: u })
                             }
-                            className="px-3 py-1.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 border border-slate-200 font-bold rounded-lg transition-colors text-xs"
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold rounded-lg transition-colors text-xs"
                           >
-                            إعادة تفعيل
+                            فك التعليق
                           </button>
+                        )}
+
+                        {u.status === 'REJECTED' && (
+                          <span className="text-slate-400 text-[11px] italic">
+                            مرفوض (لا إجراءات)
+                          </span>
                         )}
                       </div>
                     </td>
@@ -374,14 +412,16 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
             <div className="flex items-center gap-3 mb-4">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${
-                  confirmModal.action === 'verify' || confirmModal.action === 'unsuspend'
+                  confirmModal.action === 'verify'
                     ? 'bg-emerald-100 text-emerald-700'
+                    : confirmModal.action === 'unsuspend'
+                    ? 'bg-blue-100 text-blue-700'
                     : confirmModal.action === 'reject'
                     ? 'bg-rose-100 text-rose-700'
                     : 'bg-amber-100 text-amber-700'
                 }`}
               >
-                {confirmModal.action === 'verify' || confirmModal.action === 'unsuspend' ? '✓' : '!'}
+                {confirmModal.action === 'verify' ? '✓' : confirmModal.action === 'unsuspend' ? '↺' : '!'}
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">تأكيد الإجراء الإداري</h3>
@@ -389,12 +429,12 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                   {confirmModal.action === 'verify' && 'هل أنت متأكد من تفعيل حساب هذا العميل؟'}
                   {confirmModal.action === 'reject' && 'هل أنت متأكد من رفض تسجيل هذا العميل؟'}
                   {confirmModal.action === 'suspend' && 'هل أنت متأكد من تعليق حساب هذا العميل؟'}
-                  {confirmModal.action === 'unsuspend' && 'هل أنت متأكد من إعادة تفعيل حساب هذا العميل؟'}
+                  {confirmModal.action === 'unsuspend' && 'هل أنت متأكد من فك تعليق حساب هذا العميل؟'}
                 </p>
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-xl p-3 mb-6 border border-slate-200 text-xs space-y-1">
+            <div className="bg-slate-50 rounded-xl p-3 mb-4 border border-slate-200 text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-slate-500">اسم العميل:</span>
                 <span className="font-bold text-slate-800">{confirmModal.user.name}</span>
@@ -406,6 +446,12 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                 </span>
               </div>
             </div>
+
+            {confirmModal.action === 'unsuspend' && (
+              <div className="bg-blue-50 text-blue-800 text-[11px] p-3 rounded-xl border border-blue-200 leading-relaxed mb-6">
+                💡 <strong>تنبيه:</strong> سيتم استعادة حالة العميل إلى ما كانت عليه قبل التعليق (مثل «بانتظار التفعيل» أو «مُفعّل»). الحسابات التي رُفضت نهائياً قبل التعليق لا يمكن فك تعليقها وفق قواعد النظام.
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2">
               <button
@@ -421,8 +467,10 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                 onClick={handleActionConfirm}
                 disabled={actionLoading}
                 className={`px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md disabled:opacity-50 flex items-center gap-1.5 ${
-                  confirmModal.action === 'verify' || confirmModal.action === 'unsuspend'
+                  confirmModal.action === 'verify'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : confirmModal.action === 'unsuspend'
+                    ? 'bg-blue-600 hover:bg-blue-700'
                     : confirmModal.action === 'reject'
                     ? 'bg-rose-600 hover:bg-rose-700'
                     : 'bg-amber-600 hover:bg-amber-700'
@@ -431,7 +479,9 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                 {actionLoading && (
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 )}
-                <span>تأكيد الإجراء</span>
+                <span>
+                  {confirmModal.action === 'unsuspend' ? 'تأكيد فك التعليق' : 'تأكيد الإجراء'}
+                </span>
               </button>
             </div>
           </div>
