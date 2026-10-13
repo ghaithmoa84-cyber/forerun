@@ -12,43 +12,43 @@
 git log -1 --stat
 ```
 
-## حالة الإنتاج (Production)
+## حالة الإنتاج والدمج (Status)
 | المكوّن | الحالة | ملاحظات |
 |---|---|---|
-| API | ✅ نشط | Railway — `https://fawrun-api-production.up.railway.app/api/v1` |
+| الكود المصدري | ✅ مدموج في master | تم دمج فرع التدقيق `feature/audit-remediation-phase4` في `master` عبر `git merge --no-ff` بنجاح بعد اجتياز كافة الفحوصات بنسبة 100%. |
+| API | ✅ نشط | Railway — `https://fawrun-api-production.up.railway.app/api/v1` (إعادة النشر التلقائي للـ master جارية) |
 | Admin Dashboard | ✅ نشر | Vercel |
 | Runner PWA | ✅ نشر | Vercel |
 | Customer Web | ✅ نشر | Vercel |
 | Android App | ✅ APK موقَّع (v2 · 3 ABI) · جاهز للنشر | APK مباشر — مفتاح التوقيع موجود ومربوط بـ Firebase project `forerun-c819d`. تم إكمال Sprint 8D/8E/8F/9. |
-| قاعدة البيانات | ✅ نشطة | PostgreSQL على Railway — 8 migrations مُطبَّقة (مع هجرة `20261012230000_add_user_previous_status`) — Schema Drift = 0 |
-
-**E2E & Audit:** نجح التدقيق الأمني والمعماري الشامل (المراحل 1-4) بنسبة 100%، وسُدّت ثغرات ترقية الصلاحيات والتسويات مع دورة حياة E2E بصفر انحراف.
+| قاعدة البيانات الإنتاجية | ⏸️ بانتظار هجرة المالك | PostgreSQL على Railway — 7 migrations سارية في الإنتاج، والهجرة الثامنة (`20261012230000_add_user_previous_status`) بانتظار تشغيل المالك يدوياً. |
 
 ---
 
-## الأنظمة والخدمات الجانبية
-| الخدمة | الحالة | ملاحظات |
-|---|---|---|
-| Telegram Bot | ✅ نشط | إرسال إشعارات فورية للإدارة عبر البوت عند إنشاء طلب جديد أو تسجيل عميل جديد (Railway) |
-| Firebase FCM | ✅ نشط | إرسال Push Notifications لهواتف العملاء عند تحديثات الطلب (قناة `forerun_orders_channel` + رابط عميق) |
-| Sentry | ⏸️ مؤجل | بعد المراجعة المحلية |
-| Cloudflare R2 | ⏔ **مؤجَّل بقرار** | **ميزة رفع الإيصالات مُؤجَّلة لما بعد MVP** (قرار 2026-09-30). الكود موجود ويعمل لكنه غير مُفعَّل: `r2.service.ts:32` يرمي ما دام `R2_*` = `<dummy-for-now>`. التفاصيل والآثار في [PROJECT_STATUS.md §12 · D5](PROJECT_STATUS.md#12-سجل-القرارات). |
+## ⚠️ خطوة تنتظر المالك (Manual Action Required by Owner)
+نظراً لأن آلية النشر لا تحتوي على `auto-migrate` داخل Dockerfile حمايةً للإنتاج:
+1. **أخذ نسخة احتياطية (Database Backup):** يجب أخذ نسخة احتياطية من قاعدة بيانات الإنتاج عبر لوحة تحكم Railway قبل تنفيذ أي أمر، لكون الهجرة مرتبطة بنموذج وحالة المستخدمين (`User`).
+2. **أمر التنفيذ:** قم بتشغيل الأمر التالي من Railway Console الخاص بخدمة API أو بيئة الاتصال بقاعدة البيانات:
+   ```bash
+   prisma migrate deploy
+   ```
+3. **الهجرة المنتظرة:** `20261012230000_add_user_previous_status` (تضيف عمود `previousStatus` إلى جدول `User` لتمكين آلة الحالة `UserStateMachine` من استعادة حالة الحساب الصحيحة ومنع ترقية الحسابات المرفوضة).
 
 ---
 
-## الفحص المحلي (Local Checks)
+## الفحص المحلي على master (Local Checks on master)
 | الفحص | الحالة | التفاصيل |
 |---|---|---|
-| `pnpm lint` | ✅ نجح | 6/6 packages — 0 أخطاء |
-| `pnpm typecheck` | ✅ نجح | 6/6 packages |
-| `pnpm test` | ✅ نجح | 26 ملف اختبار، 398 اختبارًا نجحوا جميعها (API وحده: 398 اختبار بنسبة 100%) |
-| Audit Integration Tests | ✅ نجح | اختبارات التدقيق الـ 4 في `apps/api/test/integration/_audit/` تجريبياً وحياً |
+| `pnpm lint` | ✅ نجح | 6/6 packages — 0 أخطاء و 0 تحذيرات |
+| `pnpm typecheck` | ✅ نجح | 6/6 packages — 0 أخطاء |
+| `pnpm test` | ✅ نجح | 26 ملف اختبار، 398 اختبار وحدة (API وحده: 398 اختبار بنسبة 100%) |
+| `_audit/` Integration Tests | ✅ نجح | 6 ملفات اختبارات علاجية و 33 اختباراً نجحت بنسبة 100% (مع عزل PoCs القديمة في `historical-poc/`) |
 | Android Gradle `test` | ✅ نجح | **269 `@Test`** في 37 ملف اختبار · 0 lint errors |
 
 ## الخطوة التالية (Next Action)
-1. ✅ اكتمال التدقيق المعماري والأمني الشامل (Phase 4 Remediation) وسد الثغرات الحرجة.
-2. ⏭️ دمج الفرع `feature/audit-remediation-phase4` إلى `master` عبر `git merge --no-ff`.
-3. 🚀 تشغيل `prisma migrate deploy` على بيئة الإنتاج في Railway لتطبيق هجرة `previousStatus`.
+1. ✅ اكتمال التدقيق المعماري والأمني الشامل والتحقق المستقل من الصفر (Zero-Trust) بنجاح.
+2. ✅ عزل ملفات PoC القديمة ودمج الفرع إلى `master` عبر `git merge --no-ff`.
+3. 🚀 تشغيل `prisma migrate deploy` من قِبل المالك على بيئة الإنتاج في Railway.
 
 ---
 
