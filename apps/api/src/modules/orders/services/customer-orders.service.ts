@@ -25,6 +25,16 @@ import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.
 import { mapOrderItem } from './order-mapper.js';
 import type { Prisma } from '@prisma/client';
 
+/**
+ * D35: Statuses where runner personal contact info (whatsapp, phone) is legitimately accessible to the customer.
+ * Once the order transitions to DELIVERED, CANCELLED, or any non-active state, contact info is masked to null.
+ */
+const ACTIVE_RUNNER_CONTACT_STATUSES: ReadonlySet<string> = new Set([
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'OUT_FOR_DELIVERY',
+]);
+
 @Injectable()
 export class CustomerOrdersService {
   constructor(
@@ -444,8 +454,12 @@ export class CustomerOrdersService {
           ? {
               id: order.runner.id,
               name: order.runner.user.name,
-              whatsapp: order.runner.user.whatsapp,
-              phone: order.runner.user.altPhone || order.runner.user.whatsapp,
+              whatsapp: ACTIVE_RUNNER_CONTACT_STATUSES.has(order.status)
+                ? order.runner.user.whatsapp
+                : null,
+              phone: ACTIVE_RUNNER_CONTACT_STATUSES.has(order.status)
+                ? (order.runner.user.altPhone || order.runner.user.whatsapp)
+                : null,
             }
           : null,
       })),
@@ -583,8 +597,12 @@ export class CustomerOrdersService {
             avgRating: order.runner.avgRating,
             totalRatings: order.runner.totalRatings,
             status: order.runner.status,
-            whatsapp: order.runner.user.whatsapp,
-            phone: order.runner.user.altPhone || order.runner.user.whatsapp,
+            whatsapp: ACTIVE_RUNNER_CONTACT_STATUSES.has(order.status)
+              ? order.runner.user.whatsapp
+              : null,
+            phone: ACTIVE_RUNNER_CONTACT_STATUSES.has(order.status)
+              ? (order.runner.user.altPhone || order.runner.user.whatsapp)
+              : null,
           }
         : null,
     };
