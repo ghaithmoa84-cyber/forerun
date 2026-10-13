@@ -579,6 +579,7 @@ fawrun/
     - في كلا المسارين (`getOrderDetails` و `listCustomerOrders`): حصر إرجاع `whatsapp` و `phone` في الحالات النشطة فقط، وإرجاع `null` حكماً في كافة الحالات الأخرى (كالطلبات المسلمة أو الملغاة).
     - الإبقاء على بيانات الهوية العامة للمندوب (`id`, `name`, `avgRating`, `totalRatings`) لتمكين العميل من تقييم الطلب ومراجعة سجل التوصيل دون انتهاك خصوصية أرقام التواصل.
   - في `packages/shared-types/src/customer.types.ts`: تحديث `CustomerOrderListItem.runner.whatsapp` ليكون `string | null` توافقياً.
+  - في `apps/customer-web/src/pages/HomeScreen.tsx`: معالجة دفاعية بحتة لـ `null` (`runner.whatsapp && ...`) لتفادي كسر فحص الأنواع وبناء الـ Monorepo (`pnpm build`) ومنع توليد روابط تالفة، دون أي تعديل وظيفي أو ميزة جديدة على تطبيق الويب المجمّد إنتاجياً وفق D30.
 - **التحقق والاختبار (6/6 Tests):**
   - إنشاء حزمة اختبار تكامل مخصصة `apps/api/test/integration/orders/runner-contact-privacy.integration.spec.ts` أثبتت عملياً:
     1. ظهور أرقام المندوب في الحالات النشطة الثلاث (`ASSIGNED`, `IN_PROGRESS`, `OUT_FOR_DELIVERY`).
