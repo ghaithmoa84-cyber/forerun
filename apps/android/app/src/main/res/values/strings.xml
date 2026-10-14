@@ -331,18 +331,20 @@
     <string name="rating_error_submit">فشل إرسال التقييم، يرجى المحاولة ثانية</string>
 
     <!-- Services (Home Screen Redesign) -->
-    <string name="services_section_title">خدماتنا</string>
-    <string name="services_section_subtitle">خدمة سريعة وموثوقة في القنجرة</string>
-    <string name="service_grocery_title">حاجيات البقالة</string>
-    <string name="service_grocery_desc">من أي متجر أو سوبرماركت في القنجرة</string>
+    <string name="services_section_title">خدماتنا المتاحة</string>
+    <string name="services_section_subtitle">خدمة سريعة في القنجرة</string>
+    <string name="service_grocery_title">حاجيات البقالة والسوبرماركت</string>
+    <string name="service_grocery_desc">نوفر كل مقاضيك واحتياجاتك اليومية من أي متجر أو سوبرماركت تختاره، ونوصلها لباب بيتك فوراً.</string>
+    <string name="services_coming_soon_title">خدمات تنطلق قريباً</string>
+    <string name="services_coming_soon_subtitle">حجز واستفسار مسبق</string>
     <string name="service_parcels_title">طرود وأمانات</string>
     <string name="service_parcels_desc">القنجرة ↔ اللاذقية</string>
     <string name="service_parcels_tag">سريع</string>
     <string name="service_rides_title">مشاوير ركاب</string>
-    <string name="service_rides_desc">القنجرة ↔ اللاذقية</string>
+    <string name="service_rides_desc">مشاوير سريعة وآمنة</string>
     <string name="service_rides_tag">توصيلة</string>
     <string name="service_tag_coming_soon">قريباً</string>
-    <string name="service_card_whatsapp_coord">تنسيق عبر واتساب</string>
+    <string name="service_card_whatsapp_coord">تنسيق واتساب</string>
     <string name="service_in_dev_dialog_title">خدمة الطرود والمشاوير</string>
     <string name="service_in_dev_dialog_desc">هذه الخدمة قيد التطوير داخل التطبيق حالياً، ويسعدنا خدمتك وتنسيق طلبك فوراً عبر واتساب الإدارة.</string>
     <string name="service_in_dev_dialog_btn">مراسلة الإدارة عبر واتساب</string>
@@ -397,7 +399,7 @@
     <string name="home_quick_services_subtitle">توصيل سريع وموثوق في القنجرة</string>
     <string name="home_service_grocery_title">طلب بقالية ومشتريات</string>
     <string name="home_service_grocery_subtitle">حدد طلبك وسيتولى الكابتن شراءه وتوصيله فوراً</string>
-    <string name="home_service_grocery_btn">+ اطلب الآن</string>
+    <string name="home_service_grocery_btn">+ اطلب حاجياتك الآن</string>
     <string name="home_service_orders_title">طلباتي السابقة</string>
     <string name="home_service_orders_subtitle">استعرض طلباتك وأعد طلب قائمتك المفضلة</string>
     <string name="home_service_orders_btn">سجل الطلبات</string>

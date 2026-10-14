@@ -1162,32 +1162,29 @@ private fun QuickServicesSection(
 
         Spacer(modifier = Modifier.height(Dimens.Space10))
 
-        // Main Feature: Grocery Delivery (In-app order creation)
+        // Main Feature: Grocery Delivery (Hero Service Card)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .border(1.5.dp, ForerunMint.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
+                .border(1.dp, ForerunMint.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
                 .clickable { onGroceryClick() },
             colors = CardDefaults.cardColors(containerColor = ForerunSurface),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(Dimens.Space14),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(Dimens.Space16)
             ) {
                 Row(
-                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(ForerunMintSoft),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1195,32 +1192,32 @@ private fun QuickServicesSection(
                             imageVector = Icons.Default.Storefront,
                             contentDescription = null,
                             tint = ForerunNavy,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
-                    Column {
-                        Text(
-                            text = stringResource(R.string.service_grocery_title),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunNavy,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(R.string.service_grocery_desc),
-                            fontSize = 11.sp,
-                            color = ForerunTextMuted,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.service_grocery_title),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(Dimens.Space8))
+                Spacer(modifier = Modifier.height(Dimens.Space8))
 
-                // Orange Action Button (+ اطلب الآن)
+                Text(
+                    text = stringResource(R.string.service_grocery_desc),
+                    fontSize = 12.sp,
+                    color = ForerunTextMuted,
+                    lineHeight = 18.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                // Prominent Full-Width Orange Action Button (+ اطلب حاجياتك الآن)
                 Button(
                     onClick = onGroceryClick,
                     colors = ButtonDefaults.buttonColors(
@@ -1228,18 +1225,50 @@ private fun QuickServicesSection(
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier.fillMaxWidth().height(42.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.home_service_grocery_btn),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        softWrap = false
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(Dimens.Space6))
+                        Text(
+                            text = stringResource(R.string.home_service_grocery_btn),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Space20))
+
+        // Secondary Section Sub-Header: خدمات تنطلق قريباً
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.services_coming_soon_title),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = ForerunNavy
+            )
+            Text(
+                text = stringResource(R.string.services_coming_soon_subtitle),
+                fontSize = 11.sp,
+                color = ForerunTextMuted,
+                fontWeight = FontWeight.Medium
+            )
         }
 
         Spacer(modifier = Modifier.height(Dimens.Space10))
