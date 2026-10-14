@@ -46,7 +46,7 @@ import com.forerun.customer.data.remote.dto.banner.BannerActionType
 import com.forerun.customer.data.remote.dto.banner.BannerDto
 import com.forerun.customer.ui.navigation.BannerRouteMapper
 import com.forerun.customer.ui.theme.Dimens
-import com.forerun.customer.ui.theme.ForerunGreen
+import com.forerun.customer.ui.theme.ForerunOrange
 import kotlinx.coroutines.delay
 
 /**
@@ -128,7 +128,7 @@ fun BannersSection(
                                 .size(if (isSelected) 7.dp else 5.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isSelected) ForerunGreen else Color.White.copy(alpha = 0.6f)
+                                    if (isSelected) ForerunOrange else Color.White.copy(alpha = 0.6f)
                                 )
                         )
                     }
@@ -219,8 +219,8 @@ private fun BannerCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = 0.35f),
-                                    Color.Black.copy(alpha = 0.85f)
+                                    Color.Black.copy(alpha = 0.25f),
+                                    Color.Black.copy(alpha = 0.65f)
                                 )
                             )
                         )
@@ -229,12 +229,7 @@ private fun BannerCard(
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(
-                            start = Dimens.Space16,
-                            end = Dimens.Space16,
-                            top = Dimens.Space12,
-                            bottom = 26.dp
-                        )
+                        .padding(horizontal = Dimens.Space16, vertical = Dimens.Space12)
                 ) {
                     if (!banner.headline.isNullOrBlank()) {
                         Text(
@@ -263,7 +258,7 @@ private fun BannerCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                .background(ForerunGreen)
+                                .background(ForerunOrange)
                                 .padding(horizontal = Dimens.Space8, vertical = Dimens.Space2)
                         ) {
                             Text(

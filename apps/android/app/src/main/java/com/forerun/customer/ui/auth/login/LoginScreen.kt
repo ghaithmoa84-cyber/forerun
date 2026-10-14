@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -60,8 +62,8 @@ import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunDangerLight
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenDark
+import com.forerun.customer.ui.theme.ForerunNavy
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextOnPrimary
@@ -104,25 +106,17 @@ fun LoginScreen(
             .padding(horizontal = Dimens.ScreenMargin, vertical = Dimens.Space24),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(Dimens.Space32))
+        Spacer(modifier = Modifier.height(Dimens.Space16))
 
         // Branding
         Image(
             painter = painterResource(id = R.drawable.logo),
             contentDescription = stringResource(R.string.app_name),
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier.size(130.dp),
+            contentScale = ContentScale.Fit
         )
 
-        Spacer(modifier = Modifier.height(Dimens.Space8))
-
-        Text(
-            text = stringResource(R.string.app_name),
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            color = ForerunGreenDark
-        )
-
-        Spacer(modifier = Modifier.height(Dimens.Space8))
+        Spacer(modifier = Modifier.height(Dimens.Space16))
 
         Text(
             text = stringResource(R.string.login_title),
@@ -188,7 +182,7 @@ fun LoginScreen(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ForerunGreen,
+                focusedBorderColor = ForerunOrange,
                 unfocusedBorderColor = ForerunBorder,
                 focusedContainerColor = ForerunSoftSurface,
                 unfocusedContainerColor = ForerunSoftSurface
@@ -238,7 +232,7 @@ fun LoginScreen(
                 }
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ForerunGreen,
+                focusedBorderColor = ForerunOrange,
                 unfocusedBorderColor = ForerunBorder,
                 focusedContainerColor = ForerunSoftSurface,
                 unfocusedContainerColor = ForerunSoftSurface
@@ -257,16 +251,16 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(Dimens.ButtonHeight),
-            shape = RoundedCornerShape(Dimens.RadiusMedium),
+            shape = RoundedCornerShape(Dimens.RadiusPill),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ForerunGreen,
-                contentColor = ForerunTextOnPrimary
+                containerColor = ForerunOrange,
+                contentColor = Color.White
             )
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    color = ForerunTextOnPrimary,
+                    color = Color.White,
                     strokeWidth = 2.5.dp
                 )
             } else {
@@ -293,7 +287,7 @@ fun LoginScreen(
             TextButton(onClick = viewModel::onRegisterClicked) {
                 Text(
                     text = stringResource(R.string.register_action),
-                    color = ForerunGreenDark,
+                    color = ForerunOrange,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )

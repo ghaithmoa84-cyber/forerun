@@ -59,8 +59,7 @@ import com.forerun.customer.R
 import com.forerun.customer.ui.theme.Dimens
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextOnPrimary
@@ -131,13 +130,13 @@ fun SupportScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(CircleShape)
-                                .background(ForerunGreenLight),
+                                .background(WhatsAppGreen.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Phone,
                                 contentDescription = null,
-                                tint = ForerunGreen,
+                                tint = WhatsAppGreen,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -181,7 +180,7 @@ fun SupportScreen(
                             shape = RoundedCornerShape(Dimens.RadiusMedium),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = WhatsAppGreen,
-                                contentColor = ForerunTextOnPrimary
+                                contentColor = Color.White
                             )
                         ) {
                             Icon(
@@ -217,7 +216,7 @@ fun SupportScreen(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = ForerunGreen,
+                        tint = ForerunOrange,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(Dimens.Space8))
@@ -258,7 +257,7 @@ private fun FaqCard(
         colors = CardDefaults.cardColors(containerColor = ForerunSurface),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (faq.isExpanded) ForerunGreen.copy(alpha = 0.5f) else ForerunBorder
+            if (faq.isExpanded) ForerunOrange.copy(alpha = 0.5f) else ForerunBorder
         )
     ) {
         Column(
@@ -273,13 +272,13 @@ private fun FaqCard(
                     text = faq.question,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = if (faq.isExpanded) ForerunGreen else ForerunTextPrimary,
+                    color = if (faq.isExpanded) ForerunOrange else ForerunTextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     imageVector = if (faq.isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = if (faq.isExpanded) ForerunGreen else ForerunTextMuted,
+                    tint = if (faq.isExpanded) ForerunOrange else ForerunTextMuted,
                     modifier = Modifier.size(22.dp)
                 )
             }

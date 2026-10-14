@@ -9,12 +9,35 @@
     <string name="onboarding_skip">تخطي</string>
     <string name="onboarding_next">التالي</string>
     <string name="onboarding_start">ابدأ الآن</string>
-    <string name="onboarding_title_1">طلبات البقالة في دقائق</string>
-    <string name="onboarding_desc_1">اكتب طلبك بالشكل الذي يناسبك، وسيتولى الكابتن شراء وتوصيل كل ما تحتاجه.</string>
-    <string name="onboarding_title_2">كباتن موثوقون وأسعار واضحة</string>
-    <string name="onboarding_desc_2">أسعار المنتجات كما هي في المحل تماماً مع رسوم توصيل ثابتة وشفافة.</string>
-    <string name="onboarding_title_3">تتبع مباشر وتواصل سريع</string>
-    <string name="onboarding_desc_3">تتبع حالة طلبك لحظة بلحظة وتواصل مع الكابتن مباشرة عبر الواتساب أو الاتصال.</string>
+
+    <!-- Page 1: Local Stores & Shopping -->
+    <string name="onboarding_badge_1">دكاكين حارتك</string>
+    <string name="onboarding_title_1">كل مستلزماتك من دكاكين حارتك</string>
+    <string name="onboarding_desc_1">تصفّح بقاليات ومحلات منطقتك واطلب كل اللي ناقصك للبيت بسهولة وسرعة وبأفضل جودة.</string>
+    <string name="onboarding_feat1_title">متجرك المفضل</string>
+    <string name="onboarding_feat1_sub">من أقرب دكان لبيتك</string>
+    <string name="onboarding_feat2_title">بضغطة زر</string>
+    <string name="onboarding_feat2_sub">سلة سريعة وسهلة</string>
+
+    <!-- Page 2: Swift Runner Delivery -->
+    <string name="onboarding_badge_2">توصيل فَوْري</string>
+    <string name="onboarding_title_2">كابتن فَوْراً يوصلك ع السريع</string>
+    <string name="onboarding_desc_2">كباتنّا بالحي جاهزون لشراء كل طلباتك والانطلاق فوراً لباب بيتك بكل أمان واهتمام.</string>
+    <string name="onboarding_step_1">١. اختر طلبك</string>
+    <string name="onboarding_step_2">٢. نشتريك</string>
+    <string name="onboarding_step_3">٣. نوصلك</string>
+
+    <!-- Page 3: Doorstep Arrival & Cash on Delivery -->
+    <string name="onboarding_badge_3">لعند باب بيتك</string>
+    <string name="onboarding_title_3">طلبك لعندك.. طازج ومرتاح</string>
+    <string name="onboarding_desc_3">وفّر مشاويرك وتعبك، استلم أغراضك عند الباب طازجة وادفع براحتك كاش عند الاستلام.</string>
+    <string name="onboarding_feat3_title">دفع عند الاستلام</string>
+    <string name="onboarding_feat3_sub">كاش بكل أمان</string>
+    <string name="onboarding_feat4_title">وفّر مشوارك</string>
+    <string name="onboarding_feat4_sub">راحتك هي الأساس</string>
+
+    <string name="onboarding_already_have_account">عندي حساب بالفعل؟</string>
+    <string name="onboarding_login_action">تسجيل الدخول</string>
 
     <!-- Auth Common -->
     <string name="phone_number_label">رقم الواتساب</string>
@@ -76,7 +99,7 @@
     <string name="home_completed_orders">طلبات منجزة</string>
     <string name="home_total_fees">إجمالي الرسوم</string>
     <string name="home_retry">إعادة المحاولة</string>
-    <string name="home_order_num">طلب رقم: \u200E#%1$s</string>
+    <string name="home_order_num">طلب رقم: %1$s</string>
     <string name="home_items_count">%1$d مواد</string>
     <string name="home_currency">ل.س</string>
     <string name="home_runner_label">الكابتن:</string>
@@ -206,7 +229,7 @@
     <string name="orders_status_under_review">تحت المراجعة</string>
     <string name="orders_status_awaiting_runner">بانتظار كابتن</string>
     <string name="orders_status_awaiting_preferred">بانتظار الكابتن المفضل</string>
-    <string name="orders_status_assigned">تم تعيين كابتن</string>
+    <string name="orders_status_assigned">تم التأكيد</string>
     <string name="orders_status_in_progress">قيد الشراء</string>
     <string name="orders_status_out_for_delivery">في طريق التوصيل</string>
     <string name="orders_status_delivered">تم التسليم بنجاح</string>
@@ -220,7 +243,7 @@
 
     <!-- Order Detail Screen -->
     <string name="order_detail_title">تفاصيل الطلب</string>
-    <string name="order_detail_number">طلب \u200E#%1$s</string>
+    <string name="order_detail_number">طلب \u200E#%1$s\u200E</string>
     <string name="order_detail_retry">إعادة المحاولة</string>
     <string name="order_detail_loading">جاري تحميل تفاصيل الطلب…</string>
     <string name="order_detail_error_loading">تعذر تحميل تفاصيل الطلب، يرجى المحاولة ثانية</string>
@@ -231,7 +254,7 @@
     <string name="order_detail_timeline_title">مراحل الطلب</string>
     <string name="order_detail_step_created">تم إنشاء الطلب</string>
     <string name="order_detail_step_review">المراجعة والتدقيق</string>
-    <string name="order_detail_step_assigned">تعيين الكابتن</string>
+    <string name="order_detail_step_assigned">تم التأكيد</string>
     <string name="order_detail_step_in_progress">قيد الشراء والتجهيز</string>
     <string name="order_detail_step_out_for_delivery">في طريق التوصيل</string>
     <string name="order_detail_step_delivered">تم التسليم</string>
@@ -299,11 +322,13 @@
     <string name="service_grocery_title">حاجيات البقالة</string>
     <string name="service_grocery_desc">من أي متجر أو سوبرماركت في القنجرة</string>
     <string name="service_parcels_title">طرود وأمانات</string>
-    <string name="service_parcels_desc">القنجرة ↔ اللاذقية (تنسيق مباشر)</string>
-    <string name="service_parcels_tag">عبر الإدارة</string>
+    <string name="service_parcels_desc">القنجرة ↔ اللاذقية</string>
+    <string name="service_parcels_tag">سريع</string>
     <string name="service_rides_title">مشاوير ركاب</string>
-    <string name="service_rides_desc">القنجرة ↔ اللاذقية (تنسيق مباشر)</string>
-    <string name="service_rides_tag">عبر الإدارة</string>
+    <string name="service_rides_desc">القنجرة ↔ اللاذقية</string>
+    <string name="service_rides_tag">توصيلة</string>
+    <string name="service_tag_coming_soon">قريباً</string>
+    <string name="service_card_whatsapp_coord">تنسيق عبر واتساب</string>
     <string name="service_in_dev_dialog_title">خدمة الطرود والمشاوير</string>
     <string name="service_in_dev_dialog_desc">هذه الخدمة قيد التطوير داخل التطبيق حالياً، ويسعدنا خدمتك وتنسيق طلبك فوراً عبر واتساب الإدارة.</string>
     <string name="service_in_dev_dialog_btn">مراسلة الإدارة عبر واتساب</string>
@@ -347,11 +372,44 @@
     <string name="home_verified_runner">مندوب معتمد ✓</string>
     <string name="label_runner_whatsapp">واتساب الكابتن</string>
     <string name="label_runner_call">اتصال بالكابتن</string>
-    <string name="home_step_picked_up">تم التأكيد</string>
+    <string name="home_step_picked_up">تم الاستلام</string>
     <string name="home_step_purchasing">جاري الشراء</string>
     <string name="home_step_on_the_way">في الطريق</string>
     <string name="home_step_delivered">تم التسليم</string>
     <string name="home_items_fee_summary">%1$d مواد • %2$d %3$s</string>
+    <string name="home_greeting_user">أهلاً بك، %1$s 👋</string>
+    <string name="home_location_default">القنجرة</string>
+    <string name="home_quick_services_title">خدمات فَوْراً</string>
+    <string name="home_quick_services_subtitle">توصيل سريع وموثوق في القنجرة</string>
+    <string name="home_service_grocery_title">طلب بقالية ومشتريات</string>
+    <string name="home_service_grocery_subtitle">حدد طلبك وسيتولى الكابتن شراءه وتوصيله فوراً</string>
+    <string name="home_service_grocery_btn">+ اطلب الآن</string>
+    <string name="home_service_orders_title">طلباتي السابقة</string>
+    <string name="home_service_orders_subtitle">استعرض طلباتك وأعد طلب قائمتك المفضلة</string>
+    <string name="home_service_orders_btn">سجل الطلبات</string>
+    <string name="home_service_support_title">الدعم والمساعدة</string>
+    <string name="home_service_support_subtitle">تواصل مباشرة مع إدارة فَوْراً عبر واتساب</string>
+    <string name="home_service_support_btn">تواصل الآن</string>
+    <string name="home_awaiting_runner">جاري البحث عن كابتن متاح في الحي…</string>
+    <string name="home_order_summary_format">%1$d مواد • الإجمالي: %2$d ل.س</string>
+    <string name="home_stats_heading">ملخص حسابك مع فَوْراً</string>
+    <string name="home_stats_month">خلال هذا الشهر</string>
+    <string name="home_stats_completed_label">طلباتك المكتملة</string>
+    <string name="home_stats_orders_count">%1$d طلب</string>
+    <string name="home_stats_savings_label">إجمالي الرسوم</string>
+    <string name="home_stats_savings_value">%1$s ل.س</string>
+    <string name="home_fab_new_order">+ طلب فَوْري</string>
+    <string name="home_active_order_heading">الطلب الجاري \u200E#%1$s\u200E</string>
+    <string name="home_active_order_status_delivery">🛵 قيد التوصيل</string>
+    <string name="home_captain_bike">دراجة نارية • تقييم %1$s ★</string>
+    <string name="home_btn_whatsapp">واتساب</string>
+    <string name="home_btn_call">اتصال</string>
+    <string name="home_step_confirmed">تم التأكيد</string>
+    <string name="home_step_preparing">قيد التجهيز</string>
+    <string name="home_banner_badge_instant">توصيل فَوْري</string>
+    <string name="home_banner_location_tag">القنجرة 📍</string>
+    <string name="home_banner_promo_title">طلب بقالية ومشتريات طازجة\nكابتن فَوْراً يوصلك ع السريع</string>
+    <string name="home_runner_role">كابتن فَوْراً</string>
     <string name="error_home_data_load_failed">تعذر تحميل البيانات</string>
 
     <!-- Support (FAQ + default WhatsApp message) -->
@@ -430,16 +488,14 @@
     <!-- Promotional Banners -->
     <string name="banner_whatsapp_inquiry">مرحباً، أود الاستفسار بخصوص العرض المتاح في تطبيق فوراً</string>
     <string name="banner_image_description">شريحة العرض</string>
-
-    <!-- Admin & Support Contact Channels -->
-    <string name="home_admin_contact_title">طلب جديد أو مساعدة مباشرة؟</string>
-    <string name="home_admin_contact_desc">تواصل مع إدارة فَوْراً مباشرة للطلب أو الاستفسار</string>
-    <string name="home_admin_whatsapp_btn">واتساب الإدارة</string>
-    <string name="home_admin_call_btn">اتصال بالإدارة</string>
-    <string name="order_awaiting_runner_title">بانتظار تعيين كابتن</string>
-    <string name="order_awaiting_runner_desc">طلبك قيد المتابعة والتجهيز — يمكنك التواصل مع الإدارة لأي استفسار</string>
-    <string name="order_admin_contact_whatsapp">واتساب الإدارة</string>
-    <string name="order_admin_contact_call">اتصال بالإدارة</string>
-    <string name="home_admin_order_whatsapp_msg">مرحباً إدارة فَوْراً، أود الاستفسار والتنسيق لطلب جديد.</string>
-    <string name="order_inquiry_whatsapp_msg">مرحباً إدارة فَوْراً، أستفسر عن طلبي رقم: %1$s</string>
+    <!-- Admin Support & Runner Coordination -->
+    <string name="home_admin_support_title">الدعم الفني والإدارة</string>
+    <string name="home_admin_support_subtitle">تواصل مباشر لتنسيق أو تعديل طلبك</string>
+    <string name="home_awaiting_runner_badge">بانتظار كابتن</string>
+    <string name="tag_via_admin">عبر الإدارة</string>
+    <string name="tag_direct_coord">تنسيق مباشر</string>
+    <string name="order_detail_awaiting_runner_title">بانتظار تعيين كابتن للطلب</string>
+    <string name="order_detail_awaiting_runner_desc">طلبك قيد المتابعة وجاري تعيين كابتن متاح، يمكنك التنسيق مع الإدارة مباشرة</string>
+    <string name="order_detail_admin_support_title">الدعم الفني وإدارة فَوْراً</string>
+    <string name="order_detail_admin_support_desc">لأي استفسار أو تعديل في تفاصيل الطلب</string>
 </resources>

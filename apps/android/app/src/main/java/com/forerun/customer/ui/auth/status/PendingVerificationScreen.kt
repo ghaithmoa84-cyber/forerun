@@ -43,6 +43,7 @@ import com.forerun.customer.ui.theme.Dimens
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunDanger
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextOnPrimary
 import com.forerun.customer.ui.theme.ForerunTextPrimary
@@ -172,7 +173,7 @@ fun PendingVerificationScreen(
                 .height(Dimens.ButtonHeight),
             shape = RoundedCornerShape(Dimens.RadiusMedium),
             colors = ButtonDefaults.buttonColors(
-                containerColor = com.forerun.customer.ui.theme.ForerunGreen,
+                containerColor = ForerunOrange,
                 contentColor = ForerunTextOnPrimary
             )
         ) {

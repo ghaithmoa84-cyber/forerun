@@ -27,8 +27,9 @@ import androidx.compose.ui.unit.sp
 import com.forerun.customer.R
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunNavy
+import com.forerun.customer.ui.theme.ForerunOrange
+import com.forerun.customer.ui.theme.ForerunOrangeLight
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextPrimary
@@ -73,7 +74,10 @@ fun ForerunBottomNavBar(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        HorizontalDivider(color = ForerunBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+        HorizontalDivider(
+            color = ForerunBorder.copy(alpha = 0.6f),
+            thickness = 0.8.dp
+        )
         NavigationBar(
             containerColor = ForerunSurface,
             contentColor = ForerunTextPrimary,
@@ -103,9 +107,9 @@ fun ForerunBottomNavBar(
                         )
                     },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = ForerunGreen,
-                        selectedTextColor = ForerunGreen,
-                        indicatorColor = ForerunGreenLight,
+                        selectedIconColor = ForerunOrange,
+                        selectedTextColor = ForerunOrange,
+                        indicatorColor = ForerunOrangeLight.copy(alpha = 0.35f),
                         unselectedIconColor = ForerunTextMuted,
                         unselectedTextColor = ForerunTextMuted
                     )

@@ -44,6 +44,16 @@ class OrderDetailViewModelTest {
     private lateinit var cancelOrderUseCase: CancelOrderUseCase
     private lateinit var observeOrderEventsUseCase: ObserveOrderEventsUseCase
 
+    private val sampleRunner = OrderRunnerDetail(
+        id = "runner_1",
+        name = "الكابتن محمد",
+        avgRating = 4.9,
+        totalRatings = 20,
+        status = "AVAILABLE",
+        whatsapp = "0912345678",
+        phone = "0912345678"
+    )
+
     private val sampleOrder = CustomerOrderDetail(
         id = "order_123",
         orderNumber = "FW-000123",
@@ -59,16 +69,6 @@ class OrderDetailViewModelTest {
             DetailOrderItem(id = "item_1", itemName = "سكر", quantity = "1 كغ", anyStore = true)
         ),
         runner = null
-    )
-
-    private val sampleRunner = OrderRunnerDetail(
-        id = "runner_1",
-        name = "الكابتن محمد",
-        avgRating = 4.9,
-        totalRatings = 20,
-        status = "AVAILABLE",
-        whatsapp = "0912345678",
-        phone = "0912345678"
     )
 
     @Before
@@ -373,31 +373,47 @@ class OrderDetailViewModelTest {
     }
 
     @Test
-    fun canContactRunner_reflects_server_contact_fields() = runTest(testDispatcher) {
+    fun canContactRunner_false_when_runner_is_null() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // PENDING_REVIEW with runner = null -> cannot contact runner
+        assertNull(viewModel.uiState.value.order?.runner)
         assertFalse(viewModel.uiState.value.canContactRunner)
-        assertTrue(viewModel.uiState.value.isAwaitingRunner)
+    }
 
-        // ASSIGNED with contact numbers -> can contact
+    @Test
+    fun canContactRunner_false_when_server_masks_runner_contacts() = runTest(testDispatcher) {
+        val maskedRunner = sampleRunner.copy(whatsapp = null, phone = null)
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "PENDING_REVIEW", runner = maskedRunner)
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.canContactRunner)
+    }
+
+    @Test
+    fun canContactRunner_true_when_server_provides_contacts_in_active_order() = runTest(testDispatcher) {
         fakeRepository.getOrderDetailResult = Result.success(
             sampleOrder.copy(status = "ASSIGNED", runner = sampleRunner)
         )
-        viewModel.onIntent(OrderDetailIntent.Refresh)
+        val viewModel = createViewModel()
         advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.canContactRunner)
-        assertFalse(viewModel.uiState.value.isAwaitingRunner)
 
-        // DELIVERED with masked contact numbers (D35) -> cannot contact
-        val maskedRunner = sampleRunner.copy(whatsapp = null, phone = null)
+        assertTrue(viewModel.uiState.value.canContactRunner)
+    }
+
+    @Test
+    fun canContactRunner_true_when_only_phone_is_available() = runTest(testDispatcher) {
+        val phoneOnlyRunner = sampleRunner.copy(whatsapp = null, phone = "0912345678")
         fakeRepository.getOrderDetailResult = Result.success(
-            sampleOrder.copy(status = "DELIVERED", runner = maskedRunner)
+            sampleOrder.copy(status = "ASSIGNED", runner = phoneOnlyRunner)
         )
-        viewModel.onIntent(OrderDetailIntent.Refresh)
+        val viewModel = createViewModel()
         advanceUntilIdle()
-        assertFalse(viewModel.uiState.value.canContactRunner)
+
+        assertTrue(viewModel.uiState.value.canContactRunner)
     }
 
     @Test

@@ -8,8 +8,9 @@ object AppConfig {
     const val ADMIN_WHATSAPP = "963981571936"
     const val ADMIN_WHATSAPP_NUMBER = "963981571936"
     const val ADMIN_WHATSAPP_DISPLAY = "+963 981 571 936"
-    const val ADMIN_PHONE_NUMBER = "0981571936"
-    const val ADMIN_PHONE_DIAL = "+963981571936"
+    const val ADMIN_SUPPORT_WHATSAPP = "963981571936"
+    const val ADMIN_SUPPORT_PHONE = "+963981571936"
+    const val ADMIN_SUPPORT_DISPLAY = "+963 981 571 936"
 
     fun buildWhatsAppUrl(message: String): String {
         val encodedMessage = java.net.URLEncoder.encode(message, "UTF-8")

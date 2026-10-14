@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="forerun_green">#00C1A7</color>
-    <color name="forerun_green_dark">#008F7D</color>
+    <color name="forerun_mint">#86ECE6</color>
+    <color name="forerun_green">#86ECE6</color>
+    <color name="forerun_green_dark">#2EA59D</color>
+    <color name="forerun_orange">#FF751F</color>
+    <color name="forerun_dark_navy">#2D3B4D</color>
     <color name="forerun_white">#FFFFFF</color>
-    <color name="ic_launcher_background">#7DDDD4</color>
+    <color name="ic_launcher_background">#FF914D</color>
 </resources>
+

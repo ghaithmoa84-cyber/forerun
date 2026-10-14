@@ -11,13 +11,23 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 
 private val ForerunColorScheme = lightColorScheme(
-    primary = ForerunGreen,
-    onPrimary = ForerunTextOnPrimary,
-    primaryContainer = ForerunGreenLight,
-    onPrimaryContainer = ForerunGreenDark,
+    // 1. Primary: Vibrant Orange (#FF751F) - المحرك الأساسي للإجراءات والأزرار (CTA)
+    primary = ForerunOrange,
+    onPrimary = Color.White,
+    primaryContainer = ForerunOrangeLight,
+    onPrimaryContainer = ForerunOrangeDark,
 
-    secondary = WhatsAppGreen,
-    onSecondary = ForerunTextOnPrimary,
+    // 2. Secondary: Fresh Mint (#86ECE6) - هوية العلامة التجارية والخلفيات والدوائر
+    secondary = ForerunMint,
+    onSecondary = ForerunNavy,
+    secondaryContainer = ForerunMintLight,
+    onSecondaryContainer = ForerunMintDark,
+
+    // 3. Tertiary: Deep Slate Navy (#2D3B4D) - العناوين والعناصر الداكنة
+    tertiary = ForerunNavy,
+    onTertiary = Color.White,
+    tertiaryContainer = ForerunNavyLight,
+    onTertiaryContainer = Color.White,
 
     background = ForerunBackground,
     onBackground = ForerunTextPrimary,
@@ -31,7 +41,7 @@ private val ForerunColorScheme = lightColorScheme(
     outlineVariant = ForerunBorder,
 
     error = ForerunDanger,
-    onError = ForerunTextOnPrimary,
+    onError = Color.White,
     errorContainer = ForerunDangerLight,
     onErrorContainer = ForerunDanger
 )

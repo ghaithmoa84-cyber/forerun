@@ -74,7 +74,9 @@ import com.forerun.customer.ui.theme.ForerunBorder
 import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunDangerLight
 import com.forerun.customer.ui.theme.ForerunGreen
+import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextOnPrimary
@@ -157,7 +159,7 @@ fun AccountScreen(
                 Spacer(modifier = Modifier.height(Dimens.Space16))
                 Button(
                     onClick = { viewModel.loadAccountData() },
-                    colors = ButtonDefaults.buttonColors(containerColor = ForerunGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange)
                 ) {
                     Text(stringResource(R.string.home_retry))
                 }
@@ -470,7 +472,7 @@ fun AccountScreen(
                         .height(Dimens.ButtonHeight),
                     shape = RoundedCornerShape(Dimens.RadiusSmall),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ForerunGreen,
+                        containerColor = ForerunOrange,
                         contentColor = ForerunTextOnPrimary
                     )
                 ) {
@@ -593,7 +595,7 @@ fun AccountScreen(
                                 .height(Dimens.ButtonHeight),
                             shape = RoundedCornerShape(Dimens.RadiusSmall),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = ForerunGreen,
+                                containerColor = ForerunOrange,
                                 contentColor = ForerunTextOnPrimary
                             )
                         ) {

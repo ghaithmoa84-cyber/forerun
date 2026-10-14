@@ -2,8 +2,6 @@ package com.forerun.customer.ui.home
 
 import android.content.Intent
 import android.net.Uri
-import com.forerun.customer.ui.order.getOrderStatusColors
-import com.forerun.customer.ui.order.getOrderStatusLabelRes
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,15 +29,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocalTaxi
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
@@ -50,7 +53,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,7 +61,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,12 +68,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -81,20 +84,27 @@ import com.forerun.customer.R
 import com.forerun.customer.core.config.AppConfig
 import com.forerun.customer.domain.model.ActiveOrder
 import com.forerun.customer.domain.model.CustomerProfile
+import com.forerun.customer.ui.order.getOrderStatusColors
+import com.forerun.customer.ui.order.getOrderStatusLabelRes
 import com.forerun.customer.ui.theme.Dimens
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenDark
-import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunMint
+import com.forerun.customer.ui.theme.ForerunMintDark
+import com.forerun.customer.ui.theme.ForerunMintLight
+import com.forerun.customer.ui.theme.ForerunMintSoft
+import com.forerun.customer.ui.theme.ForerunNavy
+import com.forerun.customer.ui.theme.ForerunOrange
+import com.forerun.customer.ui.theme.ForerunOrangeLight
 import com.forerun.customer.ui.theme.ForerunSoftSurface
-import com.forerun.customer.ui.theme.ForerunSuccess
-import com.forerun.customer.ui.theme.ForerunSuccessLight
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
-import com.forerun.customer.ui.theme.ForerunTextOnPrimary
 import com.forerun.customer.ui.theme.ForerunTextPrimary
+import com.forerun.customer.ui.theme.ForerunTheme
 import com.forerun.customer.ui.theme.WhatsAppGreen
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -127,7 +137,7 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = ForerunGreen)
+                    CircularProgressIndicator(color = ForerunOrange)
                 }
             }
 
@@ -151,11 +161,11 @@ fun HomeScreen(
                             viewModel.handleIntent(HomeIntent.Refresh)
                             bannerViewModel.loadBanners()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = ForerunGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange)
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(Dimens.Space8))
-                        Text(stringResource(R.string.home_retry))
+                        Text(stringResource(R.string.home_retry), color = Color.White)
                     }
                 }
             }
@@ -184,13 +194,14 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeContent(
+fun HomeContent(
     profile: CustomerProfile,
     activeOrder: ActiveOrder?,
     bannerUiState: BannerUiState,
     onNewOrderClick: () -> Unit,
     onOrderDetailClick: (String) -> Unit,
-    onNavigateToRoute: (String) -> Unit
+    onNavigateToRoute: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var showServiceDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
@@ -203,7 +214,7 @@ private fun HomeContent(
                     text = stringResource(R.string.service_in_dev_dialog_title),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = ForerunTextPrimary
+                    color = ForerunNavy
                 )
             },
             text = {
@@ -253,195 +264,29 @@ private fun HomeContent(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Dimens.ScreenMargin, vertical = Dimens.Space16)
     ) {
-        // 1. Top Bar: Avatar Greeting + Logo 48dp + Notification Icon
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // User Greeting with Avatar
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(ForerunGreenLight),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = profile.name.trim().take(1).ifEmpty { stringResource(R.string.label_avatar_fallback_letter) },
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunGreenDark
-                    )
-                }
+        // 1. Top Header: User Greeting + Location Dropdown + Real FORERUN Logo
+        HomeTopHeader(
+            profile = profile,
+            onLocationClick = { onNavigateToRoute("account") }
+        )
 
-                Column {
-                    Text(
-                        text = stringResource(R.string.home_greeting_morning, profile.name.substringBefore(" ")),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunTextPrimary
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = ForerunGreenDark,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = stringResource(R.string.label_delivery_area),
-                            fontSize = 11.sp,
-                            color = ForerunTextMuted
-                        )
-                    }
-                }
-            }
+        Spacer(modifier = Modifier.height(Dimens.Space14))
 
-            // Brand Logo (48dp) + Notification Bell
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = stringResource(R.string.app_name),
-                    modifier = Modifier.size(48.dp)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(ForerunSoftSurface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                            contentDescription = stringResource(R.string.label_notifications),
-                        tint = ForerunTextMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.Space16))
-
-        // Banners Carousel (HorizontalPager 16:7)
-        BannersSection(
-            uiState = bannerUiState,
+        // 2. Promotional Banners Carousel (Or local banner fallback)
+        HomeBannersSection(
+            bannerUiState = bannerUiState,
+            onNewOrderClick = onNewOrderClick,
             onNavigateToRoute = onNavigateToRoute
         )
 
-        // 2. Hero Gradient CTA Card (#7DDDD4 -> #3ABFB5, 20dp corners)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .clickable { onNewOrderClick() },
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(ForerunGreen, ForerunGreenDark)
-                        )
-                    )
-                    .padding(Dimens.Space20)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_cta_badge),
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                .background(Color.White.copy(alpha = 0.22f))
-                                .padding(horizontal = Dimens.Space8, vertical = Dimens.Space2)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.home_cta_delivery_badge),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
+        Spacer(modifier = Modifier.height(Dimens.Space16))
 
-                    Spacer(modifier = Modifier.height(Dimens.Space6))
-
-                    Text(
-                        text = stringResource(R.string.home_cta_title),
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-
-                    Spacer(modifier = Modifier.height(Dimens.Space4))
-
-                    Text(
-                        text = stringResource(R.string.home_cta_subtitle),
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.92f)
-                    )
-
-                    Spacer(modifier = Modifier.height(Dimens.Space16))
-
-                    Button(
-                        onClick = onNewOrderClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(Dimens.RadiusPill),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = ForerunGreenDark
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = ForerunGreenDark,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(Dimens.Space8))
-                        Text(
-                            text = stringResource(R.string.home_cta_button),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunGreenDark
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.Space20))
-
-        // 3. Active Order Card (Real API Bound)
+        // 3. Active Order Card (Or friendly prompt if no active order)
         if (activeOrder != null) {
             ActiveOrderCard(
                 order = activeOrder,
@@ -452,257 +297,283 @@ private fun HomeContent(
                 onNewOrderClick = onNewOrderClick
             )
         }
-        Spacer(modifier = Modifier.height(Dimens.Space20))
 
-        // 4. Services Section
-        Text(
-            text = stringResource(R.string.services_section_title),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = ForerunTextPrimary
-        )
-        Text(
-            text = stringResource(R.string.services_section_subtitle),
-            fontSize = 12.sp,
-            color = ForerunTextMuted
-        )
+        Spacer(modifier = Modifier.height(Dimens.Space14))
 
-        Spacer(modifier = Modifier.height(Dimens.Space12))
-
-        // Row 1: Grocery Card (Large Primary)
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
-                .clickable { onNewOrderClick() },
-            colors = CardDefaults.cardColors(containerColor = ForerunGreenLight)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(Dimens.Space16),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(ForerunSurface),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storefront,
-                            contentDescription = null,
-                            tint = ForerunGreenDark,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            text = stringResource(R.string.service_grocery_title),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunTextPrimary
-                        )
-                        Text(
-                            text = stringResource(R.string.service_grocery_desc),
-                            fontSize = 12.sp,
-                            color = ForerunTextMuted
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(ForerunSurface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        tint = ForerunGreenDark,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.Space10))
-
-        // Row 2: 2-Column Grid (Parcels + Rides)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
-        ) {
-            // Parcels Card
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
-                    .clickable { showServiceDialog = true },
-                colors = CardDefaults.cardColors(containerColor = ForerunSurface)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Dimens.Space14)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(ForerunGreenLight),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Inventory2,
-                                contentDescription = null,
-                                tint = ForerunGreenDark,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                .background(ForerunSoftSurface)
-                                .padding(horizontal = Dimens.Space8, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.service_parcels_tag),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = ForerunTextMuted
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(Dimens.Space12))
-
-                    Text(
-                        text = stringResource(R.string.service_parcels_title),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunTextPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = stringResource(R.string.service_parcels_desc),
-                        fontSize = 11.sp,
-                        color = ForerunTextMuted
-                    )
-                }
-            }
-
-            // Rides Card
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
-                    .clickable { showServiceDialog = true },
-                colors = CardDefaults.cardColors(containerColor = ForerunSurface)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(Dimens.Space14)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(ForerunGreenLight),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocalTaxi,
-                                contentDescription = null,
-                                tint = ForerunGreenDark,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                .background(ForerunSoftSurface)
-                                .padding(horizontal = Dimens.Space8, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.service_rides_tag),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = ForerunTextMuted
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(Dimens.Space12))
-
-                    Text(
-                        text = stringResource(R.string.service_rides_title),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunTextPrimary
-                    )
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = stringResource(R.string.service_rides_desc),
-                        fontSize = 11.sp,
-                        color = ForerunTextMuted
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Dimens.Space20))
-
-        // 5. Admin Quick Contact (Direct WhatsApp + Call)
+        // Admin Support & Direct Coordination Card
         HomeAdminContactCard()
 
         Spacer(modifier = Modifier.height(Dimens.Space20))
 
-        // 6. Account Stats Summary Card
-        StatsCard(profile = profile)
+        // 4. Core FORERUN Services (Grocery Delivery + Secondary Services)
+        QuickServicesSection(
+            onGroceryClick = onNewOrderClick,
+            onSecondaryServiceClick = { showServiceDialog = true }
+        )
 
+        Spacer(modifier = Modifier.height(Dimens.Space20))
+
+        // 5. Account Stats Summary (Completed orders + Total Fees)
+        HomeStatsSection(profile = profile)
+
+        // Bottom breathing room
         Spacer(modifier = Modifier.height(Dimens.Space24))
     }
 }
 
+/**
+ * 1. Top Header Component matching mockup
+ */
+@Composable
+private fun HomeTopHeader(
+    profile: CustomerProfile,
+    onLocationClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Right in RTL: User greeting + Location badge (without avatar circle)
+        Column(
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            Text(
+                text = stringResource(R.string.home_greeting_user, profile.name.substringBefore(" ")),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = ForerunNavy
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(Dimens.RadiusPill))
+                    .clickable { onLocationClick() }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = ForerunOrange,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = stringResource(R.string.home_location_default),
+                    fontSize = 12.sp,
+                    color = ForerunTextMuted,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = ForerunTextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(Dimens.Space12))
+
+        // Left in RTL: Real FORERUN Brand Logo Asset (doubled in size: 72.dp)
+        Image(
+            painter = painterResource(R.drawable.logo),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier.size(72.dp),
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+/**
+ * 2. Promotional Banners section (with fallback promo banner matching mockup)
+ */
+@Composable
+private fun HomeBannersSection(
+    bannerUiState: BannerUiState,
+    onNewOrderClick: () -> Unit,
+    onNavigateToRoute: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hasBanners = (bannerUiState as? BannerUiState.Success)?.banners?.isNotEmpty() == true
+
+    if (hasBanners) {
+        BannersSection(
+            uiState = bannerUiState,
+            onNavigateToRoute = onNavigateToRoute,
+            modifier = modifier
+        )
+    } else {
+        // Fallback promo card matching the mockup when banners are loading or empty
+        Column(modifier = modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 7f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable { onNewOrderClick() },
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Image(
+                        painter = painterResource(R.drawable.grocery_promo),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Scrim gradient for readability
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Black.copy(alpha = 0.2f),
+                                        Color.Black.copy(alpha = 0.75f)
+                                    )
+                                )
+                            )
+                    )
+
+                    // Overlay Content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(Dimens.Space14),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Top Tags
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                    .background(ForerunMint)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.home_banner_badge_instant),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForerunNavy
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                    .background(Color.Black.copy(alpha = 0.45f))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.home_banner_location_tag),
+                                    fontSize = 11.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        // Bottom Title & CTA Button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = stringResource(R.string.home_banner_promo_title),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                lineHeight = 19.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(Dimens.Space8))
+
+                            Button(
+                                onClick = onNewOrderClick,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = ForerunOrange,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(Dimens.RadiusPill),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = stringResource(R.string.home_cta_button),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.Space8))
+
+            // Carousel dots
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(ForerunBorder)
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .height(6.dp)
+                        .width(18.dp)
+                        .clip(CircleShape)
+                        .background(ForerunOrange)
+                )
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(ForerunBorder)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 3. Active Order Card Component
+ */
 @Composable
 private fun ActiveOrderCard(
     order: ActiveOrder,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alphaAnim by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
+        initialValue = 0.4f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 800),
@@ -711,44 +582,71 @@ private fun ActiveOrderCard(
         label = "alpha"
     )
 
+    val statusColors = getOrderStatusColors(order.status)
+    val statusLabelRes = getOrderStatusLabelRes(order.status)
+
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, ForerunMint.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = ForerunSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(Dimens.Space16)) {
-            // Header Row: Order number + Pulsing status badge
+            // Header: Receipt Icon + Order Number & Fee Summary + Dynamic Status Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = null,
-                        tint = ForerunGreenDark,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.Space6))
-                    Text(
-                        text = stringResource(R.string.home_order_num, order.orderNumber),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunTextPrimary
-                    )
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ForerunMintSoft),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = null,
+                            tint = ForerunNavy,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(Dimens.Space10))
+                    Column {
+                        Text(
+                            text = stringResource(R.string.home_active_order_heading, "\u200E${order.orderNumber}\u200E"),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForerunNavy,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(R.string.home_order_summary_format, order.itemCount, order.totalFee),
+                            fontSize = 11.sp,
+                            color = ForerunTextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
-                val statusColors = getOrderStatusColors(order.status)
+                Spacer(modifier = Modifier.width(Dimens.Space8))
+
+                // Dynamic Status pill
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(Dimens.RadiusPill))
                         .background(statusColors.background)
-                        .padding(horizontal = Dimens.Space10, vertical = Dimens.Space4)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -757,238 +655,371 @@ private fun ActiveOrderCard(
                                 .clip(CircleShape)
                                 .background(statusColors.text.copy(alpha = alphaAnim))
                         )
-                        Spacer(modifier = Modifier.width(Dimens.Space6))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = stringResource(getOrderStatusLabelRes(order.status)),
+                            text = stringResource(statusLabelRes),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = statusColors.text
+                            color = statusColors.text,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.height(Dimens.Space16))
+
+            // 4-Step Stepper matching FORERUN State Machine
+            HomeOrderStepper(status = order.status)
+
             Spacer(modifier = Modifier.height(Dimens.Space14))
 
-            // 4-Step Horizontal Stepper
-            OrderStepper(status = order.status)
-
-            // Runner Information & Direct Action Buttons (WhatsApp + Call)
-            val hasRunnerContact = !order.runnerWhatsapp.isNullOrBlank() || !order.runnerPhone.isNullOrBlank()
-            if (!order.runnerName.isNullOrBlank() && hasRunnerContact) {
-                Spacer(modifier = Modifier.height(Dimens.Space12))
+            // Runner Information Bar (or Awaiting Runner Message)
+            if (order.runnerName != null) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(ForerunSoftSurface)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(ForerunMintLight.copy(alpha = 0.4f))
                         .padding(Dimens.Space10),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(ForerunGreenLight),
+                                .background(ForerunMintSoft),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = order.runnerName.trim().take(1),
-                                fontWeight = FontWeight.Bold,
-                                color = ForerunGreenDark,
-                                fontSize = 14.sp
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = ForerunNavy,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
                         Column {
                             Text(
-                                text = stringResource(R.string.home_active_runner_name, order.runnerName),
+                                text = order.runnerName,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ForerunTextPrimary
+                                color = ForerunNavy
                             )
                             Text(
-                                text = stringResource(R.string.home_verified_runner),
-                                fontSize = 11.sp,
+                                text = stringResource(R.string.home_runner_role),
+                                fontSize = 10.sp,
                                 color = ForerunTextMuted
                             )
                         }
                     }
 
+                    // WhatsApp + Call action buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space6)) {
-                        if (!order.runnerWhatsapp.isNullOrBlank()) {
-                            IconButton(
+                        val runnerWa = order.runnerWhatsapp ?: order.runnerPhone
+                        if (runnerWa != null) {
+                            Button(
                                 onClick = {
-                                    val waUrl = AppConfig.buildRunnerWhatsAppUrl(order.runnerWhatsapp)
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$runnerWa"))
                                     context.startActivity(intent)
                                 },
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(WhatsAppGreen)
+                                colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                                shape = RoundedCornerShape(Dimens.RadiusPill),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.Chat,
-                                    contentDescription = stringResource(R.string.label_runner_whatsapp),
+                                    contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.home_btn_whatsapp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
                                 )
                             }
                         }
 
-                        val phoneToCall = order.runnerPhone?.takeIf { it.isNotBlank() } ?: order.runnerWhatsapp?.takeIf { it.isNotBlank() }
-                        if (!phoneToCall.isNullOrBlank()) {
-                            IconButton(
+                        val runnerPhone = order.runnerPhone
+                        if (runnerPhone != null) {
+                            OutlinedButton(
                                 onClick = {
-                                    val callIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneToCall"))
-                                    context.startActivity(callIntent)
+                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$runnerPhone"))
+                                    context.startActivity(intent)
                                 },
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(ForerunGreenDark)
+                                shape = RoundedCornerShape(Dimens.RadiusPill),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, ForerunBorder),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ForerunNavy),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Call,
-                                    contentDescription = stringResource(R.string.label_runner_call),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
+                                    contentDescription = null,
+                                    tint = ForerunNavy,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.home_btn_call),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForerunNavy
                                 )
                             }
                         }
                     }
                 }
-            } else if (order.runnerName.isNullOrBlank() || !hasRunnerContact) {
-                // Awaiting Runner state: Direct contact channels with Admin
-                Spacer(modifier = Modifier.height(Dimens.Space12))
+            } else {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFFFF3E0))
-                        .padding(Dimens.Space10),
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(ForerunMintLight.copy(alpha = 0.35f))
+                        .padding(horizontal = Dimens.Space12, vertical = Dimens.Space10),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFFE0B2)),
+                                .background(ForerunMintSoft),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Info,
+                                imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                tint = Color(0xFFE65100),
-                                modifier = Modifier.size(18.dp)
+                                tint = ForerunMintDark,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
-
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
                         Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = stringResource(R.string.home_awaiting_runner_badge),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForerunNavy
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                        .background(ForerunMintSoft)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.tag_direct_coord),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForerunMintDark
+                                    )
+                                }
+                            }
                             Text(
-                                text = stringResource(R.string.order_awaiting_runner_title),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ForerunTextPrimary
-                            )
-                            Text(
-                                text = stringResource(R.string.order_awaiting_runner_desc),
-                                fontSize = 11.sp,
-                                color = ForerunTextMuted,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = stringResource(R.string.home_awaiting_runner),
+                                fontSize = 10.sp,
+                                color = ForerunTextMuted
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(Dimens.Space8))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space6)) {
-                        IconButton(
-                            onClick = {
-                                val msg = context.getString(R.string.order_inquiry_whatsapp_msg, order.orderNumber)
-                                val waUrl = AppConfig.buildWhatsAppUrl(msg)
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {}
-                            },
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(WhatsAppGreen)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Chat,
-                                contentDescription = stringResource(R.string.order_admin_contact_whatsapp),
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-
-                        IconButton(
-                            onClick = {
-                                try {
-                                    val callIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_PHONE_DIAL}"))
-                                    context.startActivity(callIntent)
-                                } catch (_: Exception) {}
-                            },
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(ForerunGreenDark)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Call,
-                                contentDescription = stringResource(R.string.order_admin_contact_call),
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                    // Contact Admin button when awaiting runner
+                    Button(
+                        onClick = {
+                            val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (_: Exception) {}
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                        shape = RoundedCornerShape(Dimens.RadiusPill),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Chat,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = stringResource(R.string.tag_via_admin),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
                 }
             }
 
+            // Bottom action: View full details
             Spacer(modifier = Modifier.height(Dimens.Space10))
-
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onClick() }
+                    .padding(vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.home_items_fee_summary, order.itemCount, order.totalFee, stringResource(R.string.home_currency)),
+                    text = stringResource(R.string.home_track_order),
                     fontSize = 12.sp,
-                    color = ForerunTextMuted
+                    fontWeight = FontWeight.Bold,
+                    color = ForerunNavy
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = ForerunOrange,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Modern 4-Step Stepper Component
+ */
+@Composable
+private fun HomeOrderStepper(status: String) {
+    val stepIndex = when (status) {
+        "PENDING_REVIEW", "UNDER_REVIEW", "AWAITING_RUNNER", "AWAITING_PREFERRED_RUNNER", "ASSIGNED" -> 1
+        "IN_PROGRESS" -> 2
+        "OUT_FOR_DELIVERY" -> 3
+        "DELIVERED" -> 4
+        else -> 1
+    }
+
+    val steps = listOf(
+        stringResource(R.string.home_step_confirmed),
+        stringResource(R.string.home_step_purchasing),
+        stringResource(R.string.home_step_on_the_way),
+        stringResource(R.string.home_step_delivered)
+    )
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Connecting track line behind circles
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Spacer(modifier = Modifier.weight(0.5f))
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .background(if (stepIndex > 1) ForerunOrange else ForerunBorder)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .background(if (stepIndex > 2) ForerunOrange else ForerunBorder)
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .background(if (stepIndex > 3) ForerunOrange else ForerunBorder)
+            )
+            Spacer(modifier = Modifier.weight(0.5f))
+        }
+
+        // 4 Step Nodes
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            steps.forEachIndexed { index, stepLabel ->
+                val stepNumber = index + 1
+                val isDone = stepNumber < stepIndex
+                val isCurrent = stepNumber == stepIndex
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    isDone -> ForerunOrange
+                                    isCurrent -> ForerunOrange
+                                    else -> ForerunSoftSurface
+                                }
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (!isDone && !isCurrent) ForerunBorder else Color.Transparent,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            isDone -> {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = ForerunNavy,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            isCurrent -> {
+                                Icon(
+                                    imageVector = Icons.Default.LocalShipping,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            else -> {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(ForerunBorder)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(5.dp))
+
                     Text(
-                        text = stringResource(R.string.home_track_order),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunGreenDark
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.Space4))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                        tint = ForerunGreenDark,
-                        modifier = Modifier.size(16.dp)
+                        text = stepLabel,
+                        fontSize = 10.sp,
+                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                        color = when {
+                            isCurrent -> ForerunOrange
+                            isDone -> ForerunNavy
+                            else -> ForerunTextMuted
+                        },
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -996,18 +1027,22 @@ private fun ActiveOrderCard(
     }
 }
 
+/**
+ * Card displayed when there is no active order
+ */
 @Composable
 private fun HomeNoActiveOrderCard(
-    onNewOrderClick: () -> Unit
+    onNewOrderClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, ForerunMint.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
             .clickable { onNewOrderClick() },
         colors = CardDefaults.cardColors(containerColor = ForerunSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
@@ -1019,283 +1054,583 @@ private fun HomeNoActiveOrderCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(ForerunGreenLight),
+                    .background(ForerunMintSoft),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.ShoppingCart,
                     contentDescription = null,
-                    tint = ForerunGreenDark,
+                    tint = ForerunMintDark,
                     modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(Dimens.Space14))
+            Spacer(modifier = Modifier.width(Dimens.Space12))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.home_no_active_orders),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ForerunTextPrimary
+                    color = ForerunNavy
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = stringResource(R.string.home_no_active_orders_desc),
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     color = ForerunTextMuted
                 )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = ForerunOrange,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 4. Core FORERUN Services Component (Grocery + Parcels + Passenger Rides)
+ */
+@Composable
+private fun QuickServicesSection(
+    onGroceryClick: () -> Unit,
+    onSecondaryServiceClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Section Title
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.services_section_title),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = ForerunNavy
+            )
+            Text(
+                text = stringResource(R.string.services_section_subtitle),
+                fontSize = 11.sp,
+                color = ForerunMintDark,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Space10))
+
+        // Main Feature: Grocery Delivery (In-app order creation)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .border(1.5.dp, ForerunMint.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
+                .clickable { onGroceryClick() },
+            colors = CardDefaults.cardColors(containerColor = ForerunSurface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(Dimens.Space14),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(ForerunMintSoft),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Storefront,
+                            contentDescription = null,
+                            tint = ForerunNavy,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = stringResource(R.string.service_grocery_title),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForerunNavy,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(R.string.service_grocery_desc),
+                            fontSize = 11.sp,
+                            color = ForerunTextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(Dimens.Space8))
+
+                // Orange Action Button (+ اطلب الآن)
+                Button(
+                    onClick = onGroceryClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ForerunOrange,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_service_grocery_btn),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Dimens.Space10))
+
+        // Secondary 2-Column Grid (Parcels & Passenger Rides with "قريباً" badge and WhatsApp coordination dialog)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
+        ) {
+            // Card 1: Parcels & Deliveries (طرود وأمانات)
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+                    .clickable { onSecondaryServiceClick() },
+                colors = CardDefaults.cardColors(containerColor = ForerunSurface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimens.Space12)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(ForerunMintSoft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Inventory2,
+                                contentDescription = null,
+                                tint = ForerunNavy,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Badge: "قريباً"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                .background(ForerunSoftSurface)
+                                .border(1.dp, ForerunBorder.copy(alpha = 0.7f), RoundedCornerShape(Dimens.RadiusPill))
+                                .padding(horizontal = Dimens.Space8, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.service_tag_coming_soon),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunTextMuted
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.Space8))
+
+                    Text(
+                        text = stringResource(R.string.service_parcels_title),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.service_parcels_desc),
+                        fontSize = 10.sp,
+                        color = ForerunTextMuted,
+                        lineHeight = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.Space10))
+
+                    // WhatsApp coordination prompt
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ForerunMintLight)
+                            .padding(vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                tint = ForerunMintDark,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.service_card_whatsapp_coord),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunMintDark
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Card 2: Passenger Rides (مشاوير ركاب)
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+                    .clickable { onSecondaryServiceClick() },
+                colors = CardDefaults.cardColors(containerColor = ForerunSurface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimens.Space12)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(ForerunMintSoft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocalTaxi,
+                                contentDescription = null,
+                                tint = ForerunNavy,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Badge: "قريباً"
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                .background(ForerunSoftSurface)
+                                .border(1.dp, ForerunBorder.copy(alpha = 0.7f), RoundedCornerShape(Dimens.RadiusPill))
+                                .padding(horizontal = Dimens.Space8, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.service_tag_coming_soon),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunTextMuted
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.Space8))
+
+                    Text(
+                        text = stringResource(R.string.service_rides_title),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.service_rides_desc),
+                        fontSize = 10.sp,
+                        color = ForerunTextMuted,
+                        lineHeight = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.Space10))
+
+                    // WhatsApp coordination prompt
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ForerunMintLight)
+                            .padding(vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                tint = ForerunMintDark,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.service_card_whatsapp_coord),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunMintDark
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+/**
+ * 5. Account Stats Summary Component
+ */
 @Composable
-private fun OrderStepper(status: String) {
-    val stepIndex = when (status) {
-        "PENDING_REVIEW", "UNDER_REVIEW", "AWAITING_RUNNER", "AWAITING_PREFERRED_RUNNER", "ASSIGNED" -> 1
-        "IN_PROGRESS" -> 2
-        "OUT_FOR_DELIVERY" -> 3
-        "DELIVERED" -> 4
-        else -> 1
-    }
-
-    val steps = listOf(
-        stringResource(R.string.home_step_picked_up),
-        stringResource(R.string.home_step_purchasing),
-        stringResource(R.string.home_step_on_the_way),
-        stringResource(R.string.home_step_delivered)
-    )
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Connected Stepper Track (Circles + Connecting Lines)
+private fun HomeStatsSection(
+    profile: CustomerProfile,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Dimens.Space12),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            steps.forEachIndexed { index, _ ->
-                val stepNumber = index + 1
-                val isDone = stepNumber < stepIndex
-                val isCurrent = stepNumber == stepIndex
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    tint = ForerunNavy,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = stringResource(R.string.home_stats_heading),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ForerunNavy
+                )
+            }
+            Text(
+                text = stringResource(R.string.home_stats_month),
+                fontSize = 11.sp,
+                color = ForerunTextMuted
+            )
+        }
 
-                if (index > 0) {
+        Spacer(modifier = Modifier.height(Dimens.Space10))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
+        ) {
+            // Card 1: Completed Orders
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, ForerunMint.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = ForerunMintLight.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimens.Space12),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.home_stats_completed_label),
+                            fontSize = 11.sp,
+                            color = ForerunTextMuted
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.home_stats_orders_count, profile.completedOrders),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForerunNavy
+                        )
+                    }
+
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(2.5.dp)
-                            .clip(RoundedCornerShape(Dimens.RadiusPill))
-                            .background(
-                                if (stepNumber <= stepIndex) ForerunGreenDark else ForerunSoftSurface
-                            )
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(
-                            when {
-                                isDone -> ForerunGreenDark
-                                isCurrent -> ForerunGreen
-                                else -> ForerunSoftSurface
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isDone) {
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(ForerunMintSoft),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
+                            imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
+                            tint = ForerunMintDark,
+                            modifier = Modifier.size(18.dp)
                         )
-                    } else {
+                    }
+                }
+            }
+
+            // Card 2: Savings / Fees
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, ForerunOrange.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = ForerunOrangeLight.copy(alpha = 0.6f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimens.Space12),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
                         Text(
-                            text = "$stepNumber",
+                            text = stringResource(R.string.home_stats_savings_label),
                             fontSize = 11.sp,
+                            color = ForerunTextMuted
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${profile.totalFeesPaid} ${stringResource(R.string.home_currency)}",
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isCurrent) Color.White else ForerunTextMuted
+                            color = ForerunOrange
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(ForerunOrange.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = null,
+                            tint = ForerunOrange,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(Dimens.Space6))
-
-        // Stepper Step Labels
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            steps.forEachIndexed { index, stepLabel ->
-                val stepNumber = index + 1
-                val isCurrent = stepNumber == stepIndex
-                Text(
-                    text = stepLabel,
-                    fontSize = 11.sp,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isCurrent) ForerunGreenDark else ForerunTextMuted,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
     }
 }
 
-
+/**
+ * Admin Support and Direct Coordination Card
+ */
 @Composable
-private fun StatsCard(profile: CustomerProfile) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = ForerunSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimens.Space16)
-        ) {
-            Text(
-                text = stringResource(R.string.home_stats_title),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = ForerunTextPrimary
-            )
-
-            Spacer(modifier = Modifier.height(Dimens.Space12))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${profile.completedOrders}",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunGreenDark
-                    )
-                    Text(
-                        text = stringResource(R.string.home_completed_orders),
-                        fontSize = 12.sp,
-                        color = ForerunTextMuted
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(36.dp)
-                        .background(ForerunBorder)
-                )
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${profile.totalFeesPaid} ${stringResource(R.string.home_currency)}",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunGreenDark
-                    )
-                    Text(
-                        text = stringResource(R.string.home_total_fees),
-                        fontSize = 12.sp,
-                        color = ForerunTextMuted
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun HomeAdminContactCard() {
+fun HomeAdminContactCard(
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
+
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp)),
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, ForerunBorder.copy(alpha = 0.6f), RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(containerColor = ForerunSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(Dimens.Space16)
+                .padding(Dimens.Space16),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
             ) {
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(ForerunGreenLight),
+                        .clip(CircleShape)
+                        .background(ForerunOrangeLight.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Call,
-                        contentDescription = null,
-                        tint = ForerunGreenDark,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(Dimens.Space12))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.home_admin_contact_title),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunTextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(R.string.home_admin_contact_desc),
-                        fontSize = 12.sp,
-                        color = ForerunTextMuted
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(Dimens.Space14))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
-            ) {
-                // WhatsApp Admin Button
-                Button(
-                    onClick = {
-                        val msg = context.getString(R.string.home_admin_order_whatsapp_msg)
-                        val waUrl = AppConfig.buildWhatsAppUrl(msg)
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
-                            context.startActivity(intent)
-                        } catch (_: Exception) {}
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(Dimens.ButtonHeight),
-                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Chat,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.White
+                        tint = ForerunOrange,
+                        modifier = Modifier.size(22.dp)
                     )
-                    Spacer(modifier = Modifier.width(Dimens.Space6))
+                }
+
+                Column {
                     Text(
-                        text = stringResource(R.string.home_admin_whatsapp_btn),
-                        fontSize = 13.sp,
+                        text = stringResource(R.string.home_admin_support_title),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Text(
+                        text = stringResource(R.string.home_admin_support_subtitle),
+                        fontSize = 11.sp,
+                        color = ForerunTextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space6)) {
+                // WhatsApp Admin Button
+                Button(
+                    onClick = {
+                        val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        } catch (_: Exception) {}
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.home_btn_whatsapp),
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -1304,28 +1639,29 @@ private fun HomeAdminContactCard() {
                 // Call Admin Button
                 OutlinedButton(
                     onClick = {
+                        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_SUPPORT_PHONE}"))
                         try {
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_PHONE_DIAL}"))
-                            context.startActivity(intent)
+                            context.startActivity(dialIntent)
                         } catch (_: Exception) {}
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(Dimens.ButtonHeight),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium)
+                    shape = RoundedCornerShape(Dimens.RadiusPill),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ForerunBorder),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ForerunNavy),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(34.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Call,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = ForerunTextPrimary
+                        tint = ForerunNavy,
+                        modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(Dimens.Space6))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = stringResource(R.string.home_admin_call_btn),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ForerunTextPrimary
+                        text = stringResource(R.string.home_btn_call),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
                     )
                 }
             }
@@ -1333,3 +1669,68 @@ private fun HomeAdminContactCard() {
     }
 }
 
+// =========================================================================
+// Previews for Android Studio
+// =========================================================================
+
+@Preview(name = "HomeScreen - With Active Order (RTL Arabic)", showBackground = true, widthDp = 390, heightDp = 920, locale = "ar")
+@Composable
+private fun HomeScreenFullPreview() {
+    val sampleProfile = CustomerProfile(
+        id = "cust-1",
+        name = "أحمد محمد",
+        whatsapp = "0912345678",
+        status = com.forerun.customer.domain.model.UserStatus.VERIFIED,
+        completedOrders = 14,
+        totalFeesPaid = 25000,
+        createdAt = java.time.Instant.now()
+    )
+
+    val sampleOrder = ActiveOrder(
+        id = "ord-1",
+        orderNumber = "4892",
+        status = "OUT_FOR_DELIVERY",
+        itemCount = 5,
+        totalFee = 5000,
+        createdAt = "2026-10-10T10:00:00Z",
+        runnerName = "سامر",
+        runnerPhone = "0912345678",
+        runnerWhatsapp = "0912345678"
+    )
+
+    ForerunTheme {
+        HomeContent(
+            profile = sampleProfile,
+            activeOrder = sampleOrder,
+            bannerUiState = BannerUiState.Empty,
+            onNewOrderClick = {},
+            onOrderDetailClick = {},
+            onNavigateToRoute = {}
+        )
+    }
+}
+
+@Preview(name = "HomeScreen - No Active Order (RTL Arabic)", showBackground = true, widthDp = 390, heightDp = 844, locale = "ar")
+@Composable
+private fun HomeScreenIdlePreview() {
+    val sampleProfile = CustomerProfile(
+        id = "cust-1",
+        name = "أحمد محمد",
+        whatsapp = "0912345678",
+        status = com.forerun.customer.domain.model.UserStatus.VERIFIED,
+        completedOrders = 3,
+        totalFeesPaid = 4500,
+        createdAt = java.time.Instant.now()
+    )
+
+    ForerunTheme {
+        HomeContent(
+            profile = sampleProfile,
+            activeOrder = null,
+            bannerUiState = BannerUiState.Empty,
+            onNewOrderClick = {},
+            onOrderDetailClick = {},
+            onNavigateToRoute = {}
+        )
+    }
+}

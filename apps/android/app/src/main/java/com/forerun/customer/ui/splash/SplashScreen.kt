@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -29,9 +32,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.forerun.customer.R
 import com.forerun.customer.ui.theme.Dimens
-import com.forerun.customer.ui.theme.ForerunGreen
-import com.forerun.customer.ui.theme.ForerunGreenDark
-import com.forerun.customer.ui.theme.ForerunGreenLight
+import com.forerun.customer.ui.theme.ForerunBackground
+import com.forerun.customer.ui.theme.ForerunNavy
+import com.forerun.customer.ui.theme.ForerunOrange
 import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextPrimary
 
@@ -67,7 +70,7 @@ fun SplashScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(ForerunGreenLight),
+            .background(ForerunBackground),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -78,20 +81,13 @@ fun SplashScreen(
                 .alpha(alpha.value)
                 .padding(Dimens.ScreenMargin)
         ) {
-            // Brand Logo Circle
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .background(color = ForerunGreen, shape = CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    color = ForerunGreenLight,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            // Real Brand Logo Asset
+            Image(
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = stringResource(R.string.app_name),
+                modifier = Modifier.size(110.dp),
+                contentScale = ContentScale.Fit
+            )
 
             Spacer(modifier = Modifier.height(Dimens.Space24))
 
@@ -100,7 +96,7 @@ fun SplashScreen(
                 text = stringResource(R.string.app_name),
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                color = ForerunGreenDark
+                color = ForerunNavy
             )
 
             Spacer(modifier = Modifier.height(Dimens.Space4))
@@ -110,7 +106,7 @@ fun SplashScreen(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.sp,
-                color = ForerunTextPrimary
+                color = ForerunOrange
             )
 
             Spacer(modifier = Modifier.height(Dimens.Space12))
@@ -126,7 +122,7 @@ fun SplashScreen(
 
             CircularProgressIndicator(
                 modifier = Modifier.size(32.dp),
-                color = ForerunGreen,
+                color = ForerunOrange,
                 strokeWidth = 3.dp
             )
         }
