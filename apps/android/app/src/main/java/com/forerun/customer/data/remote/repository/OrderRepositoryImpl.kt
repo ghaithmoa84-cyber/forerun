@@ -9,6 +9,7 @@ import com.forerun.customer.domain.model.ApiException
 import com.forerun.customer.domain.model.CreatedOrder
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.model.OrderItem
+import com.forerun.customer.domain.model.PricingDisclosure
 import com.forerun.customer.domain.model.RunnerInfo
 import com.forerun.customer.domain.model.CustomerOrderDetail
 import com.forerun.customer.data.remote.mapper.OrderDetailMapper.toDomain
@@ -21,7 +22,26 @@ class OrderRepositoryImpl @Inject constructor(
     private val orderApi: OrderApi
 ) : OrderRepository {
 
+    override suspend fun getPricingDisclosure(): Result<PricingDisclosure> {
+        return when (val response = orderApi.getPricingDisclosure()) {
+            is ApiResponse.Success -> {
+                val dto = response.data
+                Result.success(
+                    PricingDisclosure(
+                        baseFee = dto.baseFee,
+                        extraStoreFee = dto.extraStoreFee,
+                        peripheralFee = dto.peripheralFee
+                    )
+                )
+            }
+            is ApiResponse.Error -> Result.failure(
+                ApiException(statusCode = response.statusCode, errorCode = response.error)
+            )
+        }
+    }
+
     override suspend fun createOrder(
+
         items: List<OrderItem>,
         notes: String?,
         preferredRunnerId: String?,

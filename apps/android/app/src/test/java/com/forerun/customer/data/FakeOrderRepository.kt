@@ -134,4 +134,18 @@ class FakeOrderRepository : OrderRepository {
         }
         return submitRatingResult
     }
+
+    var getPricingDisclosureResult: Result<com.forerun.customer.domain.model.PricingDisclosure> = Result.success(
+        com.forerun.customer.domain.model.PricingDisclosure(
+            baseFee = 60,
+            extraStoreFee = 20,
+            peripheralFee = 40
+        )
+    )
+    var getPricingDisclosureCallCount: Int = 0
+
+    override suspend fun getPricingDisclosure(): Result<com.forerun.customer.domain.model.PricingDisclosure> {
+        getPricingDisclosureCallCount++
+        return getPricingDisclosureResult
+    }
 }

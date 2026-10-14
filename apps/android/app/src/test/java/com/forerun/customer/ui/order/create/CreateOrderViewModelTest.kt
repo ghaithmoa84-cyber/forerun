@@ -7,6 +7,7 @@ import com.forerun.customer.domain.repository.AddressResult
 import com.forerun.customer.domain.usecase.CreateOrderUseCase
 import com.forerun.customer.domain.usecase.GetAvailableRunnersUseCase
 import com.forerun.customer.domain.usecase.GetCustomerAddressUseCase
+import com.forerun.customer.domain.usecase.order.GetPricingDisclosureUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -36,6 +37,7 @@ class CreateOrderViewModelTest {
     private lateinit var createOrderUseCase: CreateOrderUseCase
     private lateinit var getCustomerAddressUseCase: GetCustomerAddressUseCase
     private lateinit var getAvailableRunnersUseCase: GetAvailableRunnersUseCase
+    private lateinit var getPricingDisclosureUseCase: GetPricingDisclosureUseCase
 
     @Before
     fun setUp() {
@@ -45,6 +47,17 @@ class CreateOrderViewModelTest {
         createOrderUseCase = CreateOrderUseCase(fakeOrderRepository)
         getCustomerAddressUseCase = GetCustomerAddressUseCase(fakeAddressRepository)
         getAvailableRunnersUseCase = GetAvailableRunnersUseCase(fakeOrderRepository)
+        getPricingDisclosureUseCase = GetPricingDisclosureUseCase(fakeOrderRepository)
+    }
+
+    private fun createViewModel(): CreateOrderViewModel {
+        return CreateOrderViewModel(
+            createOrderUseCase,
+            getCustomerAddressUseCase,
+            getAvailableRunnersUseCase,
+            getPricingDisclosureUseCase,
+            ApplicationProvider.getApplicationContext()
+        )
     }
 
     @After
@@ -57,7 +70,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -70,7 +83,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun setInputMode_updatesState() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(OrderInputMode.QUICK, viewModel.uiState.value.inputMode)
@@ -82,7 +95,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun updateQuickText_updatesState() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals("", viewModel.uiState.value.quickText)
@@ -96,12 +109,13 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "القنجرة - الحارة الغربية")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
         viewModel.onIntent(CreateOrderIntent.UpdateQuickText("حليب نيدو 2 كغ\nخبز 3 ربطات\nشاي لبتون"))
         viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -131,12 +145,13 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "القنجرة")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
         viewModel.onIntent(CreateOrderIntent.UpdateQuickText("\n   موز 1 كغ   \n\n   تفاح 2 كغ \n  \n"))
         viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
         advanceUntilIdle()
 
         val submittedItems = fakeOrderRepository.lastCreatedItems
@@ -151,7 +166,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "القنجرة")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
@@ -170,7 +185,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "القنجرة")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
@@ -186,7 +201,7 @@ class CreateOrderViewModelTest {
     @Test
     fun submitOrder_quickMode_failsValidation_whenAddressMissing() = runTest(testDispatcher) {
         fakeAddressRepository.getAddressResult = AddressResult.NotFound
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
@@ -202,7 +217,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun addItem_increasesItemsCount() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals(1, viewModel.uiState.value.items.size)
@@ -212,7 +227,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun removeItem_removesItemWhenMultipleExist() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.AddItem)
@@ -225,7 +240,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun removeItem_doesNotRemoveLastItem() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val singleItemId = viewModel.uiState.value.items[0].id
@@ -235,7 +250,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun updateItemFields_updatesCorrectItem() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         val itemId = viewModel.uiState.value.items[0].id
@@ -254,7 +269,7 @@ class CreateOrderViewModelTest {
     @Test
     fun submitOrder_failsValidation_whenAddressMissing() = runTest(testDispatcher) {
         fakeAddressRepository.getAddressResult = AddressResult.NotFound
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.STRUCTURED))
@@ -276,7 +291,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.STRUCTURED))
@@ -296,7 +311,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.STRUCTURED))
@@ -317,7 +332,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.STRUCTURED))
@@ -340,7 +355,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.STRUCTURED))
@@ -352,10 +367,21 @@ class CreateOrderViewModelTest {
         viewModel.onIntent(CreateOrderIntent.SubmitOrder)
         advanceUntilIdle()
 
+        // Modal intercepted before createOrderUseCase
+        assertTrue(viewModel.uiState.value.showFeeDisclosure)
+        assertNull(viewModel.uiState.value.createdOrder)
+        assertEquals(0, fakeOrderRepository.createOrderCallCount)
+
+        // Confirm inside modal submits order
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
         val state = viewModel.uiState.value
+        assertFalse(state.showFeeDisclosure)
         assertFalse(state.isSubmitting)
         assertNotNull(state.createdOrder)
         assertEquals("ORD-001", state.createdOrder?.orderNumber)
+        assertEquals(1, fakeOrderRepository.createOrderCallCount)
     }
 
     @Test
@@ -364,7 +390,7 @@ class CreateOrderViewModelTest {
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
         fakeOrderRepository.createOrderResult = Result.failure(Exception("خطأ في الاتصال بالخادم"))
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.STRUCTURED))
@@ -375,7 +401,13 @@ class CreateOrderViewModelTest {
         viewModel.onIntent(CreateOrderIntent.SubmitOrder)
         advanceUntilIdle()
 
+        assertTrue(viewModel.uiState.value.showFeeDisclosure)
+
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
         val state = viewModel.uiState.value
+        assertFalse(state.showFeeDisclosure)
         assertFalse(state.isSubmitting)
         assertNull(state.createdOrder)
         assertEquals("خطأ في الاتصال بالخادم", state.errorMessage)
@@ -387,15 +419,19 @@ class CreateOrderViewModelTest {
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
         fakeOrderRepository.createOrderDelayMs = 100
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
         viewModel.onIntent(CreateOrderIntent.UpdateQuickText("حليب\nخبز"))
 
-        // Simulate rapid double submit
         viewModel.onIntent(CreateOrderIntent.SubmitOrder)
-        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.showFeeDisclosure)
+
+        // Rapid double confirm
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
         advanceUntilIdle()
 
         assertEquals(1, fakeOrderRepository.createOrderCallCount)
@@ -404,11 +440,66 @@ class CreateOrderViewModelTest {
     }
 
     @Test
+    fun dismissFeeDisclosure_hidesModal_doesNotSendOrder() = runTest(testDispatcher) {
+        fakeAddressRepository.getAddressResult = AddressResult.Success(
+            CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
+        viewModel.onIntent(CreateOrderIntent.UpdateQuickText("تفاح 1 كغ"))
+
+        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.showFeeDisclosure)
+        assertEquals(0, fakeOrderRepository.createOrderCallCount)
+
+        viewModel.onIntent(CreateOrderIntent.DismissFeeDisclosure)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.showFeeDisclosure)
+        assertEquals(0, fakeOrderRepository.createOrderCallCount)
+        assertNull(viewModel.uiState.value.createdOrder)
+    }
+
+    @Test
+    fun submitOrder_loadsPricingDisclosure_andGracefullyDegradesOnFailure() = runTest(testDispatcher) {
+        fakeAddressRepository.getAddressResult = AddressResult.Success(
+            CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
+        )
+        // Failure on pricing disclosure network call
+        fakeOrderRepository.getPricingDisclosureResult = Result.failure(Exception("Pricing network failure"))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
+        viewModel.onIntent(CreateOrderIntent.UpdateQuickText("موز 1 كغ"))
+
+        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+
+        // Modal still opens, pricing is null (triggers fallback text), but confirmation works
+        assertTrue(viewModel.uiState.value.showFeeDisclosure)
+        assertNull(viewModel.uiState.value.disclosurePricing)
+        assertFalse(viewModel.uiState.value.isLoadingDisclosure)
+
+        // Customer can still confirm successfully
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.createdOrder)
+        assertEquals(1, fakeOrderRepository.createOrderCallCount)
+    }
+
+    @Test
     fun refreshAddress_picksUpAddressChangedOnMapScreen() = runTest(testDispatcher) {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "العنوان القديم")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertEquals("العنوان القديم", viewModel.uiState.value.deliveryAddress?.description)
@@ -431,7 +522,7 @@ class CreateOrderViewModelTest {
         fakeAddressRepository.getAddressResult = AddressResult.Success(
             CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
         )
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.deliveryAddress)
@@ -447,7 +538,7 @@ class CreateOrderViewModelTest {
 
     @Test
     fun refreshAddress_error_setsErrorMessage() = runTest(testDispatcher) {
-        val viewModel = CreateOrderViewModel(createOrderUseCase, getCustomerAddressUseCase, getAvailableRunnersUseCase, ApplicationProvider.getApplicationContext())
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         fakeAddressRepository.getAddressResult = AddressResult.Error("تعذر جلب العنوان")

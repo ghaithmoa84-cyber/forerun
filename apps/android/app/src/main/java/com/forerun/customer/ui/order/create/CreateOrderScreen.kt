@@ -143,7 +143,17 @@ fun CreateOrderScreen(
         }
     }
 
+    if (uiState.showFeeDisclosure) {
+        FeeDisclosureDialog(
+            pricing = uiState.disclosurePricing,
+            isLoading = uiState.isLoadingDisclosure,
+            onConfirm = { viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit) },
+            onDismiss = { viewModel.onIntent(CreateOrderIntent.DismissFeeDisclosure) }
+        )
+    }
+
     Scaffold(
+
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
