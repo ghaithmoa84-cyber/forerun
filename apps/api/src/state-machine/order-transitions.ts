@@ -74,13 +74,15 @@ export const ORDER_TRANSITIONS: readonly OrderTransition[] = [
   // OUT_FOR_DELIVERY → DELIVERED  (delivery confirmed)
   { from: 'OUT_FOR_DELIVERY', to: 'DELIVERED', actor: 'RUNNER', description: 'Runner confirms delivery to customer' },
 
-  // Admin cancellations from non-terminal states
+  // Admin cancellations from any non-cancelled state (Decision D39: Admin may cancel from any state including DELIVERED)
+  { from: 'DRAFT', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels draft order' },
   { from: 'PENDING_REVIEW', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels order during pending review' },
   { from: 'ASSIGNED', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels order while assigned' },
   { from: 'IN_PROGRESS', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels order during shopping' },
   { from: 'OUT_FOR_DELIVERY', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels order during delivery' },
   { from: 'AWAITING_RUNNER', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels order while awaiting runner' },
   { from: 'AWAITING_PREFERRED_RUNNER', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin cancels order while awaiting preferred runner' },
+  { from: 'DELIVERED', to: 'CANCELLED', actor: 'ADMIN', description: 'Admin force cancels delivered order' },
 
   // Runner reassignment transitions
   { from: 'ASSIGNED', to: 'AWAITING_RUNNER', actor: 'ADMIN', description: 'Admin returns order to runner pool for reassignment' },

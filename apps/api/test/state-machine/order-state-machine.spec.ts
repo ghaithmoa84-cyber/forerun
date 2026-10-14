@@ -26,6 +26,9 @@ describe('OrderStateMachine', () => {
       ['ASSIGNED', 'CANCELLED', 'CUSTOMER'],
       ['IN_PROGRESS', 'OUT_FOR_DELIVERY', 'RUNNER'],
       ['OUT_FOR_DELIVERY', 'DELIVERED', 'RUNNER'],
+      // Admin force cancellations (Decision D39)
+      ['DRAFT', 'CANCELLED', 'ADMIN'],
+      ['DELIVERED', 'CANCELLED', 'ADMIN'],
     ];
 
     it.each(allowed)(
@@ -44,6 +47,16 @@ describe('OrderStateMachine', () => {
         description: 'Customer submits order for admin review',
       });
     });
+
+    it('allows DELIVERED -> CANCELLED by ADMIN (Decision D39)', () => {
+      const result = sm.transition('DELIVERED', 'CANCELLED', 'ADMIN');
+      expect(result).toEqual({
+        from: 'DELIVERED',
+        to: 'CANCELLED',
+        actor: 'ADMIN',
+        description: 'Admin force cancels delivered order',
+      });
+    });
   });
 
   // ── Negative: every forbidden transition must be rejected ────────────
@@ -54,9 +67,8 @@ describe('OrderStateMachine', () => {
       ['OUT_FOR_DELIVERY', 'CANCELLED', 'CUSTOMER', 'customer cancellation from OUT_FOR_DELIVERY'],
       ['DELIVERED', 'CANCELLED', 'CUSTOMER', 'customer cancellation from DELIVERED'],
       ['UNDER_REVIEW', 'CANCELLED', 'CUSTOMER', 'only ADMIN can cancel during review'],
-      // DELIVERED is terminal — no outgoing transitions
-      ['DELIVERED', 'CANCELLED', 'ADMIN', 'DELIVERED is terminal'],
-      ['DELIVERED', 'IN_PROGRESS', 'RUNNER', 'DELIVERED is terminal'],
+      // DELIVERED has no outgoing transitions for RUNNER
+      ['DELIVERED', 'IN_PROGRESS', 'RUNNER', 'no runner transition from DELIVERED'],
       // CANCELLED is terminal
       ['CANCELLED', 'DRAFT', 'CUSTOMER', 'CANCELLED is terminal'],
       ['CANCELLED', 'PENDING_REVIEW', 'ADMIN', 'CANCELLED is terminal'],
@@ -90,7 +102,7 @@ describe('OrderStateMachine', () => {
     );
 
     it('throws UnprocessableEntityException on transition() for forbidden move', () => {
-      expect(() => sm.transition('DELIVERED', 'CANCELLED', 'ADMIN')).toThrow(
+      expect(() => sm.transition('DELIVERED', 'CANCELLED', 'CUSTOMER')).toThrow(
         expect.objectContaining({ status: 422 }),
       );
     });
@@ -144,8 +156,8 @@ describe('OrderStateMachine', () => {
 
   // ── Transition count ─────────────────────────────────────────────────
   describe('transition table integrity', () => {
-    it('defines exactly 28 allowed order transitions', () => {
-      expect(ORDER_TRANSITIONS).toHaveLength(28);
+    it('defines exactly 30 allowed order transitions (including D39 admin force cancel)', () => {
+      expect(ORDER_TRANSITIONS).toHaveLength(30);
     });
 
     it('covers all 10 OrderStatus enum values', () => {

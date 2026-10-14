@@ -1265,6 +1265,101 @@ it('13. MAX_CUSTOM_FEE = 500 guard allows customFee within cap and pricing row i
         NotFoundException,
       );
     });
+
+    it('throws ConflictException when order is already CANCELLED', async () => {
+      const mockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-400',
+        status: 'CANCELLED',
+        runnerId: null,
+        customerId: 'cust-400',
+        customer: { userId: 'usr-cust-400' },
+      };
+
+      txClient.order.findUnique.mockResolvedValue(mockOrder);
+
+      await expect(service.cancelOrderAdmin(orderId, adminId)).rejects.toThrow(
+        'ORDER_ALREADY_CANCELLED',
+      );
+    });
+
+    it('throws ConflictException when updateMany returns count 0 (concurrent cancellation)', async () => {
+      const mockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-400',
+        status: 'ASSIGNED',
+        runnerId: 'run-400',
+        customerId: 'cust-400',
+        customer: { userId: 'usr-cust-400' },
+        runner: {
+          id: 'run-400',
+          userId: 'usr-run-400',
+          status: 'ON_MISSION',
+        },
+      };
+
+      txClient.order.findUnique.mockResolvedValue(mockOrder);
+      txClient.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.cancelOrderAdmin(orderId, adminId)).rejects.toThrow(
+        'ORDER_ALREADY_CANCELLED',
+      );
+    });
+
+    it('cancels DELIVERED order without touching runner or emitting to runner (Decision D39)', async () => {
+      const mockOrder = {
+        id: orderId,
+        orderNumber: 'ORD-2026-400',
+        status: 'DELIVERED',
+        runnerId: 'run-400',
+        customerId: 'cust-400',
+        customer: { userId: 'usr-cust-400' },
+        runner: {
+          id: 'run-400',
+          userId: 'usr-run-400',
+          status: 'AVAILABLE',
+        },
+      };
+
+      txClient.order.findUnique.mockResolvedValue(mockOrder);
+      txClient.order.updateMany.mockResolvedValue({ count: 1 });
+      txClient.order.findUniqueOrThrow.mockResolvedValue({
+        ...mockOrder,
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+      });
+
+      const result = await service.cancelOrderAdmin(orderId, adminId, 'Post-delivery cancellation');
+
+      expect(result.order.status).toBe('CANCELLED');
+      expect(txClient.runner.updateMany).not.toHaveBeenCalled();
+      expect(notificationsService.emitToRunner).not.toHaveBeenCalled();
+
+      expect(notificationsService.emitToCustomer).toHaveBeenCalledWith(
+        'usr-cust-400',
+        'order:cancelled',
+        expect.objectContaining({
+          orderId,
+          reason: 'Post-delivery cancellation',
+          cancelledBy: adminId,
+        }),
+        'status_update',
+      );
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'ORDER_FORCE_CANCELLED_BY_ADMIN',
+          fromStatus: 'DELIVERED',
+          toStatus: 'CANCELLED',
+          actorId: adminId,
+          meta: expect.objectContaining({
+            previousStatus: 'DELIVERED',
+            reason: 'Post-delivery cancellation',
+          }),
+        }),
+        txClient,
+      );
+    });
   });
 
   describe('checkStaleOrders', () => {

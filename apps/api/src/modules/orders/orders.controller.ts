@@ -302,6 +302,7 @@ export class OrdersController {
 
   @Put('admin/orders/:id/cancel')
   @Roles('ADMIN')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   async cancelOrderAdmin(
     @Param(new ZodValidationPipe(IdParamSchema)) params: IdParamRequest,
     @Body(new ZodValidationPipe(CancelOrderSchema))
@@ -311,7 +312,7 @@ export class OrdersController {
     return this.adminOrderCommandService.cancelOrderAdmin(
       params.id,
       user.userId,
-      dto.cancelReason,
+      dto.reason || dto.cancelReason,
     );
   }
 }
