@@ -17,6 +17,7 @@ import type {
   FeePreviewResponse,
   PlatformPricingResponse,
   UpdatePlatformPricingDto,
+  CustomerPricingDisclosureResponse,
 } from '@forerun/shared-types';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -211,6 +212,20 @@ export class PricingService {
       updatedByUserId: row.updatedByUserId,
     };
   }
+
+  /**
+   * Fetches customer-facing pricing disclosure (cached 30s via getPricingConfig).
+   * Excludes all internal administrative metadata (Rule 7).
+   */
+  async getCustomerPricingDisclosure(): Promise<CustomerPricingDisclosureResponse> {
+    const config = await this.getPricingConfig();
+    return {
+      baseFee: config.baseFee,
+      extraStoreFee: config.extraStoreFee,
+      peripheralFee: config.peripheralFee,
+    };
+  }
+
 
   /**
    * Updates platform pricing with concurrency protection, DB upsert, and AuditLog.

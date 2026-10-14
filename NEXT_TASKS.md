@@ -1,6 +1,6 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-13
+> **آخر تحديث:** 2026-10-14
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
@@ -8,7 +8,9 @@
 
 ## فروع عمل معلّقة بانتظار الدمج (Pending Unmerged Branches)
 
-- لا توجد فروع عمل معلّقة حالياً — تم توحيد ودمج إعادة التصميم البصري مع كافة إصلاحات D35 والتواصل بنجاح في `master` عبر `feature/android-unified-redesign-and-fixes` (راجع القرارات D36 و D37 و D38).
+- `feature/customer-fee-disclosure-modal`: **مكتمل ومختبر بالكامل بانتظار تأكيد الدمج الصريح (Decision D40)**
+  - يحوي: نقطة النهاية `GET /api/v1/customer/pricing/disclosure` + نافذة تنويه المصاريف والإلغاء في Android قبل إرسال الطلب مع التحقق والتراجع الآمن.
+  - تم التحقق بنسبة 100%: Monorepo (`build`, `typecheck`, `lint`), Backend unit (406 passed), Backend integration (5 passed), Android unit (299 passed).
 
 ---
 

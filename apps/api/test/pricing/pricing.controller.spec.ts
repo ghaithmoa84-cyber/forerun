@@ -23,6 +23,7 @@ describe('PricingController (Sprint 6A-7)', () => {
     getPlatformPricing: ReturnType<typeof vi.fn>;
     updatePlatformPricing: ReturnType<typeof vi.fn>;
     previewFee: ReturnType<typeof vi.fn>;
+    getCustomerPricingDisclosure: ReturnType<typeof vi.fn>;
   };
 
   const mockAdminUser = {
@@ -36,6 +37,7 @@ describe('PricingController (Sprint 6A-7)', () => {
       getPlatformPricing: vi.fn(),
       updatePlatformPricing: vi.fn(),
       previewFee: vi.fn(),
+      getCustomerPricingDisclosure: vi.fn(),
     };
 
     controller = new PricingController(
@@ -205,4 +207,21 @@ describe('PricingController (Sprint 6A-7)', () => {
       ).toThrow(BadRequestException);
     });
   });
+
+  describe('GET /customer/pricing/disclosure', () => {
+    it('returns only customer disclosure fields { baseFee, extraStoreFee, peripheralFee }', async () => {
+      const mockDisclosure = {
+        baseFee: 60,
+        extraStoreFee: 20,
+        peripheralFee: 40,
+      };
+      pricingService.getCustomerPricingDisclosure.mockResolvedValue(mockDisclosure);
+
+      const result = await controller.getCustomerPricingDisclosure();
+
+      expect(result).toEqual(mockDisclosure);
+      expect(pricingService.getCustomerPricingDisclosure).toHaveBeenCalledOnce();
+    });
+  });
 });
+

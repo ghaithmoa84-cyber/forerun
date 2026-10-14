@@ -45,9 +45,21 @@ class OrderRepositoryImplTest {
             )
         )
         var cancelOrderResult: ApiResponse<CancelOrderResponseDto> = ApiResponse.Success(CancelOrderResponseDto())
+        var getPricingDisclosureResult: ApiResponse<com.forerun.customer.data.remote.dto.pricing.CustomerPricingDisclosureDto> =
+            ApiResponse.Success(
+                com.forerun.customer.data.remote.dto.pricing.CustomerPricingDisclosureDto(
+                    baseFee = 60,
+                    extraStoreFee = 20,
+                    peripheralFee = 40
+                )
+            )
+
+        override suspend fun getPricingDisclosure(): ApiResponse<com.forerun.customer.data.remote.dto.pricing.CustomerPricingDisclosureDto> =
+            getPricingDisclosureResult
 
         override suspend fun getCustomerOrders(page: Int, limit: Int, status: String?): ApiResponse<PaginatedOrdersDto> =
             throw NotImplementedError()
+
 
         override suspend fun createOrder(request: CreateOrderRequestDto): ApiResponse<CreateOrderResponseDto> =
             createOrderResult
@@ -153,4 +165,30 @@ class OrderRepositoryImplTest {
 
         assertTrue(result.isSuccess)
     }
+
+    @Test
+    fun getPricingDisclosure_success_returnsPricingDisclosure() = runTest {
+        val fakeApi = FakeOrderApi()
+        val repository = OrderRepositoryImpl(fakeApi)
+
+        val result = repository.getPricingDisclosure()
+
+        assertTrue(result.isSuccess)
+        val disclosure = result.getOrThrow()
+        assertEquals(60, disclosure.baseFee)
+        assertEquals(20, disclosure.extraStoreFee)
+        assertEquals(40, disclosure.peripheralFee)
+    }
+
+    @Test
+    fun getPricingDisclosure_error_returnsFailure() = runTest {
+        val fakeApi = FakeOrderApi()
+        fakeApi.getPricingDisclosureResult = ApiResponse.Error(500, "INTERNAL_ERROR", "Server Error")
+        val repository = OrderRepositoryImpl(fakeApi)
+
+        val result = repository.getPricingDisclosure()
+
+        assertTrue(result.isFailure)
+    }
 }
+

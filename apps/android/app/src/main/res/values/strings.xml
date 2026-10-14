@@ -202,6 +202,20 @@
     <string name="create_order_validation_custom_store">يرجى تحديد اسم المتجر أو تفعيل خيار أي متجر</string>
     <string name="create_order_validation_address_missing">يرجى تحديد عنوان التوصيل أولاً قبل إرسال الطلب</string>
 
+    <!-- Fee Disclosure Modal (Decision D40) -->
+    <string name="fee_disclosure_title">تنويه الرسوم وشروط الطلب</string>
+    <string name="fee_disclosure_peripheral_text">رسم المنطقة البعيدة: %1$d ل.س يُضاف عند التوصيل إلى مناطق أبعد.</string>
+    <string name="fee_disclosure_peripheral_fallback">يُضاف رسم إضافي للمناطق البعيدة بحسب موقع التوصيل.</string>
+    <string name="fee_disclosure_extra_store_text">رسم كل متجر إضافي: %1$d ل.س عند إضافة أكثر من متجر للطلب.</string>
+    <string name="fee_disclosure_extra_store_fallback">يُضاف رسم إضافي عن كل متجر إضافي يتم الشراء منه.</string>
+    <string name="fee_disclosure_custom_fee_text">قد تضيف الإدارة رسماً استثنائياً لظروف خاصة للطلب مع إشعار فوري وتوضيح السبب عند اعتماده.</string>
+    <string name="fee_disclosure_cancellation_text">يحق لك إلغاء الطلب مجاناً في أي وقت بعد إرساله وحتى بدء المندوب بالشراء، باستثناء الفترة القصيرة التي يكون فيها طلبك قيد المراجعة من الإدارة مباشرة بعد إرساله.</string>
+    <string name="fee_disclosure_confirm_button">تأكيد الطلب</string>
+    <string name="fee_disclosure_cancel_button">تراجع</string>
+    <string name="fee_disclosure_loading">جاري تحديث الرسوم الحية…</string>
+
+
+
     <!-- Order Confirmation Screen (Commit 5) -->
     <string name="order_confirmation_title">تأكيد الطلب</string>
     <string name="order_confirmation_success_headline">طلبك قيد المتابعة الآن!</string>

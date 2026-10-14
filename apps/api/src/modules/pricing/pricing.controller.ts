@@ -19,6 +19,7 @@ import {
   type FeePreviewDto,
   type PlatformPricingResponse,
   type FeePreviewResponse,
+  type CustomerPricingDisclosureResponse,
 } from '@forerun/shared-types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -30,6 +31,13 @@ import { PricingService } from './pricing.service.js';
 @UseGuards(VerifiedUserGuard)
 export class PricingController {
   constructor(private readonly pricingService: PricingService) {}
+
+  @Get('customer/pricing/disclosure')
+  @Roles('CUSTOMER')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async getCustomerPricingDisclosure(): Promise<CustomerPricingDisclosureResponse> {
+    return this.pricingService.getCustomerPricingDisclosure();
+  }
 
   @Get('admin/pricing')
   @Roles('ADMIN')
@@ -60,3 +68,4 @@ export class PricingController {
     return this.pricingService.previewFee(params.id, dto);
   }
 }
+

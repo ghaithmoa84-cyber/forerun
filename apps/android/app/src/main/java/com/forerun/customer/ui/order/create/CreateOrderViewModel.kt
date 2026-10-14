@@ -7,11 +7,13 @@ import com.forerun.customer.R
 import com.forerun.customer.domain.model.CreatedOrder
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.model.OrderItem
+import com.forerun.customer.domain.model.PricingDisclosure
 import com.forerun.customer.domain.model.RunnerInfo
 import com.forerun.customer.domain.repository.AddressResult
 import com.forerun.customer.domain.usecase.CreateOrderUseCase
 import com.forerun.customer.domain.usecase.GetAvailableRunnersUseCase
 import com.forerun.customer.domain.usecase.GetCustomerAddressUseCase
+import com.forerun.customer.domain.usecase.order.GetPricingDisclosureUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +44,10 @@ data class CreateOrderUiState(
     val waitForPreferred: Boolean = false,
     val validationError: String? = null,
     val createdOrder: CreatedOrder? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val showFeeDisclosure: Boolean = false,
+    val isLoadingDisclosure: Boolean = false,
+    val disclosurePricing: PricingDisclosure? = null
 )
 
 sealed interface CreateOrderIntent {
@@ -61,6 +66,8 @@ sealed interface CreateOrderIntent {
     data object SubmitOrder : CreateOrderIntent
     data object DismissSuccess : CreateOrderIntent
     data object ClearError : CreateOrderIntent
+    data object DismissFeeDisclosure : CreateOrderIntent
+    data object ConfirmOrderSubmit : CreateOrderIntent
 }
 
 sealed interface CreateOrderEvent {
@@ -73,6 +80,7 @@ class CreateOrderViewModel @Inject constructor(
     private val createOrderUseCase: CreateOrderUseCase,
     private val getCustomerAddressUseCase: GetCustomerAddressUseCase,
     private val getAvailableRunnersUseCase: GetAvailableRunnersUseCase,
+    private val getPricingDisclosureUseCase: GetPricingDisclosureUseCase,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -103,8 +111,11 @@ class CreateOrderViewModel @Inject constructor(
             is CreateOrderIntent.SubmitOrder -> submitOrder()
             is CreateOrderIntent.DismissSuccess -> _uiState.update { it.copy(createdOrder = null) }
             is CreateOrderIntent.ClearError -> _uiState.update { it.copy(errorMessage = null, validationError = null) }
+            is CreateOrderIntent.DismissFeeDisclosure -> _uiState.update { it.copy(showFeeDisclosure = false) }
+            is CreateOrderIntent.ConfirmOrderSubmit -> confirmOrderSubmit()
         }
     }
+
 
     private fun loadInitialData() {
         viewModelScope.launch {
@@ -213,30 +224,24 @@ class CreateOrderViewModel @Inject constructor(
 
     private val isSubmittingGuard = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    private fun submitOrder() {
-        if (_uiState.value.isSubmitting || !isSubmittingGuard.compareAndSet(false, true)) {
-            return
-        }
-
+    private fun validateOrderInput(): List<OrderItem>? {
         val state = _uiState.value
 
         // Validation
         if (state.deliveryAddress == null) {
-            isSubmittingGuard.set(false)
             _uiState.update { it.copy(validationError = getApplication<Application>().getString(R.string.create_order_validation_address_missing)) }
-            return
+            return null
         }
 
-        val orderItems: List<OrderItem> = when (state.inputMode) {
+        return when (state.inputMode) {
             OrderInputMode.QUICK -> {
                 val lines = state.quickText.lines()
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
 
                 if (lines.isEmpty()) {
-                    isSubmittingGuard.set(false)
                     _uiState.update { it.copy(validationError = getApplication<Application>().getString(R.string.create_order_validation_empty_items)) }
-                    return
+                    return null
                 }
 
                 lines.map { line ->
@@ -250,26 +255,22 @@ class CreateOrderViewModel @Inject constructor(
             }
             OrderInputMode.STRUCTURED -> {
                 if (state.items.isEmpty()) {
-                    isSubmittingGuard.set(false)
                     _uiState.update { it.copy(validationError = getApplication<Application>().getString(R.string.create_order_validation_empty_items)) }
-                    return
+                    return null
                 }
 
                 for (item in state.items) {
                     if (item.itemName.trim().isEmpty()) {
-                        isSubmittingGuard.set(false)
                         _uiState.update { it.copy(validationError = getApplication<Application>().getString(R.string.create_order_validation_item_name)) }
-                        return
+                        return null
                     }
                     if (item.quantity.trim().isEmpty()) {
-                        isSubmittingGuard.set(false)
                         _uiState.update { it.copy(validationError = getApplication<Application>().getString(R.string.create_order_validation_item_quantity_named, item.itemName)) }
-                        return
+                        return null
                     }
                     if (!item.anyStore && (item.customStoreName == null || item.customStoreName.trim().isEmpty())) {
-                        isSubmittingGuard.set(false)
                         _uiState.update { it.copy(validationError = getApplication<Application>().getString(R.string.create_order_validation_custom_store_named, item.itemName)) }
-                        return
+                        return null
                     }
                 }
 
@@ -282,6 +283,58 @@ class CreateOrderViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun submitOrder() {
+        if (_uiState.value.isSubmitting) {
+            return
+        }
+
+        // Validate first; if invalid, show error and do NOT open modal
+        validateOrderInput() ?: return
+
+        // Open modal
+        _uiState.update { it.copy(showFeeDisclosure = true, validationError = null) }
+
+        // Fetch disclosure if not yet fetched
+        fetchPricingDisclosure()
+    }
+
+    private fun fetchPricingDisclosure() {
+        if (_uiState.value.disclosurePricing != null || _uiState.value.isLoadingDisclosure) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingDisclosure = true) }
+            getPricingDisclosureUseCase().fold(
+                onSuccess = { pricing ->
+                    _uiState.update { it.copy(isLoadingDisclosure = false, disclosurePricing = pricing) }
+                },
+                onFailure = {
+                    // Graceful degradation: keeps disclosurePricing null, allows order creation to proceed
+                    _uiState.update { it.copy(isLoadingDisclosure = false) }
+                }
+            )
+        }
+    }
+
+    private fun confirmOrderSubmit() {
+        _uiState.update { it.copy(showFeeDisclosure = false) }
+        executeSubmitOrder()
+    }
+
+    private fun executeSubmitOrder() {
+        if (_uiState.value.isSubmitting || !isSubmittingGuard.compareAndSet(false, true)) {
+            return
+        }
+
+        val orderItems = validateOrderInput()
+        if (orderItems == null) {
+            isSubmittingGuard.set(false)
+            return
+        }
+
+        val state = _uiState.value
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, errorMessage = null, validationError = null) }
@@ -291,7 +344,7 @@ class CreateOrderViewModel @Inject constructor(
                     notes = state.notes,
                     preferredRunnerId = state.selectedRunnerId,
                     waitForPreferred = state.waitForPreferred,
-                    deliveryAddress = state.deliveryAddress
+                    deliveryAddress = state.deliveryAddress!!
                 )
                 result.fold(
                     onSuccess = { createdOrder ->

@@ -149,3 +149,14 @@ export const PlatformPricingResponseSchema = z.object({
 export type PlatformPricingResponse = z.infer<
   typeof PlatformPricingResponseSchema
 >;
+
+export const CustomerPricingDisclosureResponseSchema = z.object({
+  baseFee: z.number().int().nonnegative(),
+  extraStoreFee: z.number().int().nonnegative(),
+  peripheralFee: z.number().int().nonnegative(),
+});
+
+export type CustomerPricingDisclosureResponse = z.infer<
+  typeof CustomerPricingDisclosureResponseSchema
+>;
+
