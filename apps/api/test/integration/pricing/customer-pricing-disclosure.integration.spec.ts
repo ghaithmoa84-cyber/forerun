@@ -108,12 +108,14 @@ describe('Customer Pricing Disclosure Integration (D40)', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 403 when authenticated as a non-customer role (ADMIN or RUNNER)', async () => {
+  it('returns 403 when authenticated as ADMIN role', async () => {
     const adminRes = await request
       .get('/api/v1/customer/pricing/disclosure')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(adminRes.status).toBe(403);
+  });
 
+  it('returns 403 when authenticated as RUNNER role', async () => {
     const runnerRes = await request
       .get('/api/v1/customer/pricing/disclosure')
       .set('Authorization', `Bearer ${runnerToken}`);
