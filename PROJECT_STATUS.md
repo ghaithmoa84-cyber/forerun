@@ -223,6 +223,7 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 11 | **استهلاك الشرائح في Android (Banners Client UI — فرع وصفي)** | ✅ مكتملة ومختبرة | فرع `feature/banners-client-android` مدموج بـ `git merge --no-ff` إلى `master`. 290 اختبار وحدة (+14) · Coil 3.0.4 · 16:7 pager مع auto-scroll وتوقف عند السحب · اعتماد D30 وإغلاق C-5. |
 | 12 | **C-4 — Baseline Reconciliation Migration + C-6 — Schema Drift Diagnostic Endpoint** | ✅ مكتملة ومختبرة | فرعان مدموجان بـ `git merge --no-ff`: `feature/baseline-migrations-c4` (708f4d2) و`feature/c6-schema-drift-endpoint` (dcd958b). 398 اختبار وحدة (+8) · 59 تكامل (+6) · migration مطبَّقة على الإنتاج وDrift = 0. GET /admin/system/schema-drift محمي بـ JWT+RBAC+Throttle مزدوج (IP وadminId). |
 | 13 | 🔴 **حرج — تسريب بيانات تواصل المندوب الشخصية دون قيد زمني في `customer-orders.service.ts`** | ✅ مكتملة ومختبرة | تم فرض قيد `ACTIVE_RUNNER_CONTACT_STATUSES` في `GET /customer/orders/:id` و `GET /customer/orders`. أرقام المندوب الشخصية محجوبة (`null`) في الحالات غير النشطة (`DELIVERED`/`CANCELLED`). مغطى بـ 6 اختبارات تكامل جديدة (انظر [§12 القرار D35](#d35--فرض-قيد-دورة-الحياة-على-بيانات-تواصل-المندوب-الشخصية-2026-10-13)). |
+| 14 | **إلغاء الطلب الإجباري من الإدارة في كافة الحالات (Admin Force Cancel Order from Any State - D39)** | ✅ مكتملة ومختبرة | تم تمكين إلغاء الأدمن لأي طلب نشط وتحرير المندوب وتسجيل AuditLog مع حماية التنافس واختبارات تكامل شاملة. مدموج في `master` (cb661a4). انظر [§12 القرار D39](#d39--إلغاء-الطلب-الإجباري-من-الإدارة-في-كافة-الحالات-2026-10-14). |
 
 ---
 
@@ -647,6 +648,18 @@ fawrun/
     2. اجتياز كافة اختبارات الـ Backend (`pnpm --filter forerun-api test`: 26 files, 398 passed).
     3. نجاح البناء والفحص الأنماطي والأنواع على مستوى كامل الـ Monorepo (`pnpm build && pnpm typecheck && pnpm lint`: 6/6 packages).
   - حذف فرع الإنقاذ المؤقت `rescue/broken-redesign-attempt-2026-10-13` وتحديث `NEXT_TASKS.md` بإزالة فروع الانتظار.
+
+### D39 — إلغاء الطلب الإجباري من الإدارة في كافة الحالات (2026-10-14)
+- **الخلفية وسياق الحاجة:** كانت قدرة الإدارة على إلغاء الطلب محصورة بحالات معينة فقط في آلة الحالة، مما يترك الإدارة عاجزة عن التدخل في حالات الطوارئ (مثل تعطل المندوب أو تغيير مفاجئ من العميل أثناء الشراء أو خطأ في مسار الطلب).
+- **التنفيذ المعماري والبرمجي:**
+  1. **آلة الحالة (`order-transitions.ts`):** السماح بدور `ADMIN` بالانتقال إلى `CANCELLED` من أي حالة تشغيلية نشطة (`DRAFT`, `PENDING_REVIEW`, `UNDER_REVIEW`, `AWAITING_RUNNER`, `AWAITING_PREFERRED_RUNNER`, `ASSIGNED`, `IN_PROGRESS`) مع حظر الحالات النهائية (`DELIVERED`, `CANCELLED`, `REJECTED`).
+  2. **خدمة الإلغاء (`admin-order-command.service.ts`):** تنفيذ الإلغاء داخل Database Transaction يضمن:
+     - فك ارتباط المندوب وإعادته للحالة المتاحة (`isAvailable = true`) في حال كان معيّناً للطلب.
+     - تسجيل الانتقال في `AuditLog` مع سبب الإلغاء الصريح و`adminId`.
+     - قفل تفاؤلي `version` لمنع تضارب الإلغاء مع تسليم أو تعديل متزامن.
+  3. **واجهة الإدارة (`admin-web`):** إضافة زر الإلغاء الإداري في صفحة تفاصيل الطلب مع نافذة تأكيد تطلب سبب الإلغاء وتمنع الإلغاء العفوي.
+  4. **الاختبارات:** تغطية بـ 316 سطراً من اختبارات التكامل في `admin-force-cancel.integration.spec.ts` واختبارات الوحدة.
+- **الدمج:** تم الدمج في `master` في commit `cb661a4`.
 
 ---
 
