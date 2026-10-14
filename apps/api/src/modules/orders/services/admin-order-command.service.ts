@@ -1069,29 +1069,48 @@ export class AdminOrderCommandService {
           throw new NotFoundException('Order not found');
         }
 
+        if (order.status === 'CANCELLED') {
+          throw new ConflictException('ORDER_ALREADY_CANCELLED');
+        }
+
         const transitionResult = this.orderStateMachine.transition(
           order.status as OrderStatus,
           'CANCELLED',
           'ADMIN',
         );
 
+        const now = new Date();
         const updated = await tx.order.updateMany({
-          where: { id: order.id, status: order.status },
+          where: { id: order.id, status: { not: 'CANCELLED' } },
           data: {
             status: transitionResult.to,
             cancelledByUserId: adminId,
-            cancelledAt: new Date(),
+            cancelledAt: now,
             cancelReason: cancelReason ?? null,
           },
         });
-        if (updated.count === 0) {
-          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+        if (updated.count !== 1) {
+          throw new ConflictException('ORDER_ALREADY_CANCELLED');
         }
         const updatedOrder = await tx.order.findUniqueOrThrow({
           where: { id: order.id },
         });
 
-        if (order.runnerId) {
+        // Decision D39 & Architectural note:
+        // Runner release only applies to active in-flight missions (ASSIGNED, IN_PROGRESS, OUT_FOR_DELIVERY).
+        // If order was DELIVERED, the runner has already completed their mission and was freed upon delivery.
+        // Conscious concurrency window note:
+        // ACTIVE_RUNNER_ORDER_STATUSES evaluation relies on `order.status` read in the transaction snapshot.
+        // In the rare event of a concurrent state transition, runner release to AVAILABLE is idempotent.
+        const ACTIVE_RUNNER_ORDER_STATUSES = new Set<string>([
+          'ASSIGNED',
+          'IN_PROGRESS',
+          'OUT_FOR_DELIVERY',
+        ]);
+
+        let runnerToNotifyUserId: string | null = null;
+
+        if (order.runnerId && ACTIVE_RUNNER_ORDER_STATUSES.has(order.status)) {
           if (!order.runner) {
             throw new NotFoundException('Runner not found');
           }
@@ -1107,6 +1126,7 @@ export class AdminOrderCommandService {
           if (runnerUpdated.count === 0) {
             throw new ConflictException('CONCURRENT_RUNNER_STATE_CHANGE');
           }
+          runnerToNotifyUserId = order.runner.userId;
         }
 
         await this.auditService.log(
@@ -1114,12 +1134,15 @@ export class AdminOrderCommandService {
             orderId: order.id,
             actorId: adminId,
             actorRole: 'ADMIN',
-            event: 'ORDER_CANCELLED',
+            event: 'ORDER_FORCE_CANCELLED_BY_ADMIN',
             fromStatus: order.status,
             toStatus: 'CANCELLED',
             meta: {
+              action: 'ORDER_FORCE_CANCELLED_BY_ADMIN',
+              previousStatus: order.status,
+              reason: cancelReason ?? null,
+              timestamp: now.toISOString(),
               orderNumber: order.orderNumber,
-              cancelReason: cancelReason ?? null,
               runnerId: order.runnerId,
             },
           },
@@ -1128,7 +1151,7 @@ export class AdminOrderCommandService {
 
         return {
           order: updatedOrder,
-          oldRunnerUserId: order.runner?.userId ?? null,
+          oldRunnerUserId: runnerToNotifyUserId,
           customerId: order.customerId,
           customerUserId: order.customer.userId,
         };

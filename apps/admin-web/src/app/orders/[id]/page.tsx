@@ -56,7 +56,18 @@ const RUNNER_STATUS_LABEL: Record<RunnerStatus, string> = {
   UNAVAILABLE: 'غير متاح',
 };
 
-const CANCELLABLE_STATUSES: OrderStatus[] = ['ASSIGNED', 'IN_PROGRESS', 'OUT_FOR_DELIVERY'];
+// D39: Admin may cancel an order from any non-cancelled status (including DELIVERED)
+const CANCELLABLE_STATUSES: OrderStatus[] = [
+  'DRAFT',
+  'PENDING_REVIEW',
+  'UNDER_REVIEW',
+  'AWAITING_RUNNER',
+  'AWAITING_PREFERRED_RUNNER',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+];
 
 type AuditLogEntry = AdminOrderAuditEntry;
 
@@ -257,13 +268,24 @@ export default function OrderDetailPage() {
   };
 
   const handleCancelOrder = async () => {
+    const trimmedReason = cancelReason.trim();
+    if (!trimmedReason) {
+      showToast('يرجى كتابة سبب الإلغاء', 'error');
+      return;
+    }
+    if (trimmedReason.length < 3) {
+      showToast('سبب الإلغاء يجب أن يكون 3 أحرف على الأقل', 'error');
+      return;
+    }
     try {
       setActionLoading(true);
       await api.put(`/admin/orders/${orderId}/cancel`, {
-        cancelReason: cancelReason.trim() || undefined,
+        reason: trimmedReason,
+        cancelReason: trimmedReason,
       });
       showToast('تم إلغاء الطلب بنجاح', 'info');
       setIsCancelOpen(false);
+      setCancelReason('');
       fetchOrderData();
     } catch {
       showToast('فشل في إلغاء الطلب', 'error');

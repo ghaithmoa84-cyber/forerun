@@ -503,12 +503,28 @@ export type DeleteReceiptResponse = z.infer<
 // Admin Order Actions (Cancel order)
 // ─────────────────────────────────────────────────────────────
 
-export const CancelOrderSchema = z.object({
-  cancelReason: z
-    .string()
-    .min(1, 'Cancel reason must be at least 1 character')
-    .optional(),
-});
+export const CancelOrderSchema = z
+  .object({
+    reason: z
+      .string()
+      .min(3, 'سبب الإلغاء يجب أن يكون 3 أحرف على الأقل')
+      .optional(),
+    cancelReason: z
+      .string()
+      .min(3, 'سبب الإلغاء يجب أن يكون 3 أحرف على الأقل')
+      .optional(),
+  })
+  .refine((data) => !!(data.reason?.trim() || data.cancelReason?.trim()), {
+    message: 'سبب الإلغاء مطلوب ويجب ألا يكون فارغاً',
+    path: ['reason'],
+  })
+  .transform((data) => {
+    const effectiveReason = (data.reason || data.cancelReason)!.trim();
+    return {
+      reason: effectiveReason,
+      cancelReason: effectiveReason,
+    };
+  });
 
 export type CancelOrderRequest = z.infer<typeof CancelOrderSchema>;
 
