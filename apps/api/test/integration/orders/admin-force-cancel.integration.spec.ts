@@ -87,9 +87,11 @@ describe('Admin Force Cancel Order Integration Tests (Decision D39)', () => {
   // ── 1. Successful cancellation from every allowed state ───────────────────
   describe('Admin force cancel from each lifecycle state', () => {
     const states: OrderStatus[] = [
+      OrderStatus.DRAFT,
       OrderStatus.PENDING_REVIEW,
       OrderStatus.UNDER_REVIEW,
       OrderStatus.AWAITING_RUNNER,
+      OrderStatus.AWAITING_PREFERRED_RUNNER,
       OrderStatus.ASSIGNED,
       OrderStatus.IN_PROGRESS,
       OrderStatus.OUT_FOR_DELIVERY,
