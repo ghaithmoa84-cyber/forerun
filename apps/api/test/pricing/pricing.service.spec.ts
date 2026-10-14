@@ -1296,6 +1296,47 @@ describe('PricingService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
+
+  describe('getCustomerPricingDisclosure', () => {
+    it('returns only customer disclosure fields and excludes internal metadata', async () => {
+      prisma.platformPricing.findUnique.mockResolvedValue({
+        id: 'default',
+        baseFee: 75,
+        extraStoreFee: 25,
+        peripheralFee: 45,
+        updatedAt: new Date('2026-10-14T09:00:00.000Z'),
+        updatedByUserId: 'admin-sensitive-id',
+      });
+
+      const result = await service.getCustomerPricingDisclosure();
+
+      expect(result).toEqual({
+        baseFee: 75,
+        extraStoreFee: 25,
+        peripheralFee: 45,
+      });
+
+      // Strict check: no leaked internal fields
+      const keys = Object.keys(result);
+      expect(keys.sort()).toEqual(['baseFee', 'extraStoreFee', 'peripheralFee']);
+      expect((result as any).id).toBeUndefined();
+      expect((result as any).updatedAt).toBeUndefined();
+      expect((result as any).updatedByUserId).toBeUndefined();
+    });
+
+    it('falls back to DEFAULT_PRICING_CONFIG if DB row is missing', async () => {
+      prisma.platformPricing.findUnique.mockResolvedValue(null);
+
+      const result = await service.getCustomerPricingDisclosure();
+
+      expect(result).toEqual({
+        baseFee: DEFAULT_PRICING_CONFIG.baseFee,
+        extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
+        peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+      });
+    });
+  });
 });
+
 
 
