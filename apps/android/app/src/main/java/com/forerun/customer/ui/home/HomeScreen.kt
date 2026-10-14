@@ -594,304 +594,341 @@ private fun ActiveOrderCard(
         colors = CardDefaults.cardColors(containerColor = ForerunSurface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(Dimens.Space16)) {
-            // Header: Receipt Icon + Order Number & Fee Summary + Dynamic Status Badge
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column {
+            // Top orange accent highlight line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(ForerunOrange)
+            )
+
+            Column(modifier = Modifier.padding(Dimens.Space16)) {
+                // Header: Line 1 (طلب جاري + شارة الحالة بأفق واحد) + Line 2 (رقم الطلب الكامل بلا اقتطاع) + أيقونة السلة
                 Row(
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(ForerunMintSoft),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = ForerunNavy,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(Dimens.Space10))
-                    Column {
+                        // السطر الأول: "طلب جاري" وبجانبه شارة الحالة في نفس السطر بدون انكسار
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.home_active_order_label),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunNavy,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+
+                            // Dynamic Status pill on a single line (لا ينكسر لسطرين)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                    .background(statusColors.background)
+                                    .padding(horizontal = 9.dp, vertical = 3.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(statusColors.text.copy(alpha = alphaAnim))
+                                    )
+                                    Text(
+                                        text = stringResource(statusLabelRes),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = statusColors.text,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // السطر الثاني: رقم الطلب ممتد بالكامل مع تفاصيل المواد والرسوم دون أي اقتطاع
                         Text(
-                            text = stringResource(R.string.home_active_order_heading, "\u200E${order.orderNumber}\u200E"),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunNavy,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(R.string.home_order_summary_format, order.itemCount, order.totalFee),
-                            fontSize = 11.sp,
+                            text = stringResource(
+                                R.string.home_order_summary_full,
+                                "\u200E#${order.orderNumber}\u200E",
+                                order.itemCount,
+                                order.totalFee
+                            ),
+                            fontSize = 12.sp,
                             color = ForerunTextMuted,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.width(Dimens.Space8))
+                    Spacer(modifier = Modifier.width(Dimens.Space10))
 
-                // Dynamic Status pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(Dimens.RadiusPill))
-                        .background(statusColors.background)
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(statusColors.text.copy(alpha = alphaAnim))
-                        )
-                        Spacer(modifier = Modifier.width(5.dp))
-                        Text(
-                            text = stringResource(statusLabelRes),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = statusColors.text,
-                            maxLines = 1,
-                            softWrap = false
+                    // أيقونة السلة الأنيقة
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(ForerunOrangeLight.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ShoppingCart,
+                            contentDescription = null,
+                            tint = ForerunOrange,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(Dimens.Space16))
+                Spacer(modifier = Modifier.height(Dimens.Space16))
 
-            // 4-Step Stepper matching FORERUN State Machine
-            HomeOrderStepper(status = order.status)
+                // 4-Step Stepper matching FORERUN State Machine
+                HomeOrderStepper(status = order.status)
 
-            Spacer(modifier = Modifier.height(Dimens.Space14))
+                Spacer(modifier = Modifier.height(Dimens.Space14))
 
-            // Runner Information Bar (or Awaiting Runner Message)
-            if (order.runnerName != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(ForerunMintLight.copy(alpha = 0.4f))
-                        .padding(Dimens.Space10),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                // Runner Information Bar (أو رسالة انتظار تعيين الكابتن)
+                if (order.runnerName != null) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(ForerunMintLight.copy(alpha = 0.4f))
+                            .padding(Dimens.Space10),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(ForerunMintSoft),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = ForerunNavy,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Column {
-                            Text(
-                                text = order.runnerName,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ForerunNavy
-                            )
-                            Text(
-                                text = stringResource(R.string.home_runner_role),
-                                fontSize = 10.sp,
-                                color = ForerunTextMuted
-                            )
-                        }
-                    }
-
-                    // WhatsApp + Call action buttons
-                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space6)) {
-                        val runnerWa = order.runnerWhatsapp ?: order.runnerPhone
-                        if (runnerWa != null) {
-                            Button(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$runnerWa"))
-                                    context.startActivity(intent)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
-                                shape = RoundedCornerShape(Dimens.RadiusPill),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(34.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(ForerunMintSoft),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.home_btn_whatsapp),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-
-                        val runnerPhone = order.runnerPhone
-                        if (runnerPhone != null) {
-                            OutlinedButton(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$runnerPhone"))
-                                    context.startActivity(intent)
-                                },
-                                shape = RoundedCornerShape(Dimens.RadiusPill),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, ForerunBorder),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ForerunNavy),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.height(34.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Call,
-                                    contentDescription = null,
-                                    tint = ForerunNavy,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.home_btn_call),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ForerunNavy
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(ForerunMintLight.copy(alpha = 0.35f))
-                        .padding(horizontal = Dimens.Space12, vertical = Dimens.Space10),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f, fill = false),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(ForerunMintSoft),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = ForerunMintDark,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(Dimens.Space8))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = stringResource(R.string.home_awaiting_runner_badge),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ForerunNavy
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(Dimens.RadiusPill))
-                                        .background(ForerunMintSoft)
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
+                                val initial = order.runnerName.trim().firstOrNull()?.toString()
+                                if (!initial.isNullOrBlank()) {
                                     Text(
-                                        text = stringResource(R.string.tag_direct_coord),
-                                        fontSize = 9.sp,
+                                        text = initial,
                                         fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
                                         color = ForerunMintDark
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = ForerunNavy,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
+
+                            Column {
+                                Text(
+                                    text = order.runnerName,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForerunNavy,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = stringResource(R.string.home_runner_role_certified),
+                                    fontSize = 11.sp,
+                                    color = ForerunTextMuted,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(Dimens.Space8))
+
+                        // أزرار سريعة دائرية (واتساب + اتصال) تلغي الازدحام الأفقي تماماً
+                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)) {
+                            val runnerWa = order.runnerWhatsapp ?: order.runnerPhone
+                            if (runnerWa != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(WhatsAppGreen)
+                                        .clickable {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$runnerWa"))
+                                            context.startActivity(intent)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                                        contentDescription = stringResource(R.string.home_btn_whatsapp),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            val runnerPhone = order.runnerPhone
+                            if (runnerPhone != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(ForerunSurface)
+                                        .border(1.dp, ForerunBorder, CircleShape)
+                                        .clickable {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$runnerPhone"))
+                                            context.startActivity(intent)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Call,
+                                        contentDescription = stringResource(R.string.home_btn_call),
+                                        tint = ForerunNavy,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(ForerunMintLight.copy(alpha = 0.35f))
+                            .padding(horizontal = Dimens.Space12, vertical = Dimens.Space10),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f, fill = false),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(ForerunMintSoft),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = ForerunMintDark,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(Dimens.Space8))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = stringResource(R.string.home_awaiting_runner_badge),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForerunNavy
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                            .background(ForerunMintSoft)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.tag_direct_coord),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ForerunMintDark
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.home_awaiting_runner),
+                                    fontSize = 10.sp,
+                                    color = ForerunTextMuted
+                                )
+                            }
+                        }
+
+                        // Contact Admin button when awaiting runner
+                        Button(
+                            onClick = {
+                                val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                } catch (_: Exception) {}
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
+                            shape = RoundedCornerShape(Dimens.RadiusPill),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(30.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = stringResource(R.string.home_awaiting_runner),
+                                text = stringResource(R.string.tag_via_admin),
                                 fontSize = 10.sp,
-                                color = ForerunTextMuted
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         }
                     }
+                }
 
-                    // Contact Admin button when awaiting runner
-                    Button(
-                        onClick = {
-                            val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            } catch (_: Exception) {}
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
-                        shape = RoundedCornerShape(Dimens.RadiusPill),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        modifier = Modifier.height(30.dp)
+                // Bottom action: زر متابعة تفاصيل وتتبع الطلب بدقة (عريض وبارز كزر CTA حقيقي)
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ForerunOrangeLight.copy(alpha = 0.2f))
+                        .clickable { onClick() }
+                        .padding(vertical = 10.dp, horizontal = Dimens.Space12),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Chat,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = stringResource(R.string.tag_via_admin),
-                            fontSize = 10.sp,
+                            text = stringResource(R.string.home_track_order_action),
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = ForerunOrange
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = ForerunOrange,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
-            }
-
-            // Bottom action: View full details
-            Spacer(modifier = Modifier.height(Dimens.Space10))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onClick() }
-                    .padding(vertical = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.home_track_order),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ForerunNavy
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = ForerunOrange,
-                    modifier = Modifier.size(15.dp)
-                )
             }
         }
     }
@@ -964,7 +1001,7 @@ private fun HomeOrderStepper(status: String) {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
                             .background(
                                 when {
@@ -974,8 +1011,12 @@ private fun HomeOrderStepper(status: String) {
                                 }
                             )
                             .border(
-                                width = 1.dp,
-                                color = if (!isDone && !isCurrent) ForerunBorder else Color.Transparent,
+                                width = if (isCurrent) 2.dp else 1.dp,
+                                color = when {
+                                    isCurrent -> ForerunOrangeLight
+                                    !isDone -> ForerunBorder
+                                    else -> Color.Transparent
+                                },
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -985,8 +1026,8 @@ private fun HomeOrderStepper(status: String) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = ForerunNavy,
-                                    modifier = Modifier.size(14.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                             isCurrent -> {
@@ -994,7 +1035,7 @@ private fun HomeOrderStepper(status: String) {
                                     imageVector = Icons.Default.LocalShipping,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                             else -> {
@@ -1012,7 +1053,7 @@ private fun HomeOrderStepper(status: String) {
 
                     Text(
                         text = stepLabel,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
                         color = when {
                             isCurrent -> ForerunOrange

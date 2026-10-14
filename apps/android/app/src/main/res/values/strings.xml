@@ -424,6 +424,10 @@
     <string name="home_banner_location_tag">القنجرة 📍</string>
     <string name="home_banner_promo_title">طلب بقالية ومشتريات طازجة\nكابتن فَوْراً يوصلك ع السريع</string>
     <string name="home_runner_role">كابتن فَوْراً</string>
+    <string name="home_runner_role_certified">كابتن فَوْراً المعتمد</string>
+    <string name="home_active_order_label">طلب جاري</string>
+    <string name="home_order_summary_full">رقم الطلب: %1$s • %2$d مواد • الإجمالي %3$d ل.س</string>
+    <string name="home_track_order_action">متابعة تفاصيل وتتبع الطلب بدقة ←</string>
     <string name="error_home_data_load_failed">تعذر تحميل البيانات</string>
 
     <!-- Support (FAQ + default WhatsApp message) -->
