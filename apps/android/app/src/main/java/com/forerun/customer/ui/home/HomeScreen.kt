@@ -286,7 +286,7 @@ fun HomeContent(
 
         Spacer(modifier = Modifier.height(Dimens.Space16))
 
-        // 3. Active Order Card (Or friendly prompt if no active order)
+        // 3. Active Order Card (Or friendly prompt and Admin Contact if no active order)
         if (activeOrder != null) {
             ActiveOrderCard(
                 order = activeOrder,
@@ -296,12 +296,12 @@ fun HomeContent(
             HomeNoActiveOrderCard(
                 onNewOrderClick = onNewOrderClick
             )
+
+            Spacer(modifier = Modifier.height(Dimens.Space14))
+
+            // Admin Support & Direct Coordination Card (preserved from D38)
+            HomeAdminContactCard()
         }
-
-        Spacer(modifier = Modifier.height(Dimens.Space14))
-
-        // Admin Support & Direct Coordination Card
-        HomeAdminContactCard()
 
         Spacer(modifier = Modifier.height(Dimens.Space20))
 
