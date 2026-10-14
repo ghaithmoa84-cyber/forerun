@@ -311,11 +311,6 @@ fun HomeContent(
             onSecondaryServiceClick = { showServiceDialog = true }
         )
 
-        Spacer(modifier = Modifier.height(Dimens.Space20))
-
-        // 5. Account Stats Summary (Completed orders + Total Fees)
-        HomeStatsSection(profile = profile)
-
         // Bottom breathing room
         Spacer(modifier = Modifier.height(Dimens.Space24))
     }
