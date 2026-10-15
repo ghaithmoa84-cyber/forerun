@@ -9,7 +9,7 @@ import { SyrianPhoneSchema } from '@forerun/shared-types';
 export function LoginPage() {
   const navigate = useNavigate();
   const { user, login, isAuthenticated, isLoading } = useAuth();
-  const { isInstallable, isInstalling, installApp } = usePwaInstall();
+  const { isInstallable, isInstalling, installError, installApp } = usePwaInstall();
   useEffect(() => {
     if (isAuthenticated) {
       if (user?.status === 'SUSPENDED') {
@@ -146,6 +146,12 @@ export function LoginPage() {
               </svg>
               <span>{isInstalling ? 'جاري تثبيت التطبيق...' : 'تثبيت التطبيق على هاتفك'}</span>
             </button>
+
+            {installError && (
+              <div className="error-msg" style={{ marginTop: '12px', fontSize: '13px', textAlign: 'right' }}>
+                ⚠️ {installError}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -49,15 +49,24 @@ interface PwaInstallContextType {
   isInstallable: boolean;
   isInstalled: boolean;
   isInstalling: boolean;
+  installError: string | null;
+  clearInstallError: () => void;
   installApp: () => Promise<boolean>;
 }
 
 const PwaInstallContext = createContext<PwaInstallContextType | undefined>(undefined);
 
+const INSTALL_TIMEOUT_MS = 15000;
+
 export function PwaInstallProvider({ children }: { children: ReactNode }) {
   const [isStandalone, setIsStandalone] = useState<boolean>(() => checkIsStandalone());
   const [hasPrompt, setHasPrompt] = useState<boolean>(() => savedPromptEvent !== null);
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
+  const [installError, setInstallError] = useState<string | null>(null);
+
+  const clearInstallError = useCallback(() => {
+    setInstallError(null);
+  }, []);
 
   useEffect(() => {
     const handlePrompt = () => {
@@ -67,6 +76,7 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
     const handleInstalled = () => {
       setHasPrompt(false);
       setIsStandalone(true);
+      setInstallError(null);
     };
 
     window.addEventListener(PROMPT_EVENT_NAME, handlePrompt);
@@ -91,22 +101,51 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
 
   const installApp = useCallback(async (): Promise<boolean> => {
     if (!savedPromptEvent) {
+      setInstallError(
+        'المتصفح لم يُتح نافذة التثبيت التلقائي بعد. يمكنك التثبيت يدوياً عبر قائمة المتصفح (⋮) ثم "إضافة إلى الشاشة الرئيسية".',
+      );
       return false;
     }
 
     setIsInstalling(true);
+    setInstallError(null);
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<{ outcome: 'dismissed'; platform: 'timeout' }>((resolve) => {
+      timeoutId = setTimeout(() => {
+        resolve({ outcome: 'dismissed', platform: 'timeout' });
+      }, INSTALL_TIMEOUT_MS);
+    });
+
     try {
       await savedPromptEvent.prompt();
-      const choice = await savedPromptEvent.userChoice;
+      const choice = await Promise.race([savedPromptEvent.userChoice, timeoutPromise]);
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      if (choice.platform === 'timeout') {
+        setInstallError(
+          'لم يستجب المتصفح لنافذة التثبيت بالوقت المحدد. يمكنك تثبيت التطبيق يدوياً عبر قائمة المتصفح (⋮) ثم اختيار "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق".',
+        );
+        return false;
+      }
+
       if (choice.outcome === 'accepted') {
         savedPromptEvent = null;
         setHasPrompt(false);
         setIsStandalone(true);
+        setInstallError(null);
         return true;
       }
+
+      // User explicitly dismissed the native prompt dialog
       return false;
     } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
       console.error('Failed to trigger PWA installation prompt:', err);
+      setInstallError(
+        'تعذر إكمال التثبيت التلقائي عبر المتصفح. يمكنك التثبيت يدوياً عبر قائمة المتصفح (⋮) ثم اختيار "إضافة إلى الشاشة الرئيسية".',
+      );
       return false;
     } finally {
       setIsInstalling(false);
@@ -121,6 +160,8 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
         isInstallable,
         isInstalled: isStandalone,
         isInstalling,
+        installError,
+        clearInstallError,
         installApp,
       }}
     >

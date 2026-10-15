@@ -164,14 +164,55 @@ body {
 /* PWA Install Notification Banner */
 .pwa-install-banner {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 16px;
   background: linear-gradient(135deg, #e6faf7 0%, #d1f4ef 100%);
   border-bottom: 1px solid rgba(0, 193, 167, 0.3);
   color: #0d4d46;
   animation: pwaSlideDown 0.3s ease-out;
+}
+
+.pwa-install-banner__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.pwa-install-banner__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pwa-error-text {
+  flex: 1;
+}
+
+.btn-pwa-error-close {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.btn-pwa-error-close:hover {
+  background: rgba(239, 68, 68, 0.15);
 }
 
 @keyframes pwaSlideDown {
