@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocalShipping
@@ -43,7 +44,9 @@ import androidx.compose.material.icons.filled.LocalTaxi
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -99,6 +102,7 @@ import com.forerun.customer.ui.theme.ForerunMintLight
 import com.forerun.customer.ui.theme.ForerunMintSoft
 import com.forerun.customer.ui.theme.ForerunNavy
 import com.forerun.customer.ui.theme.ForerunOrange
+import com.forerun.customer.ui.theme.ForerunOrangeDark
 import com.forerun.customer.ui.theme.ForerunOrangeLight
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSurface
@@ -227,6 +231,7 @@ fun HomeContent(
     modifier: Modifier = Modifier
 ) {
     var showServiceDialog by rememberSaveable { mutableStateOf(false) }
+    var activeComingSoonFeature by rememberSaveable { mutableStateOf<ComingSoonFeature?>(null) }
     val context = LocalContext.current
 
     if (showServiceDialog) {
@@ -286,6 +291,13 @@ fun HomeContent(
         )
     }
 
+    activeComingSoonFeature?.let { feature ->
+        ComingSoonFeatureDialog(
+            feature = feature,
+            onDismiss = { activeComingSoonFeature = null }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -331,7 +343,9 @@ fun HomeContent(
         // 4. Core FORERUN Services (Grocery Delivery + Secondary Services)
         QuickServicesSection(
             onGroceryClick = onNewOrderClick,
-            onSecondaryServiceClick = { showServiceDialog = true }
+            onSecondaryServiceClick = { showServiceDialog = true },
+            onStoreCatalogClick = { activeComingSoonFeature = ComingSoonFeature.STORE_CATALOG },
+            onProductSearchClick = { activeComingSoonFeature = ComingSoonFeature.PRODUCT_SEARCH }
         )
 
         // Bottom breathing room
@@ -1155,6 +1169,8 @@ private fun HomeNoActiveOrderCard(
 private fun QuickServicesSection(
     onGroceryClick: () -> Unit,
     onSecondaryServiceClick: () -> Unit,
+    onStoreCatalogClick: () -> Unit = {},
+    onProductSearchClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -1490,7 +1506,334 @@ private fun QuickServicesSection(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(Dimens.Space10))
+
+        // Secondary Coming Soon Grid: Store Catalog & Product Search (Awareness only / D30)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
+        ) {
+            // Card 3: Store Catalog (اختيار متجر محدد والتسوق منه مباشرة)
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+                    .clickable { onStoreCatalogClick() },
+                colors = CardDefaults.cardColors(containerColor = ForerunSurface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimens.Space12)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(ForerunOrangeLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Store,
+                                contentDescription = null,
+                                tint = ForerunOrangeDark,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Distinct "قريباً" Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                .background(ForerunOrangeLight)
+                                .border(1.dp, ForerunOrange.copy(alpha = 0.35f), RoundedCornerShape(Dimens.RadiusPill))
+                                .padding(horizontal = Dimens.Space8, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.service_tag_coming_soon),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunOrangeDark
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.Space8))
+
+                    Text(
+                        text = stringResource(R.string.service_store_catalog_title),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.service_store_catalog_desc),
+                        fontSize = 10.sp,
+                        color = ForerunTextMuted,
+                        lineHeight = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.Space10))
+
+                    // Awareness info prompt
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ForerunSoftSurface)
+                            .padding(vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = ForerunTextMuted,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.service_card_learn_more),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunTextMuted
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Card 4: Product Search (البحث عن غرض عبر المتاجر)
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
+                    .clickable { onProductSearchClick() },
+                colors = CardDefaults.cardColors(containerColor = ForerunSurface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimens.Space12)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(ForerunMintSoft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = ForerunNavy,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Distinct "قريباً" Badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(Dimens.RadiusPill))
+                                .background(ForerunOrangeLight)
+                                .border(1.dp, ForerunOrange.copy(alpha = 0.35f), RoundedCornerShape(Dimens.RadiusPill))
+                                .padding(horizontal = Dimens.Space8, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.service_tag_coming_soon),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunOrangeDark
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.Space8))
+
+                    Text(
+                        text = stringResource(R.string.service_product_search_title),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunNavy
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.service_product_search_desc),
+                        fontSize = 10.sp,
+                        color = ForerunTextMuted,
+                        lineHeight = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.Space10))
+
+                    // Awareness info prompt
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ForerunSoftSurface)
+                            .padding(vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = ForerunTextMuted,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = stringResource(R.string.service_card_learn_more),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunTextMuted
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+
+private enum class ComingSoonFeature {
+    STORE_CATALOG,
+    PRODUCT_SEARCH
+}
+
+/**
+ * Awareness dialog for upcoming store & search features (D30 / Pre-launch awareness).
+ * Purely local presentation with zero API or repository calls.
+ */
+@Composable
+private fun ComingSoonFeatureDialog(
+    feature: ComingSoonFeature,
+    onDismiss: () -> Unit
+) {
+    val (titleRes, descRes, icon) = when (feature) {
+        ComingSoonFeature.STORE_CATALOG -> Triple(
+            R.string.service_store_catalog_dialog_title,
+            R.string.service_store_catalog_dialog_desc,
+            Icons.Default.Store
+        )
+        ComingSoonFeature.PRODUCT_SEARCH -> Triple(
+            R.string.service_product_search_dialog_title,
+            R.string.service_product_search_dialog_desc,
+            Icons.Default.Search
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(ForerunOrangeLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = ForerunOrangeDark,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(titleRes),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = ForerunNavy
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Dimens.Space12)
+            ) {
+                Text(
+                    text = stringResource(descRes),
+                    fontSize = 13.sp,
+                    color = ForerunNavy,
+                    lineHeight = 20.sp
+                )
+
+                // Callout banner with explicit notice that this feature is in development
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ForerunSoftSurface)
+                        .border(1.dp, ForerunBorder, RoundedCornerShape(12.dp))
+                        .padding(horizontal = Dimens.Space12, vertical = Dimens.Space10)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = ForerunOrange,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(top = 2.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.coming_soon_feature_in_dev_notice),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = ForerunTextMuted,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ForerunNavy,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.coming_soon_dialog_dismiss),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = ForerunSurface
+    )
 }
 
 /**
