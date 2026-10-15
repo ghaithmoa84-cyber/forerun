@@ -107,6 +107,37 @@ body {
   gap: 10px;
 }
 
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-install-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b6b60;
+  background: var(--primary-bg);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-install-header:hover {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-install-header:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .user-name {
   font-size: 14px;
   font-weight: 600;
@@ -128,6 +159,202 @@ body {
 .btn-logout:hover {
   background: var(--danger);
   color: #ffffff;
+}
+
+/* PWA Install Notification Banner */
+.pwa-install-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #e6faf7 0%, #d1f4ef 100%);
+  border-bottom: 1px solid rgba(0, 193, 167, 0.3);
+  color: #0d4d46;
+  animation: pwaSlideDown 0.3s ease-out;
+}
+
+.pwa-install-banner__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.pwa-install-banner__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pwa-error-text {
+  flex: 1;
+}
+
+.btn-pwa-error-close {
+  background: none;
+  border: none;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.btn-pwa-error-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+@keyframes pwaSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pwa-install-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-install-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #00a892;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.pwa-install-banner__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.pwa-install-banner__text strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0b4f46;
+}
+
+.pwa-install-banner__text span {
+  font-size: 11px;
+  color: #2b7067;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-install-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-pwa-install {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #00a892;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 168, 146, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-install:hover {
+  background: #008f7c;
+  transform: translateY(-1px);
+}
+
+.btn-pwa-install:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pwa-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: #4b8077;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.btn-pwa-dismiss:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111827;
+}
+
+/* Login Page Install Prompt */
+.login-install-divider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 16px;
+}
+
+.btn-pwa-login-install {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0b6b60;
+  background: #eefbf9;
+  border: 1.5px dashed #00C1A7;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-login-install:hover {
+  background: #dcf7f3;
+  border-color: #00a892;
+  color: #007364;
+}
+
+.btn-pwa-login-install:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Bottom Navigation */

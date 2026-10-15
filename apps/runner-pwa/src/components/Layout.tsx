@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useEffect, useState, useCallback } from 'react';
 import api from '../api/client';
 import type { ActiveOrderResponse } from '@forerun/shared-types';
+import { InstallPromptBanner, HeaderInstallButton } from './InstallPromptBanner';
 
 export function Layout() {
   const { user, logout } = useAuth();
@@ -49,20 +50,27 @@ export function Layout() {
           />
         </div>
 
-        {user && (
-          <div className="app-header__user">
-            <span className="user-name">{user.name}</span>
-            <button
-              type="button"
-              className="btn-logout"
-              onClick={logout}
-              title="تسجيل الخروج"
-            >
-              خروج
-            </button>
-          </div>
-        )}
+        <div className="app-header__actions">
+          <HeaderInstallButton />
+
+          {user && (
+            <div className="app-header__user">
+              <span className="user-name">{user.name}</span>
+              <button
+                type="button"
+                className="btn-logout"
+                onClick={logout}
+                title="تسجيل الخروج"
+              >
+                خروج
+              </button>
+            </div>
+          )}
+        </div>
       </header>
+
+      {/* PWA Install Notification Banner */}
+      <InstallPromptBanner />
 
       {/* Main Page Content */}
       <main className="app-content">
