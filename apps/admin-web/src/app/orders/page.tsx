@@ -74,6 +74,16 @@ export default function OrdersPage() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+
+  // Debounce search query by 350ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const fetchOrders = useCallback(async (page = 1) => {
     try {
@@ -87,6 +97,9 @@ export default function OrdersPage() {
         params.dateFrom = from;
         params.dateTo = to;
       }
+      if (debouncedSearch.trim()) {
+        params.search = debouncedSearch.trim();
+      }
 
       const res = await api.get<OrdersApiResponse>('/admin/orders', { params });
       setOrders(res.data.data);
@@ -96,7 +109,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, dateFilter, showToast]);
+  }, [statusFilter, dateFilter, debouncedSearch, showToast]);
 
   useEffect(() => {
     fetchOrders(1);
@@ -146,19 +159,50 @@ export default function OrdersPage() {
             متابعة حالة الطلبات اللحظية، الرسوم، وتعيين المناديب
           </p>
         </div>
+      </div>
+
+      {/* Omni-Search & Controls Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        {/* Omni-Search Input */}
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="البحث برقم الطلب (مثال: FW-000001)، اسم العميل، أو رقم الهاتف..."
+            className="w-full pr-10 pl-10 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 outline-hidden focus:border-[#7DDDD4] focus:ring-2 focus:ring-[#7DDDD4]/20 transition-all shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="مسح البحث"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* Date Filter */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2">
           <input
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-hidden focus:border-[#7DDDD4] w-full sm:w-auto"
+            className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-hidden focus:border-[#7DDDD4] shadow-2xs w-full sm:w-auto"
           />
           {dateFilter && (
             <button
               onClick={() => setDateFilter('')}
-              className="text-xs text-slate-500 hover:text-slate-800 underline font-semibold"
+              className="text-xs text-slate-500 hover:text-slate-800 underline font-semibold whitespace-nowrap"
             >
               إلغاء التاريخ
             </button>

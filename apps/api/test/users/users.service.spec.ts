@@ -161,3 +161,68 @@ describe('UsersService - unsuspend', () => {
     );
   });
 });
+
+describe('UsersService - findAll with search', () => {
+  let usersService: UsersService;
+  let mockPrisma: any;
+
+  beforeEach(() => {
+    mockPrisma = {
+      user: {
+        count: vi.fn().mockResolvedValue(0),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+    };
+
+    usersService = new UsersService(
+      mockPrisma as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+  });
+
+  it('filters users with OR on name, whatsapp, and altPhone when search is provided', async () => {
+    mockPrisma.user.count.mockResolvedValue(1);
+    mockPrisma.user.findMany.mockResolvedValue([
+      {
+        id: 'u-1',
+        name: 'سامر الحلبي',
+        whatsapp: '0966445566',
+        altPhone: null,
+        status: 'VERIFIED',
+        createdAt: new Date(),
+      },
+    ]);
+
+    const res = await usersService.findAll(1, 20, ' سامر ');
+
+    expect(mockPrisma.user.count).toHaveBeenCalledWith({
+      where: {
+        isDeleted: false,
+        role: 'CUSTOMER',
+        OR: [
+          { name: { contains: 'سامر', mode: 'insensitive' } },
+          { whatsapp: { contains: 'سامر' } },
+          { altPhone: { contains: 'سامر' } },
+        ],
+      },
+    });
+
+    expect(res.data.length).toBe(1);
+    expect(res.data[0].name).toBe('سامر الحلبي');
+    expect(res.meta.total).toBe(1);
+  });
+
+  it('queries without search OR clause when search is omitted', async () => {
+    await usersService.findAll(1, 20);
+
+    expect(mockPrisma.user.count).toHaveBeenCalledWith({
+      where: {
+        isDeleted: false,
+        role: 'CUSTOMER',
+      },
+    });
+  });
+});
+

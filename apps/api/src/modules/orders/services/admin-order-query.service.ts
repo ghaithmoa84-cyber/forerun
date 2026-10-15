@@ -4,6 +4,12 @@ import type { AdminOrderAuditEntry, AdminOrderDetails, AdminOrderListItem, Admin
 import { PrismaService } from '../../../database/prisma.service.js';
 import { mapOrderItem } from './order-mapper.js';
 
+const ACTIVE_RUNNER_CONTACT_STATUSES: ReadonlySet<string> = new Set([
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'OUT_FOR_DELIVERY',
+]);
+
 @Injectable()
 export class AdminOrderQueryService {
   constructor(private readonly prisma: PrismaService) {}
@@ -11,6 +17,7 @@ export class AdminOrderQueryService {
   async listAdminOrders(
     query: AdminOrdersQuery,
   ): Promise<PaginatedResponse<AdminOrderListItem>> {
+    const search = query.search?.trim();
     const where: Prisma.OrderWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.runnerId ? { runnerId: query.runnerId } : {}),
@@ -21,6 +28,16 @@ export class AdminOrderQueryService {
               ...(query.dateFrom ? { gte: query.dateFrom } : {}),
               ...(query.dateTo ? { lte: query.dateTo } : {}),
             },
+          }
+        : {}),
+      ...(search
+        ? {
+            OR: [
+              { orderNumber: { contains: search, mode: 'insensitive' } },
+              { customer: { user: { name: { contains: search, mode: 'insensitive' } } } },
+              { customer: { user: { whatsapp: { contains: search } } } },
+              { customer: { user: { altPhone: { contains: search } } } },
+            ],
           }
         : {}),
     };
@@ -172,6 +189,9 @@ export class AdminOrderQueryService {
             id: order.runner.id,
             userId: order.runner.userId,
             name: order.runner.user.name,
+            whatsapp: ACTIVE_RUNNER_CONTACT_STATUSES.has(order.status)
+              ? order.runner.user.whatsapp
+              : null,
             status: order.runner.status,
             avgRating: order.runner.avgRating,
             totalRatings: order.runner.totalRatings,

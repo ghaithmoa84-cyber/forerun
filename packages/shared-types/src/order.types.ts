@@ -85,6 +85,7 @@ export const AdminOrdersQuerySchema = z.object({
   customerId: z.string().trim().min(1).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
+  search: z.string().trim().max(100).optional(),
 });
 
 export type AdminOrdersQuery = z.infer<typeof AdminOrdersQuerySchema>;
@@ -179,6 +180,7 @@ export type AdminOrderDetails = {
     id: string;
     userId: string;
     name: string;
+    whatsapp?: string | null;
     status: string;
     avgRating: number | null;
     totalRatings: number;

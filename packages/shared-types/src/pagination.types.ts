@@ -6,3 +6,10 @@ export const PaginationQuerySchema = z.object({
 });
 
 export type PaginationQueryRequest = z.infer<typeof PaginationQuerySchema>;
+
+export const AdminUsersQuerySchema = PaginationQuerySchema.extend({
+  search: z.string().trim().max(100).optional(),
+});
+
+export type AdminUsersQueryRequest = z.infer<typeof AdminUsersQuerySchema>;
+

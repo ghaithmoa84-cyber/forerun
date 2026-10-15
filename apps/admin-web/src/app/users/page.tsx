@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 
 import {
   USER_STATUS_VALUES,
@@ -33,13 +34,25 @@ export default function UsersPage() {
     user: null,
   });
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+
+  // Debounce search input by 350ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const fetchUsers = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const res = await api.get<UsersApiResponse>('/admin/users', {
-        params: { page, limit: 20 },
-      });
+      const params: Record<string, string | number> = { page, limit: 20 };
+      if (debouncedSearch.trim()) {
+        params.search = debouncedSearch.trim();
+      }
+      const res = await api.get<UsersApiResponse>('/admin/users', { params });
       setUsers(res.data.data);
       setMeta(res.data.meta);
     } catch {
@@ -47,7 +60,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [debouncedSearch, showToast]);
 
   useEffect(() => {
     fetchUsers(1);
@@ -162,14 +175,46 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
   return (
     <div className="space-y-6">
       {/* Page Title & Stats */}
+      {/* Page Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900">إدارة العملاء</h1>
           <p className="text-xs text-slate-500 mt-1">مراجعة وتفعيل وتحديث حسابات مستخدمي المنصة</p>
         </div>
+      </div>
+
+      {/* Omni-Search & Filter Tabs */}
+      <div className="space-y-3">
+        {/* Omni-Search Input */}
+        <div className="relative">
+          <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="البحث باسم العميل، أو رقم الهاتف / الواتساب..."
+            className="w-full pr-10 pl-10 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 outline-hidden focus:border-[#7DDDD4] focus:ring-2 focus:ring-[#7DDDD4]/20 transition-all shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="مسح البحث"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* Status Filter Tabs derived directly from USER_STATUS_VALUES */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-medium shadow-xs overflow-x-auto w-full sm:w-auto">
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-medium shadow-xs overflow-x-auto w-full">
           <button
             onClick={() => setStatusFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
@@ -221,7 +266,10 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                 {/* WhatsApp */}
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 font-medium">واتساب:</span>
-                  <span className="font-mono font-medium text-slate-800" dir="ltr">{u.whatsapp}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-medium text-slate-800" dir="ltr">{u.whatsapp}</span>
+                    <WhatsAppButton phone={u.whatsapp} size="xs" />
+                  </div>
                 </div>
 
                 {/* تاريخ التسجيل */}
@@ -314,8 +362,11 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                 filteredUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-5 py-4 font-bold text-slate-900">{u.name}</td>
-                    <td className="px-5 py-4 font-medium text-slate-700" dir="ltr">
-                      {u.whatsapp}
+                    <td className="px-5 py-4 font-medium text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <span dir="ltr" className="font-mono">{u.whatsapp}</span>
+                        <WhatsAppButton phone={u.whatsapp} size="xs" />
+                      </div>
                     </td>
                     <td className="px-5 py-4">{getStatusBadge(u.status)}</td>
                     <td className="px-5 py-4 text-slate-500">{formatDate(u.createdAt)}</td>
@@ -439,11 +490,14 @@ const USER_STATUS_DOT: Record<UserStatus, string> = {
                 <span className="text-slate-500">اسم العميل:</span>
                 <span className="font-bold text-slate-800">{confirmModal.user.name}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-slate-500">رقم WhatsApp:</span>
-                <span className="font-bold text-slate-800" dir="ltr">
-                  {confirmModal.user.whatsapp}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800" dir="ltr">
+                    {confirmModal.user.whatsapp}
+                  </span>
+                  <WhatsAppButton phone={confirmModal.user.whatsapp} size="xs" />
+                </div>
               </div>
             </div>
 

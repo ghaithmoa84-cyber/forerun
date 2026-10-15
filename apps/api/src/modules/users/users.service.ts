@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { type Prisma, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -29,13 +29,26 @@ export class UsersService {
     });
   }
 
-  async findAll(page: number, limit: number) {
+  async findAll(page: number, limit: number, search?: string) {
+    const trimmedSearch = search?.trim();
+    const where: Prisma.UserWhereInput = {
+      isDeleted: false,
+      role: 'CUSTOMER',
+      ...(trimmedSearch
+        ? {
+            OR: [
+              { name: { contains: trimmedSearch, mode: 'insensitive' } },
+              { whatsapp: { contains: trimmedSearch } },
+              { altPhone: { contains: trimmedSearch } },
+            ],
+          }
+        : {}),
+    };
+
     const [total, data] = await Promise.all([
-      this.prisma.user.count({
-        where: { isDeleted: false, role: 'CUSTOMER' },
-      }),
+      this.prisma.user.count({ where }),
       this.prisma.user.findMany({
-        where: { isDeleted: false, role: 'CUSTOMER' },
+        where,
         include: { customer: true },
         skip: (page - 1) * limit,
         take: limit,
