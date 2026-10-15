@@ -7,8 +7,8 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import {
   CuidParamSchema,
   type CuidParamRequest,
-  PaginationQuerySchema,
-  type PaginationQueryRequest,
+  AdminUsersQuerySchema,
+  type AdminUsersQueryRequest,
 } from '@forerun/shared-types';
 
 @Controller('admin/users')
@@ -19,9 +19,9 @@ export class UsersController {
 
   @Get()
   async findAll(
-    @Query(new ZodValidationPipe(PaginationQuerySchema)) query: PaginationQueryRequest,
+    @Query(new ZodValidationPipe(AdminUsersQuerySchema)) query: AdminUsersQueryRequest,
   ) {
-    return this.usersService.findAll(query.page, query.limit);
+    return this.usersService.findAll(query.page, query.limit, query.search);
   }
 
   @Get(':id')

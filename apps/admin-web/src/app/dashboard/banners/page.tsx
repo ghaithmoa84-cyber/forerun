@@ -714,17 +714,17 @@ export default function BannersManagementPage() {
 
       {/* Create / Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full overflow-hidden border border-slate-200 my-8">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-start sm:items-center justify-center p-3 sm:p-6">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header (Fixed at top) */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80 shrink-0">
               <h2 className="text-lg font-black text-slate-900">
                 {editingBannerId ? 'تعديل الشريحة الإعلانية' : 'إنشاء شريحة إعلانية جديدة'}
               </h2>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors cursor-pointer"
                 aria-label="إغلاق"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -734,7 +734,9 @@ export default function BannersManagementPage() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmitForm} className="p-6 space-y-5">
+            <form onSubmit={handleSubmitForm} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Scrollable Form Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
               {/* Internal Title & Public Headline */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1043,20 +1045,22 @@ export default function BannersManagementPage() {
                   )}
               </div>
 
-              {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+              </div>
+
+              {/* Modal Actions Footer (Fixed at bottom) */}
+              <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3 bg-slate-50/80 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
                   disabled={actionLoading}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#00C1A7] hover:bg-[#009b86] rounded-xl transition-colors shadow-xs disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-[#00C1A7] hover:bg-[#009b86] rounded-xl transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {actionLoading && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

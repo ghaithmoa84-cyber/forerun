@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 
 import {
   type RunnerProfileResponse,
@@ -252,7 +253,10 @@ const RUNNER_STATUS_DOT: Record<RunnerStatus, string> = {
                 {/* WhatsApp */}
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-slate-500 font-medium">واتساب:</span>
-                  <span className="font-mono font-medium text-slate-800" dir="ltr">{r.whatsapp}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-medium text-slate-800" dir="ltr">{r.whatsapp}</span>
+                    <WhatsAppButton phone={r.whatsapp} size="xs" />
+                  </div>
                 </div>
 
                 {/* الحالة التشغيلية */}
@@ -319,8 +323,11 @@ const RUNNER_STATUS_DOT: Record<RunnerStatus, string> = {
                 runners.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="px-5 py-4 font-bold text-slate-900">{r.name}</td>
-                    <td className="px-5 py-4 font-medium text-slate-700" dir="ltr">
-                      {r.whatsapp}
+                    <td className="px-5 py-4 font-medium text-slate-700">
+                      <div className="flex items-center gap-2">
+                        <span dir="ltr" className="font-mono">{r.whatsapp}</span>
+                        <WhatsAppButton phone={r.whatsapp} size="xs" />
+                      </div>
                     </td>
                     <td className="px-5 py-4">{getStatusBadge(r.status)}</td>
                     <td className="px-5 py-4">

@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { useToast } from '@/components/Toast';
 import { OrderMap } from '@/components/OrderMap';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 
 import type {
   AdminOrderDetails,
@@ -346,123 +347,104 @@ export default function OrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Breadcrumb & Status Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Link href="/orders" className="hover:text-slate-900 font-bold">
-              ← قائمة الطلبات
-            </Link>
-            <span>/</span>
-            <span className="text-slate-700 font-extrabold" dir="ltr">
-              #{order.orderNumber}
-            </span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <h1 className="text-xl font-black text-slate-900" dir="ltr">
-              طلب #{order.orderNumber}
-            </h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-extrabold border w-fit ${ORDER_STATUS_STYLE[order.status]}`}>
-              {ORDER_STATUS_LABEL[order.status]}
-            </span>
-          </div>
-        </div>
-
-        {/* Dynamic Action Buttons based on Status */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          {(order.status === 'PENDING_REVIEW' || order.status === 'UNDER_REVIEW') && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200 w-full sm:w-auto">
-              <label className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-slate-700 cursor-pointer py-1">
-                <input
-                  type="checkbox"
-                  checked={isPeripheralChecked}
-                  onChange={(e) => setIsPeripheralChecked(e.target.checked)}
-                  className="rounded text-[#7DDDD4] focus:ring-[#7DDDD4]"
-                />
-                <span>منطقة نائية (طرفية)</span>
-              </label>
-
-              <button
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="w-full sm:w-auto inline-flex items-center justify-center px-3.5 py-2 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow-xs disabled:opacity-50"
-              >
-                اعتماد الطلب
-              </button>
-
-              <button
-                onClick={() => setIsRejectOpen(true)}
-                disabled={actionLoading}
-                className="w-full sm:w-auto inline-flex items-center justify-center px-3.5 py-2 sm:py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-lg text-xs disabled:opacity-50"
-              >
-                رفض
-              </button>
-            </div>
-          )}
-
-          {(order.status === 'AWAITING_RUNNER' ||
-            order.status === 'AWAITING_PREFERRED_RUNNER') && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <select
-                value={selectedRunnerId}
-                onChange={(e) => setSelectedRunnerId(e.target.value)}
-                className="w-full sm:w-auto px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4]"
-              >
-                <option value="">-- اختيار مندوب للتعيين --</option>
-                {availableRunners.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} ({RUNNER_STATUS_LABEL[r.status as RunnerStatus] ?? r.status})
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={handleAssignRunner}
-                disabled={actionLoading || !selectedRunnerId}
-                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-[#7DDDD4] hover:bg-[#5CCFC5] text-white font-bold rounded-xl text-xs shadow-md disabled:opacity-50"
-              >
-                تعيين المندوب
-              </button>
-            </div>
-          )}
-
-          {CANCELLABLE_STATUSES.includes(order.status) && (
-            <button
-              onClick={() => setIsCancelOpen(true)}
-              disabled={actionLoading}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs transition-all disabled:opacity-50"
+      {/* Sticky Actions Bar (Feature 3) */}
+      <div className="sticky -top-4 md:-top-8 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-md p-4 sm:p-5 space-y-3 transition-all">
+        {/* Top Row: Breadcrumb, Order Number, Status & Main Action Buttons */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Link
+              href="/orders"
+              className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors p-1 -mr-1"
             >
-              إلغاء الطلب إدارياً
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Fee Review & Live Preview Card (Sprint 6A-8) */}
-      {(order.status === 'PENDING_REVIEW' || order.status === 'UNDER_REVIEW') && (
-        <div className="bg-white rounded-2xl border-2 border-[#7DDDD4]/40 p-6 shadow-xs space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100 gap-2">
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#7DDDD4] inline-block animate-pulse"></span>
-                مراجعة وتعديل رسوم الطلب والمعاينة المباشرة
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                يمكنك تعديل الرسم الأساسي أو تعيين المنطقة الطرفية أو إضافة رسم إضافي مع المعاينة الفورية قبل الاعتماد.
-              </p>
+              <span>←</span>
+              <span>الطلبات</span>
+            </Link>
+            <span className="text-slate-300">/</span>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-black text-slate-900" dir="ltr">
+                #{order.orderNumber}
+              </h1>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${ORDER_STATUS_STYLE[order.status]}`}>
+                {ORDER_STATUS_LABEL[order.status]}
+              </span>
             </div>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 w-fit">
-              {ORDER_STATUS_LABEL[order.status]}
-            </span>
+            {order.totalFee > 0 && (
+              <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-md">
+                {formatCurrency(order.totalFee)}
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Base Fee Input */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                الرسم الأساسي (ل.س)
-              </label>
-              <div className="relative">
+          {/* Action Buttons Right/End */}
+          <div className="flex flex-wrap items-center gap-2">
+            {(order.status === 'PENDING_REVIEW' || order.status === 'UNDER_REVIEW') && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={actionLoading}
+                  className="inline-flex items-center justify-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs disabled:opacity-50 cursor-pointer transition-colors"
+                >
+                  {actionLoading ? 'جاري الاعتماد...' : 'اعتماد الطلب'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsRejectOpen(true)}
+                  disabled={actionLoading}
+                  className="inline-flex items-center justify-center px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs disabled:opacity-50 cursor-pointer transition-colors"
+                >
+                  رفض
+                </button>
+              </>
+            )}
+
+            {(order.status === 'AWAITING_RUNNER' || order.status === 'AWAITING_PREFERRED_RUNNER') && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={selectedRunnerId}
+                  onChange={(e) => setSelectedRunnerId(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] flex-1 sm:flex-none"
+                >
+                  <option value="">-- اختيار مندوب للتعيين --</option>
+                  {availableRunners.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({RUNNER_STATUS_LABEL[r.status as RunnerStatus] ?? r.status})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAssignRunner}
+                  disabled={actionLoading || !selectedRunnerId}
+                  className="inline-flex items-center justify-center px-4 py-1.5 bg-[#7DDDD4] hover:bg-[#5CCFC5] text-white font-bold rounded-xl text-xs shadow-sm disabled:opacity-50 cursor-pointer transition-colors whitespace-nowrap"
+                >
+                  تعيين المندوب
+                </button>
+              </div>
+            )}
+
+            {CANCELLABLE_STATUSES.includes(order.status) && (
+              <button
+                type="button"
+                onClick={() => setIsCancelOpen(true)}
+                disabled={actionLoading}
+                className="inline-flex items-center justify-center px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                إلغاء الطلب إدارياً
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Row (Fee Review & Live Preview): Only for PENDING_REVIEW and UNDER_REVIEW */}
+        {(order.status === 'PENDING_REVIEW' || order.status === 'UNDER_REVIEW') && (
+          <div className="pt-2.5 border-t border-slate-200/80 space-y-2.5 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-end">
+              {/* Base Fee */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  الرسم الأساسي (ل.س)
+                </label>
                 <input
                   type="number"
                   min={1}
@@ -471,44 +453,33 @@ export default function OrderDetailPage() {
                   value={baseFeeInput}
                   onChange={(e) => setBaseFeeInput(e.target.value)}
                   placeholder={String(order.baseFee)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] focus:bg-white"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] focus:bg-white"
                 />
-                <span className="absolute left-3 top-2 text-[11px] text-slate-400 font-bold pointer-events-none">
-                  ل.س
-                </span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                الافتراضي للطلب: {order.baseFee} ل.س
-              </p>
-            </div>
 
-            {/* Peripheral Area Checkbox */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                المنطقة الجغرافية
-              </label>
-              <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={isPeripheralChecked}
-                  onChange={(e) => setIsPeripheralChecked(e.target.checked)}
-                  className="rounded text-[#7DDDD4] focus:ring-[#7DDDD4] w-4 h-4"
-                />
-                <span className="text-xs font-bold text-slate-700">
-                  منطقة نائية (طرفية)
-                </span>
-              </label>
-              <p className="text-[11px] text-slate-400">
-                تضيف رسم المنطقة الطرفية إن كانت الوجهة خارج المدينة
-              </p>
-            </div>
+              {/* Peripheral Area Checkbox */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  المنطقة الجغرافية
+                </label>
+                <label className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={isPeripheralChecked}
+                    onChange={(e) => setIsPeripheralChecked(e.target.checked)}
+                    className="rounded text-[#7DDDD4] focus:ring-[#7DDDD4] w-3.5 h-3.5"
+                  />
+                  <span className="text-xs font-bold text-slate-700">
+                    منطقة طرفية / نائية
+                  </span>
+                </label>
+              </div>
 
-            {/* Custom Fee Input */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                رسم إضافي خاص (customFee)
-              </label>
-              <div className="relative">
+              {/* Custom Fee Input */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  رسم إضافي خاص (customFee)
+                </label>
                 <input
                   type="number"
                   min={0}
@@ -516,82 +487,57 @@ export default function OrderDetailPage() {
                   step={1}
                   value={customFeeInput}
                   onChange={(e) => setCustomFeeInput(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] focus:bg-white"
+                  placeholder="0"
+                  className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-hidden focus:border-[#7DDDD4] focus:bg-white"
                 />
-                <span className="absolute left-3 top-2 text-[11px] text-slate-400 font-bold pointer-events-none">
-                  ل.س
-                </span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                الحد الأقصى: 500 ل.س (يتطلب توضيح السبب)
-              </p>
-            </div>
-          </div>
 
-          {/* Custom Fee Reason Input (Shown ONLY if customFee > 0) */}
-          {Number(customFeeInput) > 0 && (
-            <div className="space-y-1.5 p-3.5 bg-amber-50/50 border border-amber-200 rounded-xl">
-              <label className="block text-xs font-bold text-amber-900">
-                سبب الرسم الإضافي (إلزامي للعميل)
-                <span className="text-rose-500 mr-1">*</span>
-              </label>
-              <input
-                type="text"
-                maxLength={200}
-                value={customFeeReasonInput}
-                onChange={(e) => setCustomFeeReasonInput(e.target.value)}
-                placeholder="مثال: حمولة ثقيلة أو طلب بعد منتصف الليل أو منطقة وعرة..."
-                required
-                className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-800 outline-hidden focus:border-amber-500"
-              />
-              <p className="text-[11px] text-amber-700">
-                يظهر هذا السبب في تفاصيل الطلب لدى العميل لتبرير الزيادة.
-              </p>
-            </div>
-          )}
-
-          {/* Live Preview Display Box */}
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-              <span className="flex items-center gap-2">
-                <span>معاينة الرسوم الحية المباشرة (Live Preview):</span>
-                {previewLoading && (
-                  <span className="text-slate-400 font-normal flex items-center gap-1">
-                    <span className="w-3 h-3 border-2 border-[#7DDDD4] border-t-transparent rounded-full animate-spin"></span>
-                    جاري الحساب...
+              {/* Live Preview Summary Badge */}
+              <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg px-3 py-1.5 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-800 block">
+                    المعاينة المباشرة للرسم
+                  </span>
+                  <span className="text-sm font-black text-emerald-900">
+                    {previewResult ? formatCurrency(previewResult.totalFee) : formatCurrency(order.totalFee)}
+                  </span>
+                </div>
+                {previewLoading ? (
+                  <span className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <span className="text-[10px] text-emerald-700 font-medium">
+                    {previewResult ? `أساسي: ${previewResult.baseFee} | طرفي: ${previewResult.peripheralFee} | إضافي: ${previewResult.customFee}` : ''}
                   </span>
                 )}
-              </span>
-              {previewResult && (
-                <span className="text-slate-400 font-normal text-[11px]">
-                  متاجر الطلب: {order.orderStores.length}
-                </span>
-              )}
+              </div>
             </div>
 
-            {previewError ? (
-              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-bold">
+            {/* Custom Fee Reason (Conditional Row if customFee > 0) */}
+            {Number(customFeeInput) > 0 && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 bg-amber-50/80 border border-amber-200 rounded-lg animate-in fade-in duration-150">
+                <label className="text-[11px] font-bold text-amber-900 whitespace-nowrap">
+                  سبب الرسم الإضافي <span className="text-rose-500">*</span>:
+                </label>
+                <input
+                  type="text"
+                  maxLength={200}
+                  value={customFeeReasonInput}
+                  onChange={(e) => setCustomFeeReasonInput(e.target.value)}
+                  placeholder="مثال: حمولة ثقيلة أو طلب بعد منتصف الليل أو منطقة وعرة..."
+                  required
+                  className="flex-1 px-2.5 py-1 bg-white border border-amber-300 rounded-md text-xs font-bold text-slate-800 outline-hidden focus:border-amber-500"
+                />
+              </div>
+            )}
+
+            {previewError && (
+              <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px] font-bold">
                 ⚠️ {previewError}
               </div>
-            ) : previewResult ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                  <span className="text-[11px] text-slate-400 block font-medium">إجمالي الرسم</span>
-                  <span className="text-base font-black text-[#3ABFB5]">
-                    {formatCurrency(previewResult.totalFee)}
-                  </span>
-                </div>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-center text-[11px] text-slate-500 font-medium space-y-0.5">
-                  <div>أساسي: {previewResult.baseFee} ل.س</div>
-                  <div>طرفي: {previewResult.peripheralFee} ل.س | إضافي: {previewResult.customFee} ل.س</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs text-slate-400">جاري إعداد المعاينة...</div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Grid: Order Info & Map */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -607,9 +553,29 @@ export default function OrderDetailPage() {
             <div>
               <span className="text-[11px] font-bold text-slate-400 block mb-1">العميل</span>
               <div className="font-bold text-slate-800 text-sm">{order.customer.name}</div>
-              <div className="text-xs text-slate-500 font-mono mt-0.5" dir="ltr">
-                {order.customer.whatsapp}
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-slate-600 font-mono" dir="ltr">
+                  {order.customer.whatsapp}
+                </span>
+                <WhatsAppButton
+                  phone={order.customer.whatsapp}
+                  text={`مرحباً ${order.customer.name}، بخصوص طلبك رقم ${order.orderNumber} من فَوْراً`}
+                  size="xs"
+                />
               </div>
+              {order.customer.altPhone && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[11px] text-slate-400">بديل:</span>
+                  <span className="text-xs text-slate-600 font-mono" dir="ltr">
+                    {order.customer.altPhone}
+                  </span>
+                  <WhatsAppButton
+                    phone={order.customer.altPhone}
+                    text={`مرحباً ${order.customer.name}، بخصوص طلبك رقم ${order.orderNumber} من فَوْراً`}
+                    size="xs"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Runner */}
@@ -627,6 +593,27 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">
                     الحالة: {RUNNER_STATUS_LABEL[order.runner.status as RunnerStatus] ?? order.runner.status}
+                  </div>
+                  {/* WhatsApp button per D35: if runner.whatsapp is null/masked, hide or clearly show masked */}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {order.runner.whatsapp ? (
+                      <>
+                        <span className="text-xs text-slate-600 font-mono" dir="ltr">
+                          {order.runner.whatsapp}
+                        </span>
+                        <WhatsAppButton
+                          phone={order.runner.whatsapp}
+                          text={`مرحباً كابتن ${order.runner.name}، بخصوص الطلب رقم ${order.orderNumber}`}
+                          size="xs"
+                        />
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">
+                        {order.status === 'DELIVERED' || order.status === 'CANCELLED'
+                          ? '🔒 رقم المندوب محجوب (مكتمل/ملغي)'
+                          : 'رقم المندوب غير متاح'}
+                      </span>
+                    )}
                   </div>
                 </div>
               ) : (
