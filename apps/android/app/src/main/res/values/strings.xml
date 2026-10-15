@@ -274,8 +274,8 @@
     <string name="order_detail_step_delivered">تم التسليم</string>
     <string name="order_detail_step_cancelled">ملغي</string>
     <string name="order_detail_runner_card_title">الكابتن المسؤول</string>
-    <string name="order_detail_runner_whatsapp">تواصل عبر واتساب</string>
-    <string name="order_detail_runner_call">اتصال هاتفي</string>
+    <string name="order_detail_runner_whatsapp">واتساب</string>
+    <string name="order_detail_runner_call">اتصال</string>
     <string name="order_detail_runner_rating_format">%1$.1f (%2$d تقييم)</string>
     <string name="order_detail_items_title">المواد والمتاجر</string>
     <string name="order_detail_any_store">أي متجر متاح</string>
@@ -306,6 +306,9 @@
     <string name="order_detail_rate_runner_btn">تقييم الكابتن</string>
     <string name="order_detail_edit_rating_btn">تعديل التقييم</string>
     <string name="order_detail_rated_label">تقييمك: %1$d نجوم</string>
+    <string name="order_detail_delivered_simplified_status">تم التسليم ✅</string>
+    <string name="order_detail_rating_thanks">شكراً لتقييمك!</string>
+    <string name="order_detail_already_rated">تم التقييم</string>
     <string name="order_detail_fee_updated_notice">تم تحديث رسوم الطلب</string>
     <string name="order_detail_notes_title">ملاحظات الطلب</string>
     <string name="order_detail_address_title">عنوان التوصيل</string>
