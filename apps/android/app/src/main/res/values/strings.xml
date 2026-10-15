@@ -354,6 +354,19 @@
     <string name="service_in_dev_dialog_dismiss">إغلاق</string>
     <string name="service_in_dev_whatsapp_msg">مرحباً، أود الاستفسار والتنسيق لطلب (طرد / مشوار) في القنجرة.</string>
 
+    <!-- Coming Soon Store & Product Cards (Awareness / D30) -->
+    <string name="service_card_learn_more">تفاصيل الميزة</string>
+    <string name="service_store_catalog_title">اختيار متجر محدد</string>
+    <string name="service_store_catalog_desc">تسوق مباشرة من متاجرك المفضلة</string>
+    <string name="service_store_catalog_dialog_title">التسوق من متجر محدد</string>
+    <string name="service_store_catalog_dialog_desc">ستتيح لك هذه الميزة تصفح قائمة المتاجر والسوبرماركت المعتمدة، واختيار طلباتك وسلتك مباشرة من المتجر الذي تفضله.</string>
+    <string name="service_product_search_title">البحث عن منتج</string>
+    <string name="service_product_search_desc">إيجاد أي غرض بين المتاجر المتاحة</string>
+    <string name="service_product_search_dialog_title">البحث عن غرض عبر المتاجر</string>
+    <string name="service_product_search_dialog_desc">ستتيح لك هذه الميزة البحث المباشر عن أي سلعة أو منتج محدد، ومعرفة المتاجر التي يتوفر فيها في منطقتك بكل سهولة.</string>
+    <string name="coming_soon_feature_in_dev_notice">هذه الميزة قيد التطوير حالياً وغير متاحة بعد.</string>
+    <string name="coming_soon_dialog_dismiss">إغلاق</string>
+
     <!-- Create Order Redesign (Quick vs Structured) -->
     <string name="create_order_tab_quick">إدخال سريع ✏️</string>
     <string name="create_order_tab_structured">إدخال منظّم 📋</string>
