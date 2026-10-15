@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 import axios from 'axios';
 import { ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
 import { SyrianPhoneSchema } from '@forerun/shared-types';
@@ -8,6 +9,7 @@ import { SyrianPhoneSchema } from '@forerun/shared-types';
 export function LoginPage() {
   const navigate = useNavigate();
   const { user, login, isAuthenticated, isLoading } = useAuth();
+  const { isInstallable, isInstalling, installApp } = usePwaInstall();
   useEffect(() => {
     if (isAuthenticated) {
       if (user?.status === 'SUSPENDED') {
@@ -119,6 +121,33 @@ export function LoginPage() {
             {isLoading ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'}
           </button>
         </form>
+
+        {isInstallable && (
+          <div className="login-install-section" style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div className="login-install-divider" />
+            <button
+              type="button"
+              className="btn-pwa-login-install"
+              onClick={() => void installApp()}
+              disabled={isInstalling}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                <line x1="12" y1="18" x2="12.01" y2="18" />
+              </svg>
+              <span>{isInstalling ? 'جاري تثبيت التطبيق...' : 'تثبيت التطبيق على هاتفك'}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
