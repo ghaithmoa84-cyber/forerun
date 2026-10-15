@@ -8,8 +8,10 @@ import com.forerun.customer.R
 import com.forerun.customer.domain.model.WebSocketEvent
 import com.forerun.customer.domain.model.CancelOrderError
 import com.forerun.customer.domain.model.CustomerOrderDetail
+import com.forerun.customer.domain.model.OrderRatingInfo
 import com.forerun.customer.domain.usecase.order.CancelOrderUseCase
 import com.forerun.customer.domain.usecase.order.GetOrderDetailUseCase
+import com.forerun.customer.domain.usecase.order.SubmitRatingUseCase
 import com.forerun.customer.domain.usecase.ObserveOrderEventsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +30,9 @@ data class OrderDetailUiState(
     val cancelSuccess: Boolean = false,
     val cancelError: CancelOrderError? = null,
     val showCancelDialog: Boolean = false,
-    val feeUpdatedNotice: Boolean = false
+    val feeUpdatedNotice: Boolean = false,
+    val isSubmittingRating: Boolean = false,
+    val ratingSuccess: Boolean = false
 ) {
     val canCancel: Boolean
         get() {
@@ -71,6 +75,7 @@ sealed interface OrderDetailIntent {
     data object ClearError : OrderDetailIntent
     data object ClearCancelSuccess : OrderDetailIntent
     data object ClearFeeNotice : OrderDetailIntent
+    data class SubmitRating(val stars: Int) : OrderDetailIntent
 }
 
 @HiltViewModel
@@ -79,6 +84,7 @@ class OrderDetailViewModel @Inject constructor(
     private val getOrderDetailUseCase: GetOrderDetailUseCase,
     private val cancelOrderUseCase: CancelOrderUseCase,
     private val observeOrderEventsUseCase: ObserveOrderEventsUseCase,
+    private val submitRatingUseCase: SubmitRatingUseCase,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -112,6 +118,52 @@ class OrderDetailViewModel @Inject constructor(
             }
             OrderDetailIntent.ClearFeeNotice -> {
                 _uiState.update { it.copy(feeUpdatedNotice = false) }
+            }
+            is OrderDetailIntent.SubmitRating -> submitRating(intent.stars)
+        }
+    }
+
+    private val isSubmittingRatingGuard = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    fun submitRating(stars: Int) {
+        if (stars !in 1..5) return
+        val currentOrder = _uiState.value.order ?: return
+        if (currentOrder.status != "DELIVERED") return
+        if (currentOrder.rating == null && !_uiState.value.canRate) return
+        if (_uiState.value.isSubmittingRating || !isSubmittingRatingGuard.compareAndSet(false, true)) {
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingRating = true, errorMessage = null) }
+            try {
+                val isUpdate = currentOrder.rating != null
+                val result = submitRatingUseCase(
+                    orderId = orderId,
+                    stars = stars,
+                    note = null,
+                    isUpdate = isUpdate
+                )
+                result.onSuccess { ratingResult ->
+                    _uiState.update { current ->
+                        current.copy(
+                            isSubmittingRating = false,
+                            ratingSuccess = true,
+                            order = current.order?.copy(
+                                rating = OrderRatingInfo(stars = ratingResult.stars, note = ratingResult.note)
+                            )
+                        )
+                    }
+                }.onFailure { err ->
+                    _uiState.update {
+                        it.copy(
+                            isSubmittingRating = false,
+                            errorMessage = err.message ?: getApplication<Application>().getString(R.string.rating_error_submit)
+                        )
+                    }
+                }
+            } finally {
+                isSubmittingRatingGuard.set(false)
             }
         }
     }

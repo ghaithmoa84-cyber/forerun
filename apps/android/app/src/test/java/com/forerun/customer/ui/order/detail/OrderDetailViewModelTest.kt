@@ -13,6 +13,7 @@ import com.forerun.customer.domain.model.DetailOrderItem
 import com.forerun.customer.domain.model.OrderRunnerDetail
 import com.forerun.customer.domain.usecase.order.CancelOrderUseCase
 import com.forerun.customer.domain.usecase.order.GetOrderDetailUseCase
+import com.forerun.customer.domain.usecase.order.SubmitRatingUseCase
 import com.forerun.customer.domain.usecase.ObserveOrderEventsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +44,7 @@ class OrderDetailViewModelTest {
     private lateinit var getOrderDetailUseCase: GetOrderDetailUseCase
     private lateinit var cancelOrderUseCase: CancelOrderUseCase
     private lateinit var observeOrderEventsUseCase: ObserveOrderEventsUseCase
+    private lateinit var submitRatingUseCase: SubmitRatingUseCase
 
     private val sampleRunner = OrderRunnerDetail(
         id = "runner_1",
@@ -81,6 +83,7 @@ class OrderDetailViewModelTest {
         getOrderDetailUseCase = GetOrderDetailUseCase(fakeRepository)
         cancelOrderUseCase = CancelOrderUseCase(fakeRepository)
         observeOrderEventsUseCase = ObserveOrderEventsUseCase(SocketOrderEventsGateway(socketManager))
+        submitRatingUseCase = SubmitRatingUseCase(fakeRepository)
     }
 
     @After
@@ -95,6 +98,7 @@ class OrderDetailViewModelTest {
             getOrderDetailUseCase = getOrderDetailUseCase,
             cancelOrderUseCase = cancelOrderUseCase,
             observeOrderEventsUseCase = observeOrderEventsUseCase,
+            submitRatingUseCase = submitRatingUseCase,
             application = ApplicationProvider.getApplicationContext()
         )
     }
@@ -474,5 +478,84 @@ class OrderDetailViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.canRate)
+    }
+
+    @Test
+    fun submitRating_success_updates_order_rating_and_state() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
+        )
+        fakeRepository.submitRatingResult = Result.success(
+            com.forerun.customer.domain.model.RatingResult(
+                id = "rate_123",
+                orderId = "order_123",
+                stars = 5,
+                note = null,
+                isFinal = false,
+                expiresAt = "2026-09-29T12:00:00Z"
+            )
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSubmittingRating)
+        assertTrue(state.ratingSuccess)
+        assertNotNull(state.order?.rating)
+        assertEquals(5, state.order?.rating?.stars)
+        assertEquals(1, fakeRepository.submitRatingCallCount)
+    }
+
+    @Test
+    fun submitRating_failure_updates_error_state() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
+        )
+        fakeRepository.submitRatingResult = Result.failure(
+            ApiException(statusCode = 400, errorCode = "BAD_REQUEST")
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(4))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSubmittingRating)
+        assertFalse(state.ratingSuccess)
+        assertEquals("HTTP 400 BAD_REQUEST", state.errorMessage)
+    }
+
+    @Test
+    fun submitRating_ignores_non_delivered_order() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "IN_PROGRESS")
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5))
+        advanceUntilIdle()
+
+        assertEquals(0, fakeRepository.submitRatingCallCount)
+        assertFalse(viewModel.uiState.value.ratingSuccess)
+    }
+
+    @Test
+    fun submitRating_ignores_invalid_stars() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED")
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(0))
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(6))
+        advanceUntilIdle()
+
+        assertEquals(0, fakeRepository.submitRatingCallCount)
     }
 }

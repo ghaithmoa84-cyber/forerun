@@ -6,6 +6,7 @@ import com.forerun.customer.ui.order.getOrderStatusColors
 import com.forerun.customer.ui.order.getOrderStatusLabelRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -256,24 +258,33 @@ fun OrderDetailScreen(
                             .padding(Dimens.Space16),
                         verticalArrangement = Arrangement.spacedBy(Dimens.Space16)
                     ) {
-                        // 1. Status Banner
-                        StatusBanner(order = order)
+                        if (order.status == "DELIVERED") {
+                            // 1. Simplified Status Banner: "تم التسليم ✅" + date/time
+                            DeliveredStatusCard(order = order)
 
-                        // 2. Delivered / Rating Action Card
-                        if (order.status == "DELIVERED" && (uiState.canRate || order.rating != null)) {
-                            DeliveredRatingCard(
-                                order = order,
-                                canRate = uiState.canRate,
-                                onRateClick = { onNavigateToRating(order.id) }
+                            // 2. Prominent Rating Card: 5 directly clickable stars or rated state
+                            if (uiState.canRate || order.rating != null) {
+                                DeliveredRatingCard(
+                                    order = order,
+                                    canRate = uiState.canRate,
+                                    isSubmitting = uiState.isSubmittingRating,
+                                    isJustRated = uiState.ratingSuccess,
+                                    onStarClick = { stars ->
+                                        viewModel.onIntent(OrderDetailIntent.SubmitRating(stars))
+                                    }
+                                )
+                            }
+                        } else {
+                            // 1. Status Banner
+                            StatusBanner(order = order)
+
+                            // 2. Vertical Timeline Stepper
+                            TimelineCard(
+                                status = order.status,
+                                timeline = order.timeline,
+                                cancelReason = order.cancelReason
                             )
                         }
-
-                        // 3. Vertical Timeline Stepper
-                        TimelineCard(
-                            status = order.status,
-                            timeline = order.timeline,
-                            cancelReason = order.cancelReason
-                        )
 
                         // 4. Runner Card or Awaiting Runner Card
                         if (order.runner != null && uiState.canContactRunner) {
@@ -435,10 +446,45 @@ private fun StatusBanner(order: CustomerOrderDetail) {
 }
 
 @Composable
+private fun DeliveredStatusCard(order: CustomerOrderDetail) {
+    val deliveredTime = order.deliveredAt ?: order.timeline.deliveredAt
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.RadiusLarge),
+        colors = CardDefaults.cardColors(containerColor = ForerunGreenLight)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.Space16, vertical = Dimens.Space14),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.order_detail_delivered_simplified_status),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = ForerunGreenDark
+            )
+            if (!deliveredTime.isNullOrBlank()) {
+                Text(
+                    text = formatTimestamp(deliveredTime),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = ForerunGreenDark
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun DeliveredRatingCard(
     order: CustomerOrderDetail,
     canRate: Boolean,
-    onRateClick: () -> Unit
+    isSubmitting: Boolean,
+    isJustRated: Boolean,
+    onStarClick: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -451,52 +497,70 @@ private fun DeliveredRatingCard(
                 .fillMaxWidth()
                 .padding(Dimens.Space16)
         ) {
+            val isRated = order.rating != null
+            val currentStars = order.rating?.stars ?: 0
+
+            val title = when {
+                isJustRated -> stringResource(R.string.order_detail_rating_thanks)
+                isRated -> stringResource(R.string.order_detail_already_rated)
+                else -> stringResource(R.string.rating_headline)
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.rating_screen_title),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ForerunTextPrimary
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isJustRated || isRated) ForerunGreenDark else ForerunTextPrimary
+                )
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = ForerunOrange
                     )
-                    if (order.rating != null) {
-                        Spacer(modifier = Modifier.height(Dimens.Space4))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Color(0xFFFFB300),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(Dimens.Space4))
-                            Text(
-                                text = stringResource(R.string.order_detail_rated_label, order.rating.stars),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = ForerunTextPrimary
-                            )
-                        }
-                    }
+                } else if (isRated) {
+                    Text(
+                        text = stringResource(R.string.order_detail_rated_label, currentStars),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = ForerunTextMuted
+                    )
                 }
+            }
 
-                if (canRate) {
-                    Button(
-                        onClick = onRateClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange),
-                        shape = RoundedCornerShape(Dimens.RadiusMedium)
-                    ) {
-                        Text(
-                            text = if (order.rating != null) {
-                                stringResource(R.string.order_detail_edit_rating_btn)
-                            } else {
-                                stringResource(R.string.order_detail_rate_runner_btn)
-                            },
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+            Spacer(modifier = Modifier.height(Dimens.Space12))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.Space12),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (star in 1..5) {
+                    val isFilled = star <= currentStars
+                    if (isRated) {
+                        Icon(
+                            imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
+                            contentDescription = null,
+                            tint = if (isFilled) Color(0xFFFFB300) else Color(0xFFE5E7EB),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Star,
+                            contentDescription = "$star",
+                            tint = Color(0xFFBDBDBD),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(enabled = !isSubmitting && canRate) {
+                                    onStarClick(star)
+                                }
+                                .padding(4.dp)
                         )
                     }
                 }
