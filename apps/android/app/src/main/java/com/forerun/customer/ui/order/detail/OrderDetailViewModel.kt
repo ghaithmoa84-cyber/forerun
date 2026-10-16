@@ -75,7 +75,7 @@ sealed interface OrderDetailIntent {
     data object ClearError : OrderDetailIntent
     data object ClearCancelSuccess : OrderDetailIntent
     data object ClearFeeNotice : OrderDetailIntent
-    data class SubmitRating(val stars: Int) : OrderDetailIntent
+    data class SubmitRating(val stars: Int, val note: String? = null) : OrderDetailIntent
 }
 
 @HiltViewModel
@@ -119,13 +119,13 @@ class OrderDetailViewModel @Inject constructor(
             OrderDetailIntent.ClearFeeNotice -> {
                 _uiState.update { it.copy(feeUpdatedNotice = false) }
             }
-            is OrderDetailIntent.SubmitRating -> submitRating(intent.stars)
+            is OrderDetailIntent.SubmitRating -> submitRating(intent.stars, intent.note)
         }
     }
 
     private val isSubmittingRatingGuard = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    fun submitRating(stars: Int) {
+    fun submitRating(stars: Int, note: String? = null) {
         if (stars !in 1..5) return
         val currentOrder = _uiState.value.order ?: return
         if (currentOrder.status != "DELIVERED") return
@@ -138,10 +138,11 @@ class OrderDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isSubmittingRating = true, errorMessage = null) }
             try {
                 val isUpdate = currentOrder.rating != null
+                val cleanNote = note?.trim()?.ifEmpty { null }
                 val result = submitRatingUseCase(
                     orderId = orderId,
                     stars = stars,
-                    note = null,
+                    note = cleanNote,
                     isUpdate = isUpdate
                 )
                 result.onSuccess { ratingResult ->
@@ -150,7 +151,10 @@ class OrderDetailViewModel @Inject constructor(
                             isSubmittingRating = false,
                             ratingSuccess = true,
                             order = current.order?.copy(
-                                rating = OrderRatingInfo(stars = ratingResult.stars, note = ratingResult.note)
+                                rating = OrderRatingInfo(
+                                    stars = stars,
+                                    note = cleanNote ?: ratingResult.note
+                                )
                             )
                         )
                     }
@@ -178,11 +182,20 @@ class OrderDetailViewModel @Inject constructor(
 
             val result = getOrderDetailUseCase(orderId)
             result.onSuccess { orderDetail ->
-                _uiState.update {
-                    it.copy(
+                _uiState.update { current ->
+                    val existingRating = current.order?.rating
+                    val finalRating = orderDetail.rating?.let { serverRating ->
+                        if (serverRating.note == null && existingRating != null && existingRating.stars == serverRating.stars) {
+                            serverRating.copy(note = existingRating.note)
+                        } else {
+                            serverRating
+                        }
+                    }
+                    val finalOrder = if (finalRating != null) orderDetail.copy(rating = finalRating) else orderDetail
+                    current.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        order = orderDetail,
+                        order = finalOrder,
                         errorMessage = null
                     )
                 }

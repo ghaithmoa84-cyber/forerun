@@ -332,6 +332,9 @@
     <string name="rating_success_created">شكراً لك! تم إرسال تقييمك بنجاح</string>
     <string name="rating_success_updated">تم تحديث التقييم بنجاح</string>
     <string name="rating_error_submit">فشل إرسال التقييم، يرجى المحاولة ثانية</string>
+    <string name="rating_edit_action">تعديل</string>
+    <string name="rating_cancel_action">إلغاء</string>
+    <string name="rating_note_title">ملاحظتك:</string>
 
     <!-- Services (Home Screen Redesign) -->
     <string name="services_section_title">خدماتنا المتاحة</string>

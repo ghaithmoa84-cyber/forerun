@@ -507,6 +507,149 @@ class OrderDetailViewModelTest {
         assertNotNull(state.order?.rating)
         assertEquals(5, state.order?.rating?.stars)
         assertEquals(1, fakeRepository.submitRatingCallCount)
+        assertEquals(5, fakeRepository.lastSubmitRatingStars)
+        assertNull(fakeRepository.lastSubmitRatingNote)
+        assertEquals(false, fakeRepository.lastSubmitRatingIsUpdate)
+    }
+
+    @Test
+    fun submitRating_with_note_success_updates_order_rating_and_note() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
+        )
+        fakeRepository.submitRatingResult = Result.success(
+            com.forerun.customer.domain.model.RatingResult(
+                id = "rate_123",
+                orderId = "order_123",
+                stars = 4,
+                note = null, // Backend response might mask note
+                isFinal = false,
+                expiresAt = "2026-09-29T12:00:00Z"
+            )
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(4, "توصيل ممتاز وسريع"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSubmittingRating)
+        assertTrue(state.ratingSuccess)
+        assertNotNull(state.order?.rating)
+        assertEquals(4, state.order?.rating?.stars)
+        assertEquals("توصيل ممتاز وسريع", state.order?.rating?.note)
+        assertEquals(1, fakeRepository.submitRatingCallCount)
+        assertEquals(4, fakeRepository.lastSubmitRatingStars)
+        assertEquals("توصيل ممتاز وسريع", fakeRepository.lastSubmitRatingNote)
+        assertEquals(false, fakeRepository.lastSubmitRatingIsUpdate)
+    }
+
+    @Test
+    fun submitRating_without_note_trims_and_passes_null() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
+        )
+        fakeRepository.submitRatingResult = Result.success(
+            com.forerun.customer.domain.model.RatingResult(
+                id = "rate_123",
+                orderId = "order_123",
+                stars = 5,
+                note = null,
+                isFinal = false,
+                expiresAt = "2026-09-29T12:00:00Z"
+            )
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5, "   "))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(5, state.order?.rating?.stars)
+        assertNull(state.order?.rating?.note)
+        assertNull(fakeRepository.lastSubmitRatingNote)
+        assertEquals(false, fakeRepository.lastSubmitRatingIsUpdate)
+    }
+
+    @Test
+    fun submitRating_update_existing_rating_passes_isUpdate_true() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(
+                status = "DELIVERED",
+                deliveredAt = null,
+                rating = com.forerun.customer.domain.model.OrderRatingInfo(stars = 2, note = "ملاحظة سابقة")
+            )
+        )
+        fakeRepository.submitRatingResult = Result.success(
+            com.forerun.customer.domain.model.RatingResult(
+                id = "rate_123",
+                orderId = "order_123",
+                stars = 5,
+                note = null,
+                isFinal = false,
+                expiresAt = "2026-09-29T12:00:00Z"
+            )
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5, "تم تحسين الخدمة وشكراً"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.ratingSuccess)
+        assertEquals(5, state.order?.rating?.stars)
+        assertEquals("تم تحسين الخدمة وشكراً", state.order?.rating?.note)
+        assertEquals(1, fakeRepository.submitRatingCallCount)
+        assertEquals(5, fakeRepository.lastSubmitRatingStars)
+        assertEquals("تم تحسين الخدمة وشكراً", fakeRepository.lastSubmitRatingNote)
+        assertEquals(true, fakeRepository.lastSubmitRatingIsUpdate)
+    }
+
+    @Test
+    fun submitRating_double_click_invokes_useCase_only_once() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
+        )
+        fakeRepository.submitRatingDelayMs = 100
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5, "ملاحظة 1"))
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5, "ملاحظة 2"))
+        advanceUntilIdle()
+
+        assertEquals(1, fakeRepository.submitRatingCallCount)
+    }
+
+    @Test
+    fun loadDetail_preserves_local_rating_note_when_backend_returns_null_note() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(OrderDetailIntent.SubmitRating(5, "ملاحظة خاصة بالعميل"))
+        advanceUntilIdle()
+
+        assertEquals("ملاحظة خاصة بالعميل", viewModel.uiState.value.order?.rating?.note)
+
+        // Simulate refresh from backend which only returns { stars: 5, note: null }
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(
+                status = "DELIVERED",
+                deliveredAt = null,
+                rating = com.forerun.customer.domain.model.OrderRatingInfo(stars = 5, note = null)
+            )
+        )
+        viewModel.onIntent(OrderDetailIntent.Refresh)
+        advanceUntilIdle()
+
+        // Local note should be preserved
+        assertEquals("ملاحظة خاصة بالعميل", viewModel.uiState.value.order?.rating?.note)
     }
 
     @Test
