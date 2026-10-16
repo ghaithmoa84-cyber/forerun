@@ -138,7 +138,7 @@ class FakeOrderRepository : OrderRepository {
         if (submitRatingDelayMs > 0) {
             kotlinx.coroutines.delay(submitRatingDelayMs)
         }
-        return submitRatingResult
+        return submitRatingResult.map { it.copy(stars = stars, note = note) }
     }
 
     var getPricingDisclosureResult: Result<com.forerun.customer.domain.model.PricingDisclosure> = Result.success(

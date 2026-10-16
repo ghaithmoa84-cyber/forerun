@@ -152,8 +152,8 @@ class OrderDetailViewModel @Inject constructor(
                             ratingSuccess = true,
                             order = current.order?.copy(
                                 rating = OrderRatingInfo(
-                                    stars = stars,
-                                    note = cleanNote ?: ratingResult.note
+                                    stars = ratingResult.stars,
+                                    note = ratingResult.note
                                 )
                             )
                         )
@@ -182,20 +182,11 @@ class OrderDetailViewModel @Inject constructor(
 
             val result = getOrderDetailUseCase(orderId)
             result.onSuccess { orderDetail ->
-                _uiState.update { current ->
-                    val existingRating = current.order?.rating
-                    val finalRating = orderDetail.rating?.let { serverRating ->
-                        if (serverRating.note == null && existingRating != null && existingRating.stars == serverRating.stars) {
-                            serverRating.copy(note = existingRating.note)
-                        } else {
-                            serverRating
-                        }
-                    }
-                    val finalOrder = if (finalRating != null) orderDetail.copy(rating = finalRating) else orderDetail
-                    current.copy(
+                _uiState.update {
+                    it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        order = finalOrder,
+                        order = orderDetail,
                         errorMessage = null
                     )
                 }

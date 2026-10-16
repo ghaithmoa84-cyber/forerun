@@ -625,31 +625,21 @@ class OrderDetailViewModelTest {
     }
 
     @Test
-    fun loadDetail_preserves_local_rating_note_when_backend_returns_null_note() = runTest(testDispatcher) {
-        fakeRepository.getOrderDetailResult = Result.success(
-            sampleOrder.copy(status = "DELIVERED", deliveredAt = null)
-        )
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        viewModel.onIntent(OrderDetailIntent.SubmitRating(5, "ملاحظة خاصة بالعميل"))
-        advanceUntilIdle()
-
-        assertEquals("ملاحظة خاصة بالعميل", viewModel.uiState.value.order?.rating?.note)
-
-        // Simulate refresh from backend which only returns { stars: 5, note: null }
+    fun loadDetail_loads_server_rating_and_note() = runTest(testDispatcher) {
         fakeRepository.getOrderDetailResult = Result.success(
             sampleOrder.copy(
                 status = "DELIVERED",
                 deliveredAt = null,
-                rating = com.forerun.customer.domain.model.OrderRatingInfo(stars = 5, note = null)
+                rating = com.forerun.customer.domain.model.OrderRatingInfo(stars = 4, note = "ملاحظة سابقة من السيرفر")
             )
         )
-        viewModel.onIntent(OrderDetailIntent.Refresh)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Local note should be preserved
-        assertEquals("ملاحظة خاصة بالعميل", viewModel.uiState.value.order?.rating?.note)
+        val state = viewModel.uiState.value
+        assertNotNull(state.order?.rating)
+        assertEquals(4, state.order?.rating?.stars)
+        assertEquals("ملاحظة سابقة من السيرفر", state.order?.rating?.note)
     }
 
     @Test

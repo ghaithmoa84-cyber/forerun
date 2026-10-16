@@ -1,7 +1,7 @@
 import type { Rating, RatingResponse } from '@forerun/shared-types';
 
 export function mapRating(rating: Rating, role: string): RatingResponse {
-  const isAllowed = role === 'ADMIN';
+  const isAllowed = role === 'ADMIN' || role === 'CUSTOMER';
   return {
     id: rating.id,
     orderId: rating.orderId,

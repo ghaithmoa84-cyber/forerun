@@ -167,6 +167,7 @@ export type OrderPricing = {
 
 export type OrderRating = {
   stars: number;
+  note?: string | null;
 } | null;
 
 export type OrderTimeline = {
