@@ -4,6 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import com.forerun.customer.ui.order.getOrderStatusColors
 import com.forerun.customer.ui.order.getOrderStatusLabelRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
@@ -46,6 +49,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -57,7 +62,10 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -269,8 +277,8 @@ fun OrderDetailScreen(
                                     canRate = uiState.canRate,
                                     isSubmitting = uiState.isSubmittingRating,
                                     isJustRated = uiState.ratingSuccess,
-                                    onStarClick = { stars ->
-                                        viewModel.onIntent(OrderDetailIntent.SubmitRating(stars))
+                                    onSubmitRating = { stars, note ->
+                                        viewModel.onIntent(OrderDetailIntent.SubmitRating(stars, note))
                                     }
                                 )
                             }
@@ -484,8 +492,22 @@ private fun DeliveredRatingCard(
     canRate: Boolean,
     isSubmitting: Boolean,
     isJustRated: Boolean,
-    onStarClick: (Int) -> Unit
+    onSubmitRating: (stars: Int, note: String?) -> Unit
 ) {
+    val isRated = order.rating != null
+    val currentStars = order.rating?.stars ?: 0
+    val currentNote = order.rating?.note.orEmpty()
+
+    var isEditing by remember(order.id) { mutableStateOf(false) }
+    var selectedStars by remember(order.id, order.rating?.stars) { mutableIntStateOf(order.rating?.stars ?: 0) }
+    var noteText by remember(order.id, order.rating?.note) { mutableStateOf(order.rating?.note.orEmpty()) }
+
+    LaunchedEffect(order.rating, isJustRated) {
+        if (isJustRated) {
+            isEditing = false
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(Dimens.RadiusLarge),
@@ -497,70 +519,345 @@ private fun DeliveredRatingCard(
                 .fillMaxWidth()
                 .padding(Dimens.Space16)
         ) {
-            val isRated = order.rating != null
-            val currentStars = order.rating?.stars ?: 0
-
-            val title = when {
-                isJustRated -> stringResource(R.string.order_detail_rating_thanks)
-                isRated -> stringResource(R.string.order_detail_already_rated)
-                else -> stringResource(R.string.rating_headline)
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            if (!isRated) {
+                // 1. Unrated state
                 Text(
-                    text = title,
+                    text = stringResource(R.string.rating_headline),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isJustRated || isRated) ForerunGreenDark else ForerunTextPrimary
+                    color = ForerunTextPrimary
                 )
-                if (isSubmitting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = ForerunOrange
-                    )
-                } else if (isRated) {
+
+                val runnerName = order.runner?.name
+                if (!runnerName.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(Dimens.Space4))
                     Text(
-                        text = stringResource(R.string.order_detail_rated_label, currentStars),
+                        text = stringResource(R.string.rating_subtitle, runnerName),
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
                         color = ForerunTextMuted
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(Dimens.Space12))
+                Spacer(modifier = Modifier.height(Dimens.Space12))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Dimens.Space12),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                for (star in 1..5) {
-                    val isFilled = star <= currentStars
-                    if (isRated) {
+                // Interactive 5 stars
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space12),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (star in 1..5) {
+                        val isFilled = star <= selectedStars
                         Icon(
                             imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
-                            contentDescription = null,
-                            tint = if (isFilled) Color(0xFFFFB300) else Color(0xFFE5E7EB),
-                            modifier = Modifier.size(32.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Outlined.Star,
                             contentDescription = "$star",
-                            tint = Color(0xFFBDBDBD),
+                            tint = if (isFilled) Color(0xFFFFB300) else Color(0xFFBDBDBD),
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .clickable(enabled = !isSubmitting && canRate) {
-                                    onStarClick(star)
+                                    selectedStars = star
                                 }
                                 .padding(4.dp)
+                        )
+                    }
+                }
+
+                // If stars selected, expand note input + submit button
+                AnimatedVisibility(visible = selectedStars > 0) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Spacer(modifier = Modifier.height(Dimens.Space8))
+                        val starLabel = when (selectedStars) {
+                            1 -> stringResource(R.string.rating_score_1)
+                            2 -> stringResource(R.string.rating_score_2)
+                            3 -> stringResource(R.string.rating_score_3)
+                            4 -> stringResource(R.string.rating_score_4)
+                            5 -> stringResource(R.string.rating_score_5)
+                            else -> ""
+                        }
+                        Text(
+                            text = starLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ForerunGreenDark
+                        )
+
+                        Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                        OutlinedTextField(
+                            value = noteText,
+                            onValueChange = { if (it.length <= 1000) noteText = it },
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.rating_note_hint),
+                                    fontSize = 13.sp,
+                                    color = ForerunTextMuted
+                                )
+                            },
+                            enabled = !isSubmitting,
+                            minLines = 2,
+                            maxLines = 4,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(Dimens.RadiusMedium),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = ForerunOrange,
+                                unfocusedBorderColor = ForerunBorder
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                        Button(
+                            onClick = { onSubmitRating(selectedStars, noteText.trim().ifEmpty { null }) },
+                            enabled = selectedStars in 1..5 && !isSubmitting,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            shape = RoundedCornerShape(Dimens.RadiusPill),
+                            colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange)
+                        ) {
+                            if (isSubmitting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.rating_submit_btn),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            } else if (!isEditing) {
+                // 2. Rated state (View mode)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isJustRated) stringResource(R.string.order_detail_rating_thanks) else stringResource(R.string.order_detail_already_rated),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunGreenDark
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = ForerunOrange
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.order_detail_rated_label, currentStars),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = ForerunTextMuted
+                            )
+                            if (canRate) {
+                                Spacer(modifier = Modifier.width(Dimens.Space8))
+                                TextButton(
+                                    onClick = {
+                                        selectedStars = currentStars
+                                        noteText = currentNote
+                                        isEditing = true
+                                    },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(30.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = ForerunOrange
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource(R.string.rating_edit_action),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForerunOrange
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.Space10))
+
+                // Display rated stars
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (star in 1..5) {
+                        val isFilled = star <= currentStars
+                        Icon(
+                            imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
+                            contentDescription = null,
+                            tint = if (isFilled) Color(0xFFFFB300) else Color(0xFFE5E7EB),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+
+                // If there is a note, display it under the stars
+                if (currentNote.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(Dimens.Space10))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(ForerunSoftSurface, RoundedCornerShape(Dimens.RadiusMedium))
+                            .padding(horizontal = Dimens.Space12, vertical = Dimens.Space8)
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.rating_note_title),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ForerunTextMuted
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = currentNote,
+                                fontSize = 13.sp,
+                                color = ForerunTextPrimary
+                            )
+                        }
+                    }
+                }
+            } else {
+                // 3. Rated state (Edit mode)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.order_detail_edit_rating_btn),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunTextPrimary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                // Interactive 5 stars for editing
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space12),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (star in 1..5) {
+                        val isFilled = star <= selectedStars
+                        Icon(
+                            imageVector = if (isFilled) Icons.Default.Star else Icons.Outlined.Star,
+                            contentDescription = "$star",
+                            tint = if (isFilled) Color(0xFFFFB300) else Color(0xFFBDBDBD),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(enabled = !isSubmitting) {
+                                    selectedStars = star
+                                }
+                                .padding(4.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(Dimens.Space8))
+                val starLabel = when (selectedStars) {
+                    1 -> stringResource(R.string.rating_score_1)
+                    2 -> stringResource(R.string.rating_score_2)
+                    3 -> stringResource(R.string.rating_score_3)
+                    4 -> stringResource(R.string.rating_score_4)
+                    5 -> stringResource(R.string.rating_score_5)
+                    else -> ""
+                }
+                Text(
+                    text = starLabel,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ForerunGreenDark
+                )
+
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { if (it.length <= 1000) noteText = it },
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.rating_note_hint),
+                            fontSize = 13.sp,
+                            color = ForerunTextMuted
+                        )
+                    },
+                    enabled = !isSubmitting,
+                    minLines = 2,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = ForerunOrange,
+                        unfocusedBorderColor = ForerunBorder
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(Dimens.Space12))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { onSubmitRating(selectedStars, noteText.trim().ifEmpty { null }) },
+                        enabled = selectedStars in 1..5 && !isSubmitting,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(Dimens.RadiusPill),
+                        colors = ButtonDefaults.buttonColors(containerColor = ForerunOrange)
+                    ) {
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.rating_update_btn),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            selectedStars = currentStars
+                            noteText = currentNote
+                            isEditing = false
+                        },
+                        enabled = !isSubmitting,
+                        modifier = Modifier.height(44.dp),
+                        shape = RoundedCornerShape(Dimens.RadiusPill),
+                        border = BorderStroke(1.dp, ForerunBorder)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.rating_cancel_action),
+                            fontSize = 14.sp,
+                            color = ForerunTextPrimary
                         )
                     }
                 }

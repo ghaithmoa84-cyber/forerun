@@ -56,10 +56,10 @@ describe('RatingsService', () => {
   });
 
   describe('mapRating visibility', () => {
-    it('hides notes for CUSTOMER and RUNNER and exposes them for ADMIN', () => {
-      expect(mapRating(baseRating, 'CUSTOMER').note).toBeNull();
-      expect(mapRating(baseRating, 'RUNNER').note).toBeNull();
+    it('exposes notes for ADMIN and CUSTOMER and hides them for RUNNER', () => {
+      expect(mapRating(baseRating, 'CUSTOMER').note).toBe('great runner');
       expect(mapRating(baseRating, 'ADMIN').note).toBe('great runner');
+      expect(mapRating(baseRating, 'RUNNER').note).toBeNull();
     });
   });
 
@@ -88,7 +88,7 @@ describe('RatingsService', () => {
       });
 
       expect(result.stars).toBe(5);
-      expect(result.note).toBeNull();
+      expect(result.note).toBe('great runner');
       expect(prisma.rating.create).toHaveBeenCalledWith({
         data: {
           orderId: 'order-1',
@@ -238,7 +238,7 @@ describe('RatingsService', () => {
         note: 'updated',
       });
 
-      expect(result.note).toBeNull();
+      expect(result.note).toBe('great runner');
       expect(prisma.rating.update).toHaveBeenCalledWith({
         where: { id: 'rating-1' },
         data: { stars: 5, note: 'updated' },

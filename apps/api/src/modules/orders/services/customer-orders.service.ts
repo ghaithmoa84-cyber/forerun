@@ -580,7 +580,10 @@ export class CustomerOrdersService {
       })),
       rating:
         order.ratings.length > 0
-          ? { stars: order.ratings[0].stars }
+          ? {
+              stars: order.ratings[0].stars,
+              note: order.ratings[0].note,
+            }
           : null,
       timeline: {
         createdAt: order.createdAt,

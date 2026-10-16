@@ -121,6 +121,9 @@ class FakeOrderRepository : OrderRepository {
     )
     var submitRatingCallCount: Int = 0
     var submitRatingDelayMs: Long = 0
+    var lastSubmitRatingStars: Int? = null
+    var lastSubmitRatingNote: String? = null
+    var lastSubmitRatingIsUpdate: Boolean? = null
 
     override suspend fun submitRating(
         orderId: String,
@@ -129,10 +132,13 @@ class FakeOrderRepository : OrderRepository {
         isUpdate: Boolean
     ): Result<com.forerun.customer.domain.model.RatingResult> {
         submitRatingCallCount++
+        lastSubmitRatingStars = stars
+        lastSubmitRatingNote = note
+        lastSubmitRatingIsUpdate = isUpdate
         if (submitRatingDelayMs > 0) {
             kotlinx.coroutines.delay(submitRatingDelayMs)
         }
-        return submitRatingResult
+        return submitRatingResult.map { it.copy(stars = stars, note = note) }
     }
 
     var getPricingDisclosureResult: Result<com.forerun.customer.domain.model.PricingDisclosure> = Result.success(
