@@ -27,8 +27,8 @@ class ComingSoonFeatureStringsTest {
         val dialogTitle = context.getString(R.string.service_store_catalog_dialog_title)
         val dialogDesc = context.getString(R.string.service_store_catalog_dialog_desc)
 
-        assertTrue("Store catalog title should not be empty", title.isNotEmpty())
-        assertTrue("Store catalog desc should not be empty", desc.isNotEmpty())
+        assertEquals("اختر متجرك", title)
+        assertEquals("تسوق من متجرك المفضل", desc)
         assertTrue("Store catalog dialog title should not be empty", dialogTitle.isNotEmpty())
         assertTrue("Store catalog dialog desc should not be empty", dialogDesc.isNotEmpty())
     }
@@ -40,8 +40,8 @@ class ComingSoonFeatureStringsTest {
         val dialogTitle = context.getString(R.string.service_product_search_dialog_title)
         val dialogDesc = context.getString(R.string.service_product_search_dialog_desc)
 
-        assertTrue("Product search title should not be empty", title.isNotEmpty())
-        assertTrue("Product search desc should not be empty", desc.isNotEmpty())
+        assertEquals("ابحث عن منتجك", title)
+        assertEquals("إيجاد أغراضك من المتاجر المتاحة", desc)
         assertTrue("Product search dialog title should not be empty", dialogTitle.isNotEmpty())
         assertTrue("Product search dialog desc should not be empty", dialogDesc.isNotEmpty())
     }
@@ -49,7 +49,7 @@ class ComingSoonFeatureStringsTest {
     @Test
     fun inDevelopmentNotice_isUnambiguous() {
         val notice = context.getString(R.string.coming_soon_feature_in_dev_notice)
-        assertEquals("هذه الميزة قيد التطوير حالياً وغير متاحة بعد.", notice)
+        assertEquals("هذه الخدمة قيد التطوير حالياً وغير متاحة بعد.", notice)
     }
 
     @Test
@@ -60,6 +60,6 @@ class ComingSoonFeatureStringsTest {
 
         assertEquals("قريباً", badge)
         assertEquals("إغلاق", dismiss)
-        assertEquals("تفاصيل الميزة", learnMore)
+        assertEquals("تفاصيل الخدمة", learnMore)
     }
 }

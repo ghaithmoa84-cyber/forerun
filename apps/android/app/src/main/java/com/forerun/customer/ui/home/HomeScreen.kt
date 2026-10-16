@@ -14,9 +14,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -444,7 +446,7 @@ private fun HomeBannersSection(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 7f)
+                    .aspectRatio(16f / 8f)
                     .clip(RoundedCornerShape(20.dp))
                     .clickable { onNewOrderClick() },
                 shape = RoundedCornerShape(20.dp),
@@ -1511,13 +1513,16 @@ private fun QuickServicesSection(
 
         // Secondary Coming Soon Grid: Store Catalog & Product Search (Awareness only / D30)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(Dimens.Space10)
         ) {
             // Card 3: Store Catalog (اختيار متجر محدد والتسوق منه مباشرة)
             Card(
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxHeight()
                     .clip(RoundedCornerShape(16.dp))
                     .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
                     .clickable { onStoreCatalogClick() },
@@ -1525,7 +1530,7 @@ private fun QuickServicesSection(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .padding(Dimens.Space12)
                 ) {
                     Row(
@@ -1537,13 +1542,13 @@ private fun QuickServicesSection(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(ForerunOrangeLight),
+                                .background(ForerunMintSoft),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Store,
                                 contentDescription = null,
-                                tint = ForerunOrangeDark,
+                                tint = ForerunNavy,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1581,6 +1586,7 @@ private fun QuickServicesSection(
                         lineHeight = 14.sp
                     )
 
+                    Spacer(modifier = Modifier.weight(1f))
                     Spacer(modifier = Modifier.height(Dimens.Space10))
 
                     // Awareness info prompt
@@ -1588,7 +1594,7 @@ private fun QuickServicesSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(ForerunSoftSurface)
+                            .background(ForerunMintLight)
                             .padding(vertical = 5.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1596,7 +1602,7 @@ private fun QuickServicesSection(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = ForerunTextMuted,
+                                tint = ForerunMintDark,
                                 modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -1604,7 +1610,7 @@ private fun QuickServicesSection(
                                 text = stringResource(R.string.service_card_learn_more),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ForerunTextMuted
+                                color = ForerunMintDark
                             )
                         }
                     }
@@ -1615,6 +1621,7 @@ private fun QuickServicesSection(
             Card(
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxHeight()
                     .clip(RoundedCornerShape(16.dp))
                     .border(1.dp, ForerunBorder, RoundedCornerShape(16.dp))
                     .clickable { onProductSearchClick() },
@@ -1622,7 +1629,7 @@ private fun QuickServicesSection(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .padding(Dimens.Space12)
                 ) {
                     Row(
@@ -1678,6 +1685,7 @@ private fun QuickServicesSection(
                         lineHeight = 14.sp
                     )
 
+                    Spacer(modifier = Modifier.weight(1f))
                     Spacer(modifier = Modifier.height(Dimens.Space10))
 
                     // Awareness info prompt
@@ -1685,7 +1693,7 @@ private fun QuickServicesSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(ForerunSoftSurface)
+                            .background(ForerunMintLight)
                             .padding(vertical = 5.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1693,7 +1701,7 @@ private fun QuickServicesSection(
                             Icon(
                                 imageVector = Icons.Default.Info,
                                 contentDescription = null,
-                                tint = ForerunTextMuted,
+                                tint = ForerunMintDark,
                                 modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -1701,7 +1709,7 @@ private fun QuickServicesSection(
                                 text = stringResource(R.string.service_card_learn_more),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = ForerunTextMuted
+                                color = ForerunMintDark
                             )
                         }
                     }
