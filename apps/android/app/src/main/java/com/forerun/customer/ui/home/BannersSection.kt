@@ -101,7 +101,7 @@ fun BannersSection(
                 state = pagerState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 7f)
+                    .aspectRatio(16f / 8f)
             ) { page ->
                 val banner = banners[page]
                 BannerCard(
