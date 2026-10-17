@@ -46,6 +46,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -132,7 +134,7 @@ fun AddressSetupScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var mapLoadError by remember { mutableStateOf<String?>(null) }
+    @StringRes var mapLoadError by rememberSaveable { mutableStateOf<Int?>(null) }
     var maplibreInstance by remember { mutableStateOf<MapLibreMap?>(null) }
 
     LaunchedEffect(viewModel.events) {
@@ -304,7 +306,7 @@ fun AddressSetupScreen(
                             )
                             Spacer(modifier = Modifier.height(Dimens.Space8))
                             Text(
-                                text = stringResource(R.string.address_map_fallback_note),
+                                text = stringResource(mapLoadError ?: R.string.address_map_fallback_note),
                                 textAlign = TextAlign.Center,
                                 fontSize = 14.sp,
                                 color = ForerunTextMuted
@@ -334,7 +336,7 @@ fun AddressSetupScreen(
                         },
                         onError = { error ->
                             Log.e(TAG, "MapLibre error: $error")
-                            mapLoadError = error
+                            mapLoadError = R.string.address_map_fallback_note
                         }
                     )
 
