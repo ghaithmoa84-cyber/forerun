@@ -1,16 +1,17 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-14
+> **آخر تحديث:** 2026-10-17
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
 ---
 
-## فروع عمل معلّقة بانتظار الدمج (Pending Unmerged Branches)
+## حالة فروع العمل وشجرة الكود (Branch Status)
 
-- `feature/customer-fee-disclosure-modal`: **مكتمل ومختبر بالكامل بانتظار تأكيد الدمج الصريح (Decision D40)**
-  - يحوي: نقطة النهاية `GET /api/v1/customer/pricing/disclosure` + نافذة تنويه المصاريف والإلغاء في Android قبل إرسال الطلب مع التحقق والتراجع الآمن.
-  - تم التحقق بنسبة 100%: Monorepo (`build`, `typecheck`, `lint`), Backend unit (406 passed), Backend integration (5 passed), Android unit (299 passed).
+- ✅ **لا توجد فروع معلّقة حالياً بانتظار الدمج:** كافة الفروع منتهية ومدموجة في `master` (شجرة العمل والريموت نظيفان 100% ومتطابقان حتى القرار D43).
+  - فرع `feature/customer-fee-disclosure-modal` دُمج في `master` بـ `feb0f6b` (القرار D40).
+  - فروع الميزات الأخيرة (D41، D42، D43، استعادة التقييم، وتحديث الأيقونة) دُمجت جميعاً بـ `git merge --no-ff`.
+  - تم تنظيف وإغلاق كافة الفروع البعيدة القديمة على GitHub.
 
 ---
 
