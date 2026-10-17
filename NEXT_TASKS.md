@@ -80,12 +80,13 @@
 ### مهام التنظيف المؤجلة (Cleanup)
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
 |---|---|---|---|---|---|
-| C-1 | مراجعة `getEntriesByRunner` (`ledger.service.ts:145`) — إما rename أو حذف | منخفضة | ⏳ معلّق | @code-architect | إدراج `ORDER_FEE_TOTAL` فيها يخالف D25 مفهوميًا |
+| C-1 | مراجعة `getEntriesByRunner` (`ledger.service.ts:145`) — إما rename أو حذف | منخفضة | ✅ مُنجَز | @code-architect | حُذفت بالكامل كـ Dead Code بموجب D25 ودُمجت في master بـ `a71e421` (415/415 اختبار حي). |
 | C-2 | تنظيف عمودَي `runnerShare` و `platformShare` من جدولي `Settlement` و `SettlementItem` في migration مستقل بعد MVP | منخفضة | ⏳ مؤجل لما بعد MVP | @code-architect | حقول إرثية (Legacy) أصبحت ثابتة (0 و totalFees) بموجب D26 لتجنب تعديل schema في MVP |
-| C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ⏳ معلّق | @android-dev | تنظيف لاحق لـ Sprint 9 |
+| C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ✅ مُنجَز | @android-dev | تحويلها إلى `@StringRes Int?` عبر `rememberSaveable` ودُمجت في master بـ `a71e421` (318/318 اختبار وحدة). |
 | C-4 | معالجة انحراف الـ migrations التاريخية في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل لما بعد 7A | منخفضة | ✅ مُنجَز | @code-architect | تم إنشاء الهجرة 20261007120000_reconcile_token_defaults ومطابقة schema.prisma مع التاريخ (D31). |
 | C-5 | طبقة تحويل (Mapping Layer) في Android عبر `BannerRouteMapper` مع 7 اختبارات وحدة وربطها بالواجهة | متوسطة | ✅ مُنجَز | @android-dev | تم التنفيذ في `BannerRouteMapper` والدمج في `master` من `feature/banners-client-android` |
 | C-6 | فحص الـ Drift عبر نقطة تشخيصية في بيئة الإنتاج | منخفضة | ✅ مُنجَز | Ops / @code-architect | تم بناء GET /admin/system/schema-drift مع Throttle مزدوج وAuditLog وتحديث runbook. |
+| C-7 | توحيد onError في MapLibreContainer ليُرجع معرّف مورد نصي (@StringRes) بدل نص الاستثناء الخام (String) — يمنع تكرار نفس فئة المشكلة التي عولجت في C-3 عند أي موقع استدعاء مستقبلي آخر | منخفضة | ⏳ معلّق | @android-dev | اكتُشف أثناء تنفيذ C-3 (2026-10-17)؛ لم يُصلَح لتفادي توسيع نطاق فرع التنظيف |
 | P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)
