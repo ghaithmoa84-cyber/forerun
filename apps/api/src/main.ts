@@ -23,9 +23,10 @@ async function bootstrap(): Promise<void> {
   // bypassed on login/registration. Set TRUST_PROXY to the actual trusted
   // proxy address or subnet (e.g. "127.0.0.1" or "10.0.0.0/8"); leave it
   // unset or "false" when the API is directly exposed.
-  const trustProxy = process.env.TRUST_PROXY;
-  if (trustProxy && trustProxy !== 'false') {
-    app.set('trust proxy', trustProxy);
+  const rawTrustProxy = process.env.TRUST_PROXY;
+  if (rawTrustProxy && rawTrustProxy !== 'false') {
+    const numericTrustProxy = Number(rawTrustProxy);
+    app.set('trust proxy', isNaN(numericTrustProxy) ? rawTrustProxy : numericTrustProxy);
   } else {
     app.set('trust proxy', false);
   }
