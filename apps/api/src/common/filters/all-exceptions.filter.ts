@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import * as Sentry from '@sentry/nestjs';
 
 const { PrismaClientKnownRequestError } = Prisma;
 
@@ -64,6 +65,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const error = 
       HTTP_ERROR_MAP[status] ??
       (status >= 500 ? 'INTERNAL_SERVER_ERROR' : 'REQUEST_ERROR');
+
+    if (status >= 500) {
+      Sentry.captureException(exception);
+    }
 
     response.status(status).json({
       statusCode: status,
