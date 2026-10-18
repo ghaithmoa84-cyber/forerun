@@ -56,6 +56,18 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;');
 }
 
+function isValidSentryUrl(urlStr: string): boolean {
+  if (!urlStr || typeof urlStr !== 'string') return false;
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'https:') return false;
+    const hostname = parsed.hostname.toLowerCase();
+    return hostname === 'sentry.io' || hostname.endsWith('.sentry.io');
+  } catch {
+    return false;
+  }
+}
+
 @Controller('webhooks/sentry')
 export class SentryWebhookController {
   private readonly logger = new Logger(SentryWebhookController.name);
@@ -81,24 +93,27 @@ export class SentryWebhookController {
   ): Promise<{ status: string; handled: boolean }> {
     const configuredSecret = this.configService.get<string>('SENTRY_WEBHOOK_SECRET');
 
-    // التحقق الأمني عبر توقيع HMAC الرسمي حصراً
-    if (configuredSecret) {
-      if (!signature) {
-        this.logger.warn('Missing sentry-hook-signature header in Sentry webhook request');
-        throw new UnauthorizedException('Missing Sentry webhook signature');
-      }
+    // SEC-02: التحقق الأمني بمبدأ Fail-Closed — رفض الطلب حتماً إن لم يكن السر معرّفاً
+    if (!configuredSecret || configuredSecret.trim().length === 0) {
+      this.logger.warn('SENTRY_WEBHOOK_SECRET is not configured. Webhook rejected.');
+      throw new UnauthorizedException('Sentry webhook secret is not configured');
+    }
 
-      const isAuthorized = this.verifyHmacSignature(
-        req?.rawBody,
-        body,
-        configuredSecret,
-        signature,
-      );
+    if (!signature) {
+      this.logger.warn('Missing sentry-hook-signature header in Sentry webhook request');
+      throw new UnauthorizedException('Missing Sentry webhook signature');
+    }
 
-      if (!isAuthorized) {
-        this.logger.warn('Invalid sentry-hook-signature in Sentry webhook request');
-        throw new UnauthorizedException('Invalid Sentry webhook signature');
-      }
+    const isAuthorized = this.verifyHmacSignature(
+      req?.rawBody,
+      body,
+      configuredSecret,
+      signature,
+    );
+
+    if (!isAuthorized) {
+      this.logger.warn('Invalid sentry-hook-signature in Sentry webhook request');
+      throw new UnauthorizedException('Invalid Sentry webhook signature');
     }
 
     // استخراج بيانات المشكلة بمرونة سواء كانت من Internal Integration أو Alert Rule
@@ -121,7 +136,8 @@ export class SentryWebhookController {
 
     const level = (issueData?.level || body?.level || 'error').toUpperCase();
     const project = issueData?.project?.slug || body?.project_name || 'fawrun-api';
-    const url = issueData?.permalink || body?.url || body?.web_url || '';
+    const rawUrl = issueData?.permalink || body?.url || body?.web_url || '';
+    const validUrl = isValidSentryUrl(rawUrl) ? escapeHtml(rawUrl) : '';
     const culprit = issueData?.culprit || body?.culprit || '';
     const shortId = issueData?.shortId || '';
 
@@ -133,7 +149,7 @@ export class SentryWebhookController {
       `<b>المستوى:</b> <code>${escapeHtml(level)}</code>`,
       `<b>الخطأ:</b> <code>${escapeHtml(title)}</code>`,
       culprit ? `<b>الموقع:</b> <code>${escapeHtml(culprit)}</code>` : '',
-      url ? `<a href="${url}">🔗 فتح المشكلة في Sentry</a>` : '',
+      validUrl ? `<a href="${validUrl}">🔗 فتح المشكلة في Sentry</a>` : '',
     ].filter(Boolean);
 
     await this.telegramService.sendMessage(messageLines.join('\n'));
