@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BadRequestException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 
 vi.mock('@prisma/client', () => ({
   PrismaClient: class {},
