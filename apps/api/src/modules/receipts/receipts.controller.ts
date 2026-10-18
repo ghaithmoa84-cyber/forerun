@@ -79,7 +79,7 @@ export class ReceiptsController {
     if (!orderStore) {
       throw new NotFoundException('Order or order store not found');
     }
-    return this.receiptsService.createReceipt(orderStore.id, dto);
+    return this.receiptsService.createReceipt(params.id, orderStore.id, dto);
   }
 
   @Delete('runner/orders/:id/stores/:storeId/receipts/:receiptId')
@@ -101,6 +101,7 @@ export class ReceiptsController {
     return this.receiptsService.deleteReceipt(
       params.receiptId,
       orderStore.id,
+      params.id,
     );
   }
 }

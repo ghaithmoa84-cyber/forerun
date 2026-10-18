@@ -116,9 +116,17 @@ export class ReceiptsService {
   }
 
   async createReceipt(
+    orderId: string,
     orderStoreId: string,
     dto: CreateReceiptRequest,
   ): Promise<CreateReceiptResponse> {
+    const expectedPrefix = `receipts/${orderId}/${orderStoreId}/`;
+    if (!dto.r2Key.startsWith(expectedPrefix)) {
+      throw new BadRequestException(
+        `r2Key must start with '${expectedPrefix}'`,
+      );
+    }
+
     const receipt = await this.prisma.receipt.create({
       data: {
         orderStoreId,
@@ -134,6 +142,7 @@ export class ReceiptsService {
   async deleteReceipt(
     receiptId: string,
     orderStoreId: string,
+    orderId?: string,
   ): Promise<DeleteReceiptResponse> {
     const result = await this.prisma.$transaction(
       async (tx) => {
@@ -152,6 +161,14 @@ export class ReceiptsService {
         });
         if (!orderStore) {
           throw new NotFoundException('Order store not found');
+        }
+
+        const effectiveOrderId = orderId ?? orderStore.orderId;
+        const expectedPrefix = `receipts/${effectiveOrderId}/${orderStoreId}/`;
+        if (!receipt.r2Key.startsWith(expectedPrefix)) {
+          throw new BadRequestException(
+            `Receipt r2Key must start with '${expectedPrefix}'`,
+          );
         }
 
         let fileDeletedFromR2 = false;
