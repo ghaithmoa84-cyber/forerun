@@ -14,8 +14,9 @@ Sentry.init({
 
 console.log('جاري إرسال استثناء اختباري إلى Sentry...');
 
+const timeStr = new Date().toLocaleTimeString('ar-SY');
 const eventId = Sentry.captureException(
-  new Error('تجربة عملية من غيث: فحص ظهور الاستثناء في Sentry')
+  new Error(`تجربة الربط الحي مع تلغرام - فحص الويب هوك (${timeStr})`)
 );
 
 Sentry.flush(3000)

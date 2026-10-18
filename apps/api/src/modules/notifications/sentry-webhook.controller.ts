@@ -3,11 +3,13 @@ import {
   Post,
   Body,
   Headers,
+  Req,
   HttpCode,
   HttpStatus,
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import * as crypto from 'crypto';
@@ -30,6 +32,7 @@ interface SentryWebhookPayload {
   action?: string;
   project_name?: string;
   message?: string;
+  description?: string;
   level?: string;
   url?: string;
   web_url?: string;
@@ -37,8 +40,10 @@ interface SentryWebhookPayload {
   issue?: SentryWebhookIssue;
   data?: {
     issue?: SentryWebhookIssue;
+    description?: string;
     event?: {
       title?: string;
+      message?: string;
     };
   };
 }
@@ -62,7 +67,7 @@ export class SentryWebhookController {
 
   /**
    * يستقبل تنبيهات Sentry الرسمية (Internal Integration Webhook)
-   * ويقوم بالتحقق المشدد من توقيع HMAC التابع لـ Sentry حصراً
+   * ويقوم بالتحقق المشدد من توقيع HMAC التابع لـ Sentry عبر rawBody
    * ثم إعادة توجيه الإشعار فوراً إلى محادثة تلغرام الخاصة بالمشروع
    */
   @Post()
@@ -71,6 +76,7 @@ export class SentryWebhookController {
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   async handleSentryWebhook(
     @Body() body: SentryWebhookPayload,
+    @Req() req: Request & { rawBody?: Buffer },
     @Headers('sentry-hook-signature') signature?: string,
   ): Promise<{ status: string; handled: boolean }> {
     const configuredSecret = this.configService.get<string>('SENTRY_WEBHOOK_SECRET');
@@ -83,6 +89,7 @@ export class SentryWebhookController {
       }
 
       const isAuthorized = this.verifyHmacSignature(
+        req?.rawBody,
         body,
         configuredSecret,
         signature,
@@ -98,12 +105,20 @@ export class SentryWebhookController {
     const issueData = body?.data?.issue || body?.issue;
     const action = body?.action;
 
-    // إذا كان الإجراء محدداً كـ resolved أو ignored ولا يمثل خطأ جديداً
-    if (action && action !== 'created' && action !== 'triggered' && !body?.message) {
+    // إذا كان الإجراء محدداً كـ resolved أو archived
+    if (action === 'resolved' || action === 'archived' || action === 'unresolved') {
       return { status: 'ignored', handled: false };
     }
 
-    const title = issueData?.title || body?.message || body?.data?.event?.title || 'Unknown Sentry Error';
+    const title =
+      issueData?.title ||
+      body?.message ||
+      body?.description ||
+      body?.data?.description ||
+      body?.data?.event?.title ||
+      body?.data?.event?.message ||
+      'Sentry Test Notification';
+
     const level = (issueData?.level || body?.level || 'error').toUpperCase();
     const project = issueData?.project?.slug || body?.project_name || 'fawrun-api';
     const url = issueData?.permalink || body?.url || body?.web_url || '';
@@ -122,19 +137,27 @@ export class SentryWebhookController {
     ].filter(Boolean);
 
     await this.telegramService.sendMessage(messageLines.join('\n'));
+    this.logger.log(`Sentry webhook notification dispatched to Telegram: ${title}`);
 
     return { status: 'success', handled: true };
   }
 
   private verifyHmacSignature(
+    rawBuffer: Buffer | undefined,
     body: unknown,
     secret: string,
     signature: string,
   ): boolean {
     try {
-      const rawPayload = typeof body === 'string' ? body : JSON.stringify(body);
       const hmac = crypto.createHmac('sha256', secret);
-      hmac.update(rawPayload);
+
+      if (rawBuffer && Buffer.isBuffer(rawBuffer)) {
+        hmac.update(rawBuffer);
+      } else {
+        const rawPayload = typeof body === 'string' ? body : JSON.stringify(body);
+        hmac.update(rawPayload);
+      }
+
       const digest = hmac.digest('hex');
 
       if (
