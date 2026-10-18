@@ -14,6 +14,7 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
+    rawBody: true,
   });
 
   // Trust proxy must be explicitly configured. Defaulting to `true` lets the
