@@ -87,6 +87,7 @@
 | C-5 | طبقة تحويل (Mapping Layer) في Android عبر `BannerRouteMapper` مع 7 اختبارات وحدة وربطها بالواجهة | متوسطة | ✅ مُنجَز | @android-dev | تم التنفيذ في `BannerRouteMapper` والدمج في `master` من `feature/banners-client-android` |
 | C-6 | فحص الـ Drift عبر نقطة تشخيصية في بيئة الإنتاج | منخفضة | ✅ مُنجَز | Ops / @code-architect | تم بناء GET /admin/system/schema-drift مع Throttle مزدوج وAuditLog وتحديث runbook. |
 | C-7 | توحيد onError في MapLibreContainer ليُرجع معرّف مورد نصي (@StringRes) بدل نص الاستثناء الخام (String) — يمنع تكرار نفس فئة المشكلة التي عولجت في C-3 عند أي موقع استدعاء مستقبلي آخر | منخفضة | ⏳ معلّق | @android-dev | اكتُشف أثناء تنفيذ C-3 (2026-10-17)؛ لم يُصلَح لتفادي توسيع نطاق فرع التنظيف |
+| C-8 | توحيد عقد استجابة cancelOrder: إما تعديل Backend لإرجاع success/message فعلياً، أو تعديل Android DTO ليعكس الحقول الحقيقية المُرجَعة (id, orderNumber, status, cancelledAt) بدل الاعتماد على defaults وهمية | منخفضة | ⏳ معلّق | @feature-dev | اكتُشف أثناء تدقيق Nullability الشامل (2026-10-17)؛ لا خطر Crash، لكنه عقد صامت قد يُضلل أي استهلاك مستقبلي لـ success/message |
 | P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)
