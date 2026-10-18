@@ -3,7 +3,6 @@ import {
   Post,
   Body,
   Headers,
-  Query,
   HttpCode,
   HttpStatus,
   UnauthorizedException,
@@ -62,8 +61,9 @@ export class SentryWebhookController {
   ) {}
 
   /**
-   * يستقبل تنبيهات Sentry الرسمية (Internal Integration أو Alert Rule Webhook)
-   * ويقوم بإعادة توجيهها فوراً إلى محادثة تلغرام الخاصة بالمشروع
+   * يستقبل تنبيهات Sentry الرسمية (Internal Integration Webhook)
+   * ويقوم بالتحقق المشدد من توقيع HMAC التابع لـ Sentry حصراً
+   * ثم إعادة توجيه الإشعار فوراً إلى محادثة تلغرام الخاصة بالمشروع
    */
   @Post()
   @Public()
@@ -72,24 +72,25 @@ export class SentryWebhookController {
   async handleSentryWebhook(
     @Body() body: SentryWebhookPayload,
     @Headers('sentry-hook-signature') signature?: string,
-    @Headers('authorization') authHeader?: string,
-    @Query('secret') querySecret?: string,
   ): Promise<{ status: string; handled: boolean }> {
     const configuredSecret = this.configService.get<string>('SENTRY_WEBHOOK_SECRET');
 
-    // التحقق الأمني: إذا كان الرمز السري مضبوطاً في البيئة، نتحقق منه بدقة
+    // التحقق الأمني عبر توقيع HMAC الرسمي حصراً
     if (configuredSecret) {
-      const isAuthorized = this.verifyAuthorization(
+      if (!signature) {
+        this.logger.warn('Missing sentry-hook-signature header in Sentry webhook request');
+        throw new UnauthorizedException('Missing Sentry webhook signature');
+      }
+
+      const isAuthorized = this.verifyHmacSignature(
         body,
         configuredSecret,
         signature,
-        authHeader,
-        querySecret,
       );
 
       if (!isAuthorized) {
-        this.logger.warn('Unauthorized Sentry webhook attempt rejected');
-        throw new UnauthorizedException('Invalid or missing Sentry webhook credentials');
+        this.logger.warn('Invalid sentry-hook-signature in Sentry webhook request');
+        throw new UnauthorizedException('Invalid Sentry webhook signature');
       }
     }
 
@@ -125,37 +126,25 @@ export class SentryWebhookController {
     return { status: 'success', handled: true };
   }
 
-  private verifyAuthorization(
+  private verifyHmacSignature(
     body: unknown,
     secret: string,
-    signature?: string,
-    authHeader?: string,
-    querySecret?: string,
+    signature: string,
   ): boolean {
-    // 1. التحقق عبر توكن الاستعلام URL ?secret=...
-    if (querySecret && querySecret === secret) {
-      return true;
-    }
+    try {
+      const rawPayload = typeof body === 'string' ? body : JSON.stringify(body);
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(rawPayload);
+      const digest = hmac.digest('hex');
 
-    // 2. التحقق عبر ترويسة Authorization: Bearer <secret>
-    if (authHeader && authHeader === `Bearer ${secret}`) {
-      return true;
-    }
-
-    // 3. التحقق عبر توقيع HMAC التابع لـ Sentry: sentry-hook-signature
-    if (signature) {
-      try {
-        const rawPayload = typeof body === 'string' ? body : JSON.stringify(body);
-        const hmac = crypto.createHmac('sha256', secret);
-        hmac.update(rawPayload);
-        const digest = hmac.digest('hex');
-
-        if (digest.length === signature.length && crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature))) {
-          return true;
-        }
-      } catch (err) {
-        this.logger.error('Failed to verify HMAC signature', err);
+      if (
+        digest.length === signature.length &&
+        crypto.timingSafeEqual(Buffer.from(digest), Buffer.from(signature))
+      ) {
+        return true;
       }
+    } catch (err) {
+      this.logger.error('Failed to verify Sentry HMAC signature', err);
     }
 
     return false;

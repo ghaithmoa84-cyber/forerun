@@ -9,13 +9,21 @@ describe('SentryWebhookController', () => {
   let controller: SentryWebhookController;
   let mockConfigService: { get: ReturnType<typeof vi.fn> };
   let mockTelegramService: { sendMessage: ReturnType<typeof vi.fn> };
+  const TEST_SECRET = 'test-secret-123';
+
+  function createSignature(payload: unknown, secret: string = TEST_SECRET): string {
+    const raw = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(raw);
+    return hmac.digest('hex');
+  }
 
   beforeEach(() => {
     vi.restoreAllMocks();
 
     mockConfigService = {
       get: vi.fn((key: string) => {
-        if (key === 'SENTRY_WEBHOOK_SECRET') return 'test-secret-123';
+        if (key === 'SENTRY_WEBHOOK_SECRET') return TEST_SECRET;
         return undefined;
       }),
     };
@@ -30,7 +38,7 @@ describe('SentryWebhookController', () => {
     );
   });
 
-  it('1. should throw UnauthorizedException when secret is configured but not provided in request', async () => {
+  it('1. should throw UnauthorizedException when secret is configured but signature header is missing', async () => {
     await expect(
       controller.handleSentryWebhook({ action: 'created' }),
     ).rejects.toThrow(UnauthorizedException);
@@ -38,7 +46,7 @@ describe('SentryWebhookController', () => {
     expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
   });
 
-  it('2. should authorize and forward alert when valid query secret is provided', async () => {
+  it('2. should authorize and forward alert when valid HMAC signature is provided', async () => {
     const payload = {
       action: 'created',
       data: {
@@ -54,12 +62,8 @@ describe('SentryWebhookController', () => {
       },
     };
 
-    const response = await controller.handleSentryWebhook(
-      payload,
-      undefined,
-      undefined,
-      'test-secret-123',
-    );
+    const signature = createSignature(payload);
+    const response = await controller.handleSentryWebhook(payload, signature);
 
     expect(response).toEqual({ status: 'success', handled: true });
     expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
@@ -73,56 +77,7 @@ describe('SentryWebhookController', () => {
     expect(sentMessage).toContain('https://fawrun-api.sentry.io/issues/12345');
   });
 
-  it('3. should authorize when Bearer token matches secret in authorization header', async () => {
-    const payload = {
-      message: 'Unhandled fatal exception in worker',
-      level: 'fatal',
-      project_name: 'fawrun-api',
-      url: 'https://fawrun-api.sentry.io/issues/999',
-    };
-
-    const response = await controller.handleSentryWebhook(
-      payload,
-      undefined,
-      'Bearer test-secret-123',
-    );
-
-    expect(response).toEqual({ status: 'success', handled: true });
-    expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
-    const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
-
-    expect(sentMessage).toContain('💀 <b>تنبيه Sentry — خطأ جديد في الإنتاج</b>');
-    expect(sentMessage).toContain('<b>المستوى:</b> <code>FATAL</code>');
-    expect(sentMessage).toContain('Unhandled fatal exception in worker');
-  });
-
-  it('4. should authorize when HMAC signature header is valid', async () => {
-    const payload = {
-      action: 'created',
-      data: {
-        issue: {
-          title: 'PrismaClientKnownRequestError',
-          level: 'error',
-          permalink: 'https://fawrun-api.sentry.io/issues/555',
-        },
-      },
-    };
-
-    const rawString = JSON.stringify(payload);
-    const hmac = crypto.createHmac('sha256', 'test-secret-123');
-    hmac.update(rawString);
-    const signature = hmac.digest('hex');
-
-    const response = await controller.handleSentryWebhook(
-      payload,
-      signature,
-    );
-
-    expect(response).toEqual({ status: 'success', handled: true });
-    expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
-  });
-
-  it('5. should reject when HMAC signature is invalid', async () => {
+  it('3. should reject when HMAC signature is invalid', async () => {
     const payload = { action: 'created' };
     const invalidSignature = 'invalid-signature-hex-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
 
@@ -131,6 +86,37 @@ describe('SentryWebhookController', () => {
     ).rejects.toThrow(UnauthorizedException);
 
     expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('4. should reject with signature of different secret', async () => {
+    const payload = { action: 'created' };
+    const wrongSignature = createSignature(payload, 'wrong-secret');
+
+    await expect(
+      controller.handleSentryWebhook(payload, wrongSignature),
+    ).rejects.toThrow(UnauthorizedException);
+
+    expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('5. should handle fatal level with skull icon', async () => {
+    const payload = {
+      message: 'Unhandled fatal exception in worker',
+      level: 'fatal',
+      project_name: 'fawrun-api',
+      url: 'https://fawrun-api.sentry.io/issues/999',
+    };
+
+    const signature = createSignature(payload);
+    const response = await controller.handleSentryWebhook(payload, signature);
+
+    expect(response).toEqual({ status: 'success', handled: true });
+    expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
+    const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
+
+    expect(sentMessage).toContain('💀 <b>تنبيه Sentry — خطأ جديد في الإنتاج</b>');
+    expect(sentMessage).toContain('<b>المستوى:</b> <code>FATAL</code>');
+    expect(sentMessage).toContain('Unhandled fatal exception in worker');
   });
 
   it('6. should ignore non-creation actions such as resolved without sending notification', async () => {
@@ -144,11 +130,8 @@ describe('SentryWebhookController', () => {
       },
     };
 
-    const response = await controller.handleSentryWebhook(
-      payload,
-      undefined,
-      'Bearer test-secret-123',
-    );
+    const signature = createSignature(payload);
+    const response = await controller.handleSentryWebhook(payload, signature);
 
     expect(response).toEqual({ status: 'ignored', handled: false });
     expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
@@ -161,11 +144,8 @@ describe('SentryWebhookController', () => {
       url: 'https://sentry.io',
     };
 
-    await controller.handleSentryWebhook(
-      payload,
-      undefined,
-      'Bearer test-secret-123',
-    );
+    const signature = createSignature(payload);
+    await controller.handleSentryWebhook(payload, signature);
 
     const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
     expect(sentMessage).toContain('&lt;script&gt;alert("xss")&lt;/script&gt; &amp; raw &lt;tags&gt;');
