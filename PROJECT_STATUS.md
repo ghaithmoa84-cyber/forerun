@@ -75,7 +75,7 @@ R2_ACCOUNT_ID         = <dummy-for-now>
 R2_ACCESS_KEY_ID      = <dummy-for-now>
 R2_SECRET_ACCESS_KEY  = <dummy-for-now>
 R2_BUCKET_NAME        = <dummy-for-now>
-SENTRY_DSN            = <optional>
+SENTRY_DSN            = <configured in Railway Variables>
 TRUST_PROXY           = 1
 TELEGRAM_BOT_TOKEN    = <Telegram bot token>
 TELEGRAM_CHAT_ID      = <Telegram chat ID>
@@ -227,6 +227,7 @@ curl -I -X OPTIONS https://fawrun-api-production.up.railway.app/api/v1/auth/logi
 | 15 | **نافذة تنويه المصاريف وسياسة الإلغاء قبل تأكيد الطلب في Android حصراً (D40)** | ✅ مكتملة ومختبرة | نقطة نهاية ديناميكية `GET /customer/pricing/disclosure` بدون تسريب حقول إدارية (قاعدة 7)، نافذة Compose تفاعلية تعترض الطلب، وتراجع آمن عند فشل الشبكة. فرع `feature/customer-fee-disclosure-modal`. انظر [§12 القرار D40](#d40--نافذة-تنويه-المصاريف-وسياسة-الإلغاء-قبل-تأكيد-الطلب-في-android-حصرا-2026-10-14). |
 | 16 | **إصلاح فشل تثبيت PWA لتطبيق المندوب على Chrome Android (D42)** | ✅ مكتملة ومختبرة | التقاط مركزي لحدث `beforeinstallprompt` عبر `usePwaInstall` مع 3 نقاط دخول للتثبيت، مهلة 15 ثانية ورسالة خطأ عربية صريحة، وفصل وسوم الأيقونات في Manifest. انظر [§12 القرار D42](#d42--إصلاح-فشل-تثبيت-pwa-لتطبيق-المندوب-على-chrome-android-2026-10-15). |
 | 17 | **إتاحة ملاحظة التقييم (note) للعميل وحجبها الصارم عن المندوب (D43) وتحديث أيقونة Android** | ✅ مكتملة ومختبرة | تعديل `rating.mapper.ts` و`OrderDetailViewModel` لإتاحة الملاحظة للعميل مع حفظ خصوصيتها من المندوب (Rule 7)، واستعادة التقييم في `DeliveredRatingCard`، وتحديث أيقونة التطبيق للهوية البرتقالية مع ضبط 108dp. انظر [§12 القرار D43](#d43--إتاحة-ملاحظة-التقييم-note-للعميل-صاحب-التقييم-مع-حجبها-الصارم-عن-المندوب-2026-10-16). |
+| 18 | **S4 — تفعيل Sentry على الإنتاج وإصلاح التقاط أخطاء 500 في `AllExceptionsFilter`** | ✅ مكتملة ومختبرة | فرع `fix/sentry-500-capture` مدموج بـ `git merge --no-ff` إلى `master` (`45bab35`). تم ضبط `SENTRY_DSN` في Railway Variables، وتعديل الفلتر ليلتقط صراحة كل `status >= 500` فقط مع استثناء أخطاء 4xx العميل. مغطى بـ 7 اختبارات وحدة جديدة (422 اختبار حي بنسبة 100%). |
 
 ---
 
@@ -347,6 +348,7 @@ fawrun/
 | 2026-10-16 | D43 إتاحة ملاحظة التقييم (note) للعميل مع حجبها الصارم عن المندوب (Rule 7) · استعادة وظائف التقييم الكاملة والتعديل في Android · إدراج بطاقتي "قريباً" في الرئيسية وتنسيق الواجهة. |
 | 2026-10-17 | تحديث أيقونة تطبيق Android للهوية الرسمية الجديدة (الشعار البرتقالي السريع) وإصلاح التكبير المفرط (108dp) · تنظيف وحذف كافة الفروع القديمة على GitHub (الريموت لا يحوي سوى master). |
 | 2026-10-17 | `a71e421` — تنظيف ديون تقنية Batch 1: حذف getEntriesByRunner الميتة (C-1) وإصلاح فقدان mapLoadError عند تدوير الشاشة بـ rememberSaveable مع @StringRes Int? (C-3) واكتشاف دين C-7. |
+| 2026-10-18 | `45bab35` — تفعيل Sentry وإصلاح التقاط استثناءات 500 في `AllExceptionsFilter` (بند S4): ضبط `SENTRY_DSN` في Railway Variables، حصر التقاط الأخطاء بـ `status >= 500` وتفادي ضجيج أخطاء 4xx، وإضافة 7 اختبارات وحدة جديدة مع إثبات السلوك في Vitest (422/422 ناجح). |
 
 ---
 
