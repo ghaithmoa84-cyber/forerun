@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CONFIG } from '@forerun/shared-constants';
@@ -67,6 +72,19 @@ export class CustomersService {
       updateData.altPhone = dto.altPhone;
     }
     if (dto.password !== undefined) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('currentPassword is required when updating password');
+      }
+
+      const isCurrentValid = await bcrypt.compare(
+        dto.currentPassword,
+        customer.user.passwordHash,
+      );
+
+      if (!isCurrentValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+
       updateData.passwordHash = await bcrypt.hash(
         dto.password,
         CONFIG.BCRYPT_ROUNDS,

@@ -58,11 +58,25 @@ export const CustomerOrdersQuerySchema = z.object({
 
 export type CustomerOrdersQuery = z.infer<typeof CustomerOrdersQuerySchema>;
 
-export const UpdateCustomerSchema = z.object({
-  name: z.string().trim().min(2).optional(),
-  altPhone: SyrianPhoneSchema.nullable().optional(),
-  password: passwordSchema.optional(),
-});
+export const UpdateCustomerSchema = z
+  .object({
+    name: z.string().trim().min(2).optional(),
+    altPhone: SyrianPhoneSchema.nullable().optional(),
+    password: passwordSchema.optional(),
+    currentPassword: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.password && (!data.currentPassword || data.currentPassword.trim() === '')) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'currentPassword is required when updating password',
+      path: ['currentPassword'],
+    },
+  );
 
 export type UpdateCustomerRequest = z.infer<typeof UpdateCustomerSchema>;
 

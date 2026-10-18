@@ -162,17 +162,54 @@ describe('SentryWebhookController', () => {
     expect(sentMessage).not.toContain('<script>');
   });
 
-  it('8. should allow requests in dev/test when secret is not configured', async () => {
+  it('8. should throw UnauthorizedException when secret is not configured at all (fail-closed)', async () => {
     mockConfigService.get.mockReturnValue(''); // No secret configured
 
     const payload = {
-      message: 'Dev error test',
+      message: 'Unauthenticated attack attempt',
       level: 'warning',
     };
 
     const mockReq = {} as Request & { rawBody?: Buffer };
-    const response = await controller.handleSentryWebhook(payload, mockReq);
+    await expect(
+      controller.handleSentryWebhook(payload, mockReq, 'some-signature'),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('9. should omit url when url does not match valid https sentry domain without rejecting webhook', async () => {
+    const maliciousPayload = {
+      message: 'Test with phishing link',
+      level: 'error',
+      url: 'http://malicious-phishing.com/login',
+    };
+
+    const { signature, buffer } = createSignature(maliciousPayload);
+    const mockReq = { rawBody: buffer } as Request & { rawBody?: Buffer };
+    const response = await controller.handleSentryWebhook(maliciousPayload, mockReq, signature);
+
     expect(response).toEqual({ status: 'success', handled: true });
     expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
+    const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
+    expect(sentMessage).not.toContain('malicious-phishing.com');
+    expect(sentMessage).not.toContain('🔗 فتح المشكلة في Sentry');
+  });
+
+  it('10. should include url when url is a valid https sentry.io domain', async () => {
+    const validPayload = {
+      message: 'Test with valid sentry link',
+      level: 'error',
+      url: 'https://org.sentry.io/issues/54321',
+    };
+
+    const { signature, buffer } = createSignature(validPayload);
+    const mockReq = { rawBody: buffer } as Request & { rawBody?: Buffer };
+    const response = await controller.handleSentryWebhook(validPayload, mockReq, signature);
+
+    expect(response).toEqual({ status: 'success', handled: true });
+    expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
+    const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
+    expect(sentMessage).toContain('https://org.sentry.io/issues/54321');
+    expect(sentMessage).toContain('🔗 فتح المشكلة في Sentry');
   });
 });
