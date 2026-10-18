@@ -18,7 +18,7 @@ import type {
 import { PrismaService } from '../../../database/prisma.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { NotificationsService } from '../../notifications/notifications.service.js';
-import { TelegramService } from '../../notifications/telegram.service.js';
+import { TelegramService, escapeTelegramHtml } from '../../notifications/telegram.service.js';
 import { PricingService, type FeeResult } from '../../pricing/pricing.service.js';
 import { OrderStateMachine } from '../../../state-machine/order-state-machine.js';
 import { RunnerStateMachine } from '../../../state-machine/runner-state-machine.js';
@@ -315,9 +315,12 @@ export class CustomerOrdersService {
         },
       });
 
+      const rawCustomerName = fullOrder?.customer?.user?.name ?? customerName ?? 'غير محدد';
+      const escapedCustomerName = escapeTelegramHtml(rawCustomerName);
+
       const storeNames =
         fullOrder?.orderStores
-          ?.map((os) => os.storeName)
+          ?.map((os) => escapeTelegramHtml(os.storeName))
           .filter(Boolean)
           .join('، ') || 'غير محدد';
 
@@ -329,7 +332,7 @@ export class CustomerOrdersService {
       await this.telegramService.sendMessage(
         `🛍️ <b>طلب جديد</b>\n` +
           `رقم الطلب: <b>#${order.orderNumber}</b>\n` +
-          `العميل: ${fullOrder?.customer?.user?.name ?? customerName ?? 'غير محدد'}\n` +
+          `العميل: ${escapedCustomerName}\n` +
           `${storesLine}\n` +
           `الإجمالي: ${order.totalFee} ل.س`
       );

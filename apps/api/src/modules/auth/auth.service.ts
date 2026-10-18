@@ -10,7 +10,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
-import { TelegramService } from '../notifications/telegram.service.js';
+import { TelegramService, escapeTelegramHtml } from '../notifications/telegram.service.js';
 import { CONFIG, ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
 import type { RegisterRequest, LoginRequest, RefreshRequest, LogoutDto } from '@forerun/shared-types';
 
@@ -100,10 +100,12 @@ export class AuthService {
     }
 
     try {
+      const escapedName = escapeTelegramHtml(result.name) || 'غير محدد';
+      const escapedPhone = escapeTelegramHtml(result.whatsapp);
       await this.telegramService.sendMessage(
         `👤 <b>مستخدم جديد — بانتظار الموافقة</b>\n` +
-        `الاسم: ${result.name ?? 'غير محدد'}\n` +
-        `الهاتف: ${result.whatsapp}\n` +
+        `الاسم: ${escapedName}\n` +
+        `الهاتف: ${escapedPhone}\n` +
         `التاريخ: ${new Date().toLocaleString('ar-SY', { timeZone: 'Asia/Damascus' })}`
       );
     } catch (err) {

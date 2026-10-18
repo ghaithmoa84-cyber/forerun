@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
-import { TelegramService } from './telegram.service.js';
+import { TelegramService, escapeTelegramHtml } from './telegram.service.js';
 
 describe('TelegramService', () => {
   let mockConfigService: { get: ReturnType<typeof vi.fn> };
@@ -109,5 +109,27 @@ describe('TelegramService', () => {
 
     await expect(service.sendMessage('test message')).resolves.not.toThrow();
     expect(loggerErrorSpy).toHaveBeenCalledWith('Telegram API error: Bad Request');
+  });
+
+  describe('escapeTelegramHtml helper', () => {
+    it('5. escapes <, >, and & characters to prevent Telegram parse errors', () => {
+      const maliciousName = 'Ahmad <script>alert("hack")</script> & Co';
+      const escaped = escapeTelegramHtml(maliciousName);
+
+      expect(escaped).toBe('Ahmad &lt;script&gt;alert("hack")&lt;/script&gt; &amp; Co');
+      expect(escaped).not.toContain('<script>');
+      expect(escaped).not.toContain('& Co');
+    });
+
+    it('6. safely handles null, undefined, and empty string without throwing', () => {
+      expect(escapeTelegramHtml(null)).toBe('');
+      expect(escapeTelegramHtml(undefined)).toBe('');
+      expect(escapeTelegramHtml('')).toBe('');
+    });
+
+    it('7. leaves regular safe text unchanged', () => {
+      expect(escapeTelegramHtml('محمد علي')).toBe('محمد علي');
+      expect(escapeTelegramHtml('+963912345678')).toBe('+963912345678');
+    });
   });
 });

@@ -14,7 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import * as crypto from 'crypto';
 import { Public } from '../../common/decorators/public.decorator.js';
-import { TelegramService } from './telegram.service.js';
+import { TelegramService, escapeTelegramHtml } from './telegram.service.js';
 
 interface SentryWebhookIssue {
   id?: string;
@@ -48,13 +48,6 @@ interface SentryWebhookPayload {
   };
 }
 
-function escapeHtml(text: string): string {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
 
 function isValidSentryUrl(urlStr: string): boolean {
   if (!urlStr || typeof urlStr !== 'string') return false;
@@ -137,18 +130,18 @@ export class SentryWebhookController {
     const level = (issueData?.level || body?.level || 'error').toUpperCase();
     const project = issueData?.project?.slug || body?.project_name || 'fawrun-api';
     const rawUrl = issueData?.permalink || body?.url || body?.web_url || '';
-    const validUrl = isValidSentryUrl(rawUrl) ? escapeHtml(rawUrl) : '';
+    const validUrl = isValidSentryUrl(rawUrl) ? escapeTelegramHtml(rawUrl) : '';
     const culprit = issueData?.culprit || body?.culprit || '';
     const shortId = issueData?.shortId || '';
 
     const icon = level === 'FATAL' ? '💀' : '🚨';
     const messageLines = [
       `${icon} <b>تنبيه Sentry — خطأ جديد في الإنتاج</b>`,
-      `<b>المشروع:</b> <code>${escapeHtml(project)}</code>`,
-      shortId ? `<b>المعرّف:</b> <code>${escapeHtml(shortId)}</code>` : '',
-      `<b>المستوى:</b> <code>${escapeHtml(level)}</code>`,
-      `<b>الخطأ:</b> <code>${escapeHtml(title)}</code>`,
-      culprit ? `<b>الموقع:</b> <code>${escapeHtml(culprit)}</code>` : '',
+      `<b>المشروع:</b> <code>${escapeTelegramHtml(project)}</code>`,
+      shortId ? `<b>المعرّف:</b> <code>${escapeTelegramHtml(shortId)}</code>` : '',
+      `<b>المستوى:</b> <code>${escapeTelegramHtml(level)}</code>`,
+      `<b>الخطأ:</b> <code>${escapeTelegramHtml(title)}</code>`,
+      culprit ? `<b>الموقع:</b> <code>${escapeTelegramHtml(culprit)}</code>` : '',
       validUrl ? `<a href="${validUrl}">🔗 فتح المشكلة في Sentry</a>` : '',
     ].filter(Boolean);
 
