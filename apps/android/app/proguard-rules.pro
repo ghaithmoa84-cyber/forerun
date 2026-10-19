@@ -69,10 +69,14 @@
 }
 
 # ------------------------------------------------------------------------------
-# MapLibre Android
+# Google Maps Android & Maps Compose
 # ------------------------------------------------------------------------------
--keep class org.maplibre.android.** { *; }
--dontwarn org.maplibre.android.**
+-keep class com.google.android.gms.maps.** { *; }
+-keep interface com.google.android.gms.maps.** { *; }
+-keep class com.google.maps.android.compose.** { *; }
+-keep interface com.google.maps.android.compose.** { *; }
+-dontwarn com.google.android.gms.maps.**
+-dontwarn com.google.maps.android.compose.**
 
 # ------------------------------------------------------------------------------
 # FORERUN Security Rules
