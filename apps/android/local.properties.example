@@ -1,0 +1,8 @@
+## Google Maps Android API Key
+# Restricted to:
+# - Package Name: com.forerun.customer
+# - SHA-1 Fingerprints:
+#   Release: 35:D5:F0:85:9A:BB:EB:95:23:2C:1B:E7:93:F4:FB:27:D8:2A:A9:EA
+#   Debug:   8C:33:BD:1C:E5:1C:EA:83:54:A7:90:B5:E3:23:6E:32:31:9A:CF:53
+# - Enabled API: Maps SDK for Android
+MAPS_API_KEY=

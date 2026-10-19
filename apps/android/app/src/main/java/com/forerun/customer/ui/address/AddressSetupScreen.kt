@@ -64,7 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
@@ -93,36 +93,13 @@ import com.forerun.customer.ui.theme.ForerunTextOnPrimary
 import com.forerun.customer.ui.theme.ForerunTextPrimary
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import org.maplibre.android.camera.CameraPosition
-import org.maplibre.android.camera.CameraUpdateFactory
-import org.maplibre.android.geometry.LatLng
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.MapView
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 
 private const val TAG = "AddressSetupScreen"
-private const val OSM_STYLE_JSON = """{
-  "version": 8,
-  "sources": {
-    "osm": {
-      "type": "raster",
-      "tiles": [
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-      ],
-      "tileSize": 256,
-      "attribution": "© OpenStreetMap contributors"
-    }
-  },
-  "layers": [
-    {
-      "id": "osm-layer",
-      "type": "raster",
-      "source": "osm",
-      "minzoom": 0,
-      "maxzoom": 19
-    }
-  ]
-}"""
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +112,7 @@ fun AddressSetupScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     @StringRes var mapLoadError by rememberSaveable { mutableStateOf<Int?>(null) }
-    var maplibreInstance by remember { mutableStateOf<MapLibreMap?>(null) }
+    var googleMapInstance by remember { mutableStateOf<GoogleMap?>(null) }
 
     LaunchedEffect(viewModel.events) {
         viewModel.events.collect { event ->
@@ -185,8 +162,8 @@ fun AddressSetupScreen(
                         viewModel.onIntent(
                             AddressSetupIntent.UpdateCoordinates(location.latitude, location.longitude)
                         )
-                        maplibreInstance?.animateCamera(
-                            CameraUpdateFactory.newLatLngZoom(target, 15.0)
+                        googleMapInstance?.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(target, 15.0f)
                         )
                     } else {
                         fusedLocationClient.lastLocation.addOnSuccessListener { lastLoc ->
@@ -195,8 +172,8 @@ fun AddressSetupScreen(
                                 viewModel.onIntent(
                                     AddressSetupIntent.UpdateCoordinates(lastLoc.latitude, lastLoc.longitude)
                                 )
-                                maplibreInstance?.animateCamera(
-                                    CameraUpdateFactory.newLatLngZoom(target, 15.0)
+                                googleMapInstance?.animateCamera(
+                                    CameraUpdateFactory.newLatLngZoom(target, 15.0f)
                                 )
                             } else {
                                 coroutineScope.launch {
@@ -325,17 +302,17 @@ fun AddressSetupScreen(
                         }
                     }
                 } else {
-                    MapLibreContainer(
+                    GoogleMapContainer(
                         initialLat = uiState.lat,
                         initialLng = uiState.lng,
                         onMapReady = { map ->
-                            maplibreInstance = map
+                            googleMapInstance = map
                         },
                         onCameraIdle = { lat, lng ->
                             viewModel.onIntent(AddressSetupIntent.UpdateCoordinates(lat, lng))
                         },
                         onError = { error ->
-                            Log.e(TAG, "MapLibre error: $error")
+                            Log.e(TAG, "GoogleMap error: $error")
                             mapLoadError = R.string.address_map_fallback_note
                         }
                     )
@@ -573,10 +550,10 @@ fun AddressSetupScreen(
 }
 
 @Composable
-private fun MapLibreContainer(
+private fun GoogleMapContainer(
     initialLat: Double,
     initialLng: Double,
-    onMapReady: (MapLibreMap) -> Unit,
+    onMapReady: (GoogleMap) -> Unit,
     onCameraIdle: (Double, Double) -> Unit,
     onError: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -619,27 +596,31 @@ private fun MapLibreContainer(
     AndroidView(
         factory = {
             mapView.apply {
-                getMapAsync { maplibreMap ->
+                getMapAsync { googleMap ->
                     try {
-                        onMapReady(maplibreMap)
-                        // Load style (using OpenStreetMap raster style json)
-                        maplibreMap.setStyle(Style.Builder().fromJson(OSM_STYLE_JSON)) {
-                            val cameraPosition = CameraPosition.Builder()
-                                .target(LatLng(initialLat, initialLng))
-                                .zoom(14.5)
-                                .build()
-                            maplibreMap.cameraPosition = cameraPosition
+                        onMapReady(googleMap)
+                        googleMap.moveCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                LatLng(initialLat, initialLng),
+                                14.5f
+                            )
+                        )
+                        googleMap.uiSettings.apply {
+                            isCompassEnabled = false
+                            isMyLocationButtonEnabled = false
+                            isMapToolbarEnabled = false
+                            isRotateGesturesEnabled = true
+                            isScrollGesturesEnabled = true
+                            isTiltGesturesEnabled = false
+                            isZoomGesturesEnabled = true
                         }
-
-                        maplibreMap.addOnCameraIdleListener {
-                            val target = maplibreMap.cameraPosition.target
-                            if (target != null) {
-                                onCameraIdle(target.latitude, target.longitude)
-                            }
+                        googleMap.setOnCameraIdleListener {
+                            val target = googleMap.cameraPosition.target
+                            onCameraIdle(target.latitude, target.longitude)
                         }
                     } catch (t: Throwable) {
-                        Log.e(TAG, "MapLibre setup error", t)
-                        onError(t.localizedMessage ?: "Failed to initialize map style")
+                        Log.e(TAG, "GoogleMap setup error", t)
+                        onError(t.localizedMessage ?: "Failed to initialize Google Maps")
                     }
                 }
             }
