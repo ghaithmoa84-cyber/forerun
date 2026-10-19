@@ -285,4 +285,43 @@ class AddressSetupViewModelTest {
         assertFalse(viewModel.uiState.value.isSaving)
         assertTrue(viewModel.uiState.value.saveSuccess)
     }
+
+    @Test
+    fun cameraIdleUpdateCoordinates_preservesBackendContractExactTypesAndValues() = runTest(testDispatcher) {
+        var capturedLat: Double? = null
+        var capturedLng: Double? = null
+        var capturedDesc: String? = null
+
+        val contractRepo = object : com.forerun.customer.domain.repository.AddressRepository {
+            override suspend fun getAddress(): AddressResult = AddressResult.NotFound
+            override suspend fun updateAddress(
+                lat: Double,
+                lng: Double,
+                description: String
+            ): Result<CustomerAddress> {
+                capturedLat = lat
+                capturedLng = lng
+                capturedDesc = description
+                return Result.success(CustomerAddress(lat = lat, lng = lng, description = description))
+            }
+        }
+        val customGetUseCase = GetCustomerAddressUseCase(contractRepo)
+        val customUpdateUseCase = UpdateCustomerAddressUseCase(contractRepo)
+        val viewModel = AddressSetupViewModel(customGetUseCase, customUpdateUseCase, reverseGeocodeUseCase, ApplicationProvider.getApplicationContext())
+        advanceUntilIdle()
+
+        // GoogleMapContainer onCameraIdle callback delivers lat/lng to UpdateCoordinates
+        val targetLat = 35.5312
+        val targetLng = 35.7925
+        viewModel.onIntent(AddressSetupIntent.UpdateCoordinates(targetLat, targetLng))
+        advanceTimeBy(600)
+        advanceUntilIdle()
+
+        viewModel.onIntent(AddressSetupIntent.SaveAddress)
+        advanceUntilIdle()
+
+        assertEquals(targetLat, capturedLat!!, 0.0001)
+        assertEquals(targetLng, capturedLng!!, 0.0001)
+        assertEquals("القنجرة - شارع البلدية", capturedDesc)
+    }
 }

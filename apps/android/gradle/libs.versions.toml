@@ -21,7 +21,8 @@ datastore = "1.1.1"
 coroutines = "1.9.0"
 junit = "4.13.2"
 turbine = "1.1.0"
-maplibre = "11.5.2"
+playServicesMaps = "18.2.0"
+mapsCompose = "4.4.1"
 playServicesLocation = "21.3.0"
 
 socketio = "2.1.1"
@@ -37,7 +38,8 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 socketio-client = { module = "io.socket:socket.io-client", version.ref = "socketio" }
 
-maplibre-android = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }

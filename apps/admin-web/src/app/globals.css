@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import 'leaflet/dist/leaflet.css';
-
 * {
   box-sizing: border-box;
   padding: 0;

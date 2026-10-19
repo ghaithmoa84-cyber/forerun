@@ -5,8 +5,8 @@ import android.app.Application
 import android.os.Bundle
 import android.util.Log
 import com.forerun.customer.core.websocket.SocketManager
+import com.google.android.gms.maps.MapsInitializer
 import dagger.hilt.android.HiltAndroidApp
-import org.maplibre.android.MapLibre
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -18,9 +18,11 @@ class ForerunApp : Application() {
     override fun onCreate() {
         super.onCreate()
         try {
-            MapLibre.getInstance(this)
+            MapsInitializer.initialize(applicationContext, MapsInitializer.Renderer.LATEST) { renderer ->
+                Log.d("ForerunApp", "Google Maps initialized with renderer: $renderer")
+            }
         } catch (e: Throwable) {
-            Log.e("ForerunApp", "Failed to initialize MapLibre", e)
+            Log.e("ForerunApp", "Failed to initialize Google Maps", e)
         }
 
         try {

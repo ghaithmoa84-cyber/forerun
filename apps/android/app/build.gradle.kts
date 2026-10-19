@@ -11,6 +11,21 @@ plugins {
     alias(libs.plugins.google.services)
 }
 
+val localPropsFile = project.file("local.properties").takeIf { it.exists() }
+    ?: rootProject.file("local.properties").takeIf { it.exists() }
+val mapsApiKey: String = run {
+    val fromProp = if (localPropsFile != null) {
+        val props = Properties()
+        props.load(FileInputStream(localPropsFile))
+        props.getProperty("MAPS_API_KEY", "")?.trim() ?: ""
+    } else {
+        ""
+    }
+    fromProp.ifBlank {
+        System.getenv("MAPS_API_KEY") ?: System.getenv("GOOGLE_MAPS_API_KEY") ?: ""
+    }
+}
+
 android {
     namespace = "com.forerun.customer"
     compileSdk = 35
@@ -21,6 +36,9 @@ android {
         targetSdk = 35
         versionCode = 3
         versionName = "0.1.2"
+
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -131,7 +149,8 @@ dependencies {
     implementation(libs.androidx.security.crypto)
 
     // Maps & Location
-    implementation(libs.maplibre.android)
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
     implementation(libs.play.services.location)
 
     // DataStore (Preferences)
