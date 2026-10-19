@@ -51,7 +51,7 @@ export class NotificationsService {
   ): Promise<void> {
     if (!this.fcmService) return;
 
-    let title = 'FORERUN';
+    let title = 'فَوْراً';
     let body = 'لديك تحديث جديد على طلبك';
     const orderId = (data.orderId as string) || undefined;
     const orderNumber = (data.orderNumber as string) || undefined;
@@ -79,7 +79,7 @@ export class NotificationsService {
           break;
         case 'DELIVERED':
           title = 'تم تسليم الطلب بنجاح 🎉';
-          body = `${orderPrefix}شكراً لاستخدامك FORERUN!`;
+          body = `${orderPrefix}شكراً لاستخدامك فَوْراً!`;
           break;
         case 'CANCELLED':
           title = 'تم إلغاء الطلب';
@@ -110,7 +110,7 @@ export class NotificationsService {
         : `${orderPrefix}تم الشراء من أحد المتاجر المطلوبة.`;
     } else if (event === 'account:verified') {
       title = 'تم تفعيل حسابك 🎉';
-      body = 'حسابك في FORERUN أصبح موثقاً وجاهزاً للطلب الآن!';
+      body = 'حسابك في فَوْراً أصبح موثقاً وجاهزاً للطلب الآن!';
     }
 
     const stringData: Record<string, string> = {};

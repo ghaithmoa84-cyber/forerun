@@ -382,7 +382,7 @@ export function CreateOrderScreen() {
                 }}
               />
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                سيقوم الكابتن بقراءة مشترياتك وتأمينها بأفضل جودة وسرعة.
+                سيقوم المندوب بقراءة مشترياتك وتأمينها بأفضل جودة وسرعة.
               </p>
             </div>
           )}
@@ -591,7 +591,7 @@ export function CreateOrderScreen() {
               value={preferredRunnerId}
               onChange={(e) => setPreferredRunnerId(e.target.value)}
             >
-              <option value="">أي كابتن متاح (توصيل أسرع)</option>
+              <option value="">أي مندوب متاح (توصيل أسرع)</option>
               {runners.map((runner) => (
                 <option key={runner.id} value={runner.id}>
                   {runner.name} {runner.avgRating ? `(★ ${runner.avgRating.toFixed(1)})` : ''}

@@ -266,7 +266,7 @@ export function HomeScreen() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>الكابتن المعيّن للطلب رقم {order.orderNumber}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>المندوب المعيّن للطلب رقم {order.orderNumber}</span>
                     <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-h)', margin: '2px 0 0 0' }}>
                       {runner.name}
                     </h3>
@@ -283,7 +283,7 @@ export function HomeScreen() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {runner.whatsapp && (
                     <a
-                      href={formatWhatsappUrl(runner.whatsapp, `مرحباً كابتن ${runner.name}، بخصوص طلبي رقم ${order.orderNumber}`)}
+                      href={formatWhatsappUrl(runner.whatsapp, `مرحباً ${runner.name}، بخصوص طلبي رقم ${order.orderNumber}`)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-outline"
@@ -391,7 +391,7 @@ export function HomeScreen() {
           </li>
           <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ color: 'var(--primary)', fontWeight: 800 }}>•</span>
-            توصيل سريع من قِبل كباتن معتمدين وموثوقين
+            توصيل سريع من قِبل مندوبين معتمدين وموثوقين
           </li>
           <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ color: 'var(--primary)', fontWeight: 800 }}>•</span>

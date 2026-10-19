@@ -345,7 +345,7 @@ fun OnboardingPageOne(modifier: Modifier = Modifier) {
 }
 
 /**
- * Screen 2: "كابتن فَوْراً يوصلك ع السريع"
+ * Screen 2: "مندوبنا بيوصل لعندك فورا"
  */
 @Composable
 fun OnboardingPageTwo(modifier: Modifier = Modifier) {

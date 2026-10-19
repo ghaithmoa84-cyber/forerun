@@ -177,7 +177,7 @@ class AccountViewModelTest {
 
         val state = viewModel.uiState.value
         assertNull(fakeAccountRepository.lastChangedPassword)
-        assertEquals("كلمة المرور يجب أن تكون 8 أحرف على الأقل", state.errorMessage)
+        assertEquals(ApplicationProvider.getApplicationContext<android.content.Context>().getString(com.forerun.customer.R.string.error_password_short), state.errorMessage)
         assertNull(state.passwordSuccessMessage)
     }
 

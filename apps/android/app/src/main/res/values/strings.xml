@@ -11,26 +11,26 @@
     <string name="onboarding_start">ابدأ الآن</string>
 
     <!-- Page 1: Local Stores & Shopping -->
-    <string name="onboarding_badge_1">دكاكين حارتك</string>
-    <string name="onboarding_title_1">كل مستلزماتك من دكاكين حارتك</string>
+    <string name="onboarding_badge_1">متاجر القنجرة</string>
+    <string name="onboarding_title_1">كل مستلزماتك من متاجر القنجرة</string>
     <string name="onboarding_desc_1">تصفّح بقاليات ومحلات منطقتك واطلب كل اللي ناقصك للبيت بسهولة وسرعة وبأفضل جودة.</string>
     <string name="onboarding_feat1_title">متجرك المفضل</string>
-    <string name="onboarding_feat1_sub">من أقرب دكان لبيتك</string>
+    <string name="onboarding_feat1_sub">من أقرب متجر لبيتك</string>
     <string name="onboarding_feat2_title">بضغطة زر</string>
-    <string name="onboarding_feat2_sub">سلة سريعة وسهلة</string>
+    <string name="onboarding_feat2_sub">سلة مشتريات سريعة و سهلة</string>
 
     <!-- Page 2: Swift Runner Delivery -->
     <string name="onboarding_badge_2">توصيل فَوْري</string>
-    <string name="onboarding_title_2">كابتن فَوْراً يوصلك ع السريع</string>
-    <string name="onboarding_desc_2">كباتنّا بالحي جاهزون لشراء كل طلباتك والانطلاق فوراً لباب بيتك بكل أمان واهتمام.</string>
+    <string name="onboarding_title_2">مندوبنا بيوصل لعندك فورا</string>
+    <string name="onboarding_desc_2">مندوبيننا بالقنجرة جاهزون لشراء كل طلباتك والانطلاق فوراً لباب بيتك بكل أمان واهتمام.</string>
     <string name="onboarding_step_1">١. اختر طلبك</string>
     <string name="onboarding_step_2">٢. نشتريك</string>
     <string name="onboarding_step_3">٣. نوصلك</string>
 
     <!-- Page 3: Doorstep Arrival & Cash on Delivery -->
     <string name="onboarding_badge_3">لعند باب بيتك</string>
-    <string name="onboarding_title_3">طلبك لعندك.. طازج ومرتاح</string>
-    <string name="onboarding_desc_3">وفّر مشاويرك وتعبك، استلم أغراضك عند الباب طازجة وادفع براحتك كاش عند الاستلام.</string>
+    <string name="onboarding_title_3">طلبك لعندك.. و انت مرتاح</string>
+    <string name="onboarding_desc_3">وفّر مشاويرك وتعبك، استلم أغراضك عند الباب وادفع كاش عند الاستلام.</string>
     <string name="onboarding_feat3_title">دفع عند الاستلام</string>
     <string name="onboarding_feat3_sub">كاش بكل أمان</string>
     <string name="onboarding_feat4_title">وفّر مشوارك</string>
@@ -56,28 +56,28 @@
     <!-- Register -->
     <string name="register_title">إنشاء حساب جديد</string>
     <string name="register_subtitle">انضم إلى فَوْراً واستمتع بتوصيل سريع</string>
-    <string name="name_label">الاسم الكامل</string>
+    <string name="name_label">الاسم</string>
     <string name="name_hint">مثال: أحمد محمد</string>
     <string name="alt_phone_label">رقم بديل (اختياري)</string>
     <string name="alt_phone_hint">09xxxxxxxx</string>
     <string name="address_label">عنوان التوصيل (القنجرة)</string>
-    <string name="address_hint">مثال: القنجرة - جانب البلدية</string>
+    <string name="address_hint">مثال: القنجرة - جانب المدرسة</string>
     <string name="register_button">إنشاء الحساب</string>
     <string name="already_have_account">لديك حساب بالفعل؟</string>
     <string name="login_action">تسجيل الدخول</string>
 
     <!-- Form Validation -->
     <string name="error_phone_invalid">رقم الواتساب يجب أن يبدأ بـ 09 ويتكون من 10 أرقام</string>
-    <string name="error_password_short">كلمة المرور يجب أن تكون 8 أحرف على الأقل</string>
+    <string name="error_password_short">كلمة المرور يجب أن تكون 8 أحرف او ارقام  على الأقل</string>
     <string name="error_name_short">الاسم يجب أن يكون حرفين على الأقل</string>
     <string name="error_address_required">عنوان التوصيل مطلوب</string>
-    <string name="error_network">تعذر الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت</string>
+    <string name="error_network">تعذر الاتصال ، يرجى التحقق من اتصال الإنترنت</string>
     <string name="error_generic">حدث خطأ، يرجى المحاولة لاحقاً</string>
 
     <!-- Pending Verification -->
     <string name="pending_title">الحساب قيد المراجعة</string>
-    <string name="pending_desc">شكراً لتسجيلك في فَوْراً! حسابك الآن قيد التحقق من قِبل إدارة فَوْراً. لتسريع عملية التفعيل يرجى التواصل معنا مباشرة عبر واتساب.</string>
-    <string name="contact_whatsapp">تواصل عبر واتساب</string>
+    <string name="pending_desc">شكراً لتسجيلك في فَوْراً! حسابك الآن قيد التحقق من قِبل إدارة فَوْراً. للتفعيل يرجى ارسال  سريع مباشرة عبر واتساب.</string>
+    <string name="contact_whatsapp">ارسال طلب التفعيل واتساب</string>
     <string name="check_verification_status">التحقق من حالة الحساب الآن</string>
     <string name="checking_verification_status">جاري التحقق من التفعيل…</string>
 
@@ -91,7 +91,7 @@
     <string name="home_subtitle">خدمة التوصيل السريع في القنجرة</string>
     <string name="home_status_verified">عميل موثّق ✓</string>
     <string name="home_new_order_title">طلب جديد</string>
-    <string name="home_new_order_desc">اكتب طلبك وسيتولى الكابتن شراءه وتوصيله فوراً</string>
+    <string name="home_new_order_desc">اكتب طلبك وسيتولى المندوب شراءه وتوصيله فوراً</string>
     <string name="home_active_order_title">الطلب الجاري حالياً</string>
     <string name="home_no_active_orders">لا توجد طلبات جارية حالياً</string>
     <string name="home_no_active_orders_desc">ابدأ طلباً جديداً ليصلك كل ما تحتاجه فوراً!</string>
@@ -102,7 +102,7 @@
     <string name="home_order_num">طلب رقم: %1$s</string>
     <string name="home_items_count">%1$d مواد</string>
     <string name="home_currency">ل.س</string>
-    <string name="home_runner_label">الكابتن:</string>
+    <string name="home_runner_label">المندوب:</string>
     <string name="home_track_order">متابعة تفاصيل الطلب</string>
 
     <!-- Navigation & Bottom Tabs -->
@@ -172,27 +172,27 @@
     <string name="create_order_item_header">المادة رقم %1$d</string>
     <string name="create_order_add_item">+ إضافة مادة أخرى</string>
     <string name="create_order_item_name_label">اسم المادة</string>
-    <string name="create_order_item_name_hint">مثال: لبن بقري، سكر، خبز سياحي</string>
+    <string name="create_order_item_name_hint">مثال: بزر شمس، سكر، خبز سياحي</string>
     <string name="create_order_item_quantity_label">الكمية</string>
     <string name="create_order_item_quantity_hint">مثال: 1 كغ، 2 عبوة، 5 ربطات</string>
     <string name="create_order_any_store_toggle">الشراء من أي متجر متاح</string>
     <string name="create_order_custom_store_label">اسم المتجر أو المكان المفضل</string>
-    <string name="create_order_custom_store_hint">مثال: بقالية البركة، صيدلية السلام</string>
+    <string name="create_order_custom_store_hint">مثال: بن فينوس، صيدلية السلام</string>
     <string name="create_order_delete_item">حذف المادة</string>
     <string name="create_order_notes_section">ملاحظات إضافية</string>
-    <string name="create_order_notes_label">ملاحظات للكابتن (اختياري)</string>
+    <string name="create_order_notes_label">ملاحظات للمندوب (اختياري)</string>
     <string name="create_order_notes_hint">مثال: يرجى التأكد من تاريخ الصلاحية، أو الاتصال عند الوصول</string>
-    <string name="create_order_runner_section">الكابتن المفضل</string>
-    <string name="create_order_preferred_runner_label">اختيار كابتن محدد</string>
-    <string name="create_order_any_runner">أي كابتن متاح (توصيل أسرع)</string>
-    <string name="create_order_wait_for_preferred_toggle">انتظار الكابتن في حال انشغاله</string>
-    <string name="create_order_wait_for_preferred_desc">قد يستغرق الطلب وقتاً أطول حتى يفرغ الكابتن المفضل</string>
-    <string name="create_order_pricing_disclaimer">سيتم تحديد أسعار المواد ورسوم التوصيل بدقة من قبل الكابتن والخادم عند البدء</string>
+    <string name="create_order_runner_section">المندوب المفضل</string>
+    <string name="create_order_preferred_runner_label">اختيار مندوب محدد</string>
+    <string name="create_order_any_runner">أي مندوب متاح (توصيل أسرع)</string>
+    <string name="create_order_wait_for_preferred_toggle">انتظار المندوب في حال انشغاله</string>
+    <string name="create_order_wait_for_preferred_desc">قد يستغرق الطلب وقتاً أطول حتى يفرغ المندوب المفضل</string>
+    <string name="create_order_pricing_disclaimer">سيتم تحديد أسعار المواد ورسوم التوصيل بدقة من قبل المندوب والخادم عند البدء</string>
     <string name="create_order_submit_button">أرسل الطلب الآن 🚀</string>
     <string name="create_order_submitting_button">جاري إنشاء الطلب…</string>
     <string name="create_order_items_count_summary">%1$d مواد مضافة</string>
     <string name="create_order_success_title">تم إنشاء طلبك بنجاح!</string>
-    <string name="create_order_success_desc">تم إرسال الطلب وجاري توجيهه للكابتن فوراً.</string>
+    <string name="create_order_success_desc">تم إرسال الطلب وجاري توجيهه للمندوب فوراً.</string>
     <string name="create_order_success_order_number">رقم الطلب: %1$s</string>
     <string name="create_order_track_order_btn">متابعة تفاصيل الطلب</string>
     <string name="create_order_back_home_btn">العودة للرئيسية</string>
@@ -208,8 +208,8 @@
     <string name="fee_disclosure_peripheral_fallback">يُضاف رسم إضافي للمناطق البعيدة بحسب موقع التوصيل.</string>
     <string name="fee_disclosure_extra_store_text">رسم كل متجر إضافي: %1$d ل.س عند إضافة أكثر من متجر للطلب.</string>
     <string name="fee_disclosure_extra_store_fallback">يُضاف رسم إضافي عن كل متجر إضافي يتم الشراء منه.</string>
-    <string name="fee_disclosure_custom_fee_text">قد تضيف الإدارة رسماً استثنائياً لظروف خاصة للطلب مع إشعار فوري وتوضيح السبب عند اعتماده.</string>
-    <string name="fee_disclosure_cancellation_text">يحق لك إلغاء الطلب مجاناً في أي وقت بعد إرساله وحتى بدء المندوب بالشراء، باستثناء الفترة القصيرة التي يكون فيها طلبك قيد المراجعة من الإدارة مباشرة بعد إرساله.</string>
+    <string name="fee_disclosure_custom_fee_text">قد تضيف الإدارة رسماً استثنائياً لظروف خاصة للطلب مع إشعار فوري وتوضيح السبب عند اعتماده. (مثال: حمولة جرة غاز)</string>
+    <string name="fee_disclosure_cancellation_text">يحق لك إلغاء الطلب مجاناً في أي وقت بعد إرساله وحتى بدء المندوب بالشراء،  بالطلب من الإدارة مباشرة بعد إرساله.</string>
     <string name="fee_disclosure_confirm_button">تأكيد الطلب</string>
     <string name="fee_disclosure_cancel_button">تراجع</string>
     <string name="fee_disclosure_loading">جاري تحديث الرسوم الحية…</string>
@@ -219,7 +219,7 @@
     <!-- Order Confirmation Screen (Commit 5) -->
     <string name="order_confirmation_title">تأكيد الطلب</string>
     <string name="order_confirmation_success_headline">طلبك قيد المتابعة الآن!</string>
-    <string name="order_confirmation_success_subtitle">تم تسجيل طلبك بنجاح في النظام وجاري تحضيره وتوجيهه للكابتن فوراً.</string>
+    <string name="order_confirmation_success_subtitle">تم تسجيل طلبك بنجاح في النظام وجاري تحضيره وتوجيهه للمندوب فوراً.</string>
     <string name="order_confirmation_num_label">رقم الطلب</string>
     <string name="order_confirmation_fee_label">رسوم التوصيل التقديرية</string>
     <string name="order_confirmation_fee_value">%1$d ل.س</string>
@@ -241,8 +241,8 @@
     <string name="orders_status_draft">مسودة</string>
     <string name="orders_status_pending_review">قيد المراجعة</string>
     <string name="orders_status_under_review">تحت المراجعة</string>
-    <string name="orders_status_awaiting_runner">بانتظار كابتن</string>
-    <string name="orders_status_awaiting_preferred">بانتظار الكابتن المفضل</string>
+    <string name="orders_status_awaiting_runner">بانتظار مندوب</string>
+    <string name="orders_status_awaiting_preferred">بانتظار المندوب المفضل</string>
     <string name="orders_status_assigned">تم التأكيد</string>
     <string name="orders_status_in_progress">قيد الشراء</string>
     <string name="orders_status_out_for_delivery">في طريق التوصيل</string>
@@ -273,7 +273,7 @@
     <string name="order_detail_step_out_for_delivery">في طريق التوصيل</string>
     <string name="order_detail_step_delivered">تم التسليم</string>
     <string name="order_detail_step_cancelled">ملغي</string>
-    <string name="order_detail_runner_card_title">الكابتن المسؤول</string>
+    <string name="order_detail_runner_card_title">المندوب المسؤول</string>
     <string name="order_detail_runner_whatsapp">واتساب</string>
     <string name="order_detail_runner_call">اتصال</string>
     <string name="order_detail_runner_rating_format">%1$.1f (%2$d تقييم)</string>
@@ -285,7 +285,7 @@
     <string name="order_detail_receipts_title">إيصالات الشراء</string>
     <string name="order_detail_pricing_title">تفاصيل الرسوم</string>
     <string name="order_detail_base_fee">رسم التوصيل الأساسي</string>
-    <string name="order_detail_peripheral_fee">رسم منطقة طرفية</string>
+    <string name="order_detail_peripheral_fee">رسم منطقة بعيدة</string>
     <string name="order_detail_extra_stores_fee">رسم متاجر إضافية</string>
     <string name="order_detail_custom_fee">رسم إضافي</string>
     <string name="order_detail_custom_fee_reason">السبب: %1$s</string>
@@ -303,7 +303,7 @@
     <string name="order_detail_cancel_error_state_changed">تغيّرت حالة الطلب، يرجى تحديث الطلب ثم المحاولة مجدداً</string>
     <string name="order_detail_cancel_error_not_found">الطلب غير موجود</string>
     <string name="order_detail_cancel_error_network">تعذر الاتصال بالخادم، يرجى التحقق من اتصالك بالإنترنت</string>
-    <string name="order_detail_rate_runner_btn">تقييم الكابتن</string>
+    <string name="order_detail_rate_runner_btn">تقييم المندوب</string>
     <string name="order_detail_edit_rating_btn">تعديل التقييم</string>
     <string name="order_detail_rated_label">تقييمك: %1$d نجوم</string>
     <string name="order_detail_delivered_simplified_status">تم التسليم ✅</string>
@@ -314,9 +314,9 @@
     <string name="order_detail_address_title">عنوان التوصيل</string>
 
     <!-- Rating Screen -->
-    <string name="rating_screen_title">تقييم الكابتن</string>
+    <string name="rating_screen_title">تقييم المندوب</string>
     <string name="rating_headline">كيف كانت تجربتك؟</string>
-    <string name="rating_subtitle">تقييمك للكابتن %1$s يساعدنا على تحسين جودة الخدمة</string>
+    <string name="rating_subtitle">تقييمك للمندوب %1$s يساعدنا على تحسين جودة الخدمة</string>
     <string name="rating_score_1">سيء جداً</string>
     <string name="rating_score_2">سيء</string>
     <string name="rating_score_3">مقبول</string>
@@ -347,15 +347,15 @@
     <string name="service_parcels_desc">القنجرة ↔ اللاذقية</string>
     <string name="service_parcels_tag">سريع</string>
     <string name="service_rides_title">مشاوير ركاب</string>
-    <string name="service_rides_desc">مشاوير سريعة وآمنة</string>
+    <string name="service_rides_desc">توصيل ركاب ضمن القنجرة و خارجها</string>
     <string name="service_rides_tag">توصيلة</string>
     <string name="service_tag_coming_soon">قريباً</string>
     <string name="service_card_whatsapp_coord">تنسيق واتساب</string>
-    <string name="service_in_dev_dialog_title">خدمة الطرود والمشاوير</string>
+    <string name="service_in_dev_dialog_title">خدمة الطرود و الركاب</string>
     <string name="service_in_dev_dialog_desc">هذه الخدمة قيد التطوير داخل التطبيق حالياً، ويسعدنا خدمتك وتنسيق طلبك فوراً عبر واتساب الإدارة.</string>
     <string name="service_in_dev_dialog_btn">مراسلة الإدارة عبر واتساب</string>
     <string name="service_in_dev_dialog_dismiss">إغلاق</string>
-    <string name="service_in_dev_whatsapp_msg">مرحباً، أود الاستفسار والتنسيق لطلب (طرد / مشوار) في القنجرة.</string>
+    <string name="service_in_dev_whatsapp_msg">مرحباً، أود الاستفسار والتنسيق لطلب (طرد / ركاب) في القنجرة.</string>
 
     <!-- Coming Soon Store & Product Cards (Awareness / D30) -->
     <string name="service_card_learn_more">تفاصيل الخدمة</string>
@@ -375,7 +375,7 @@
     <string name="create_order_tab_structured">إدخال منظّم 📋</string>
     <string name="create_order_quick_title">اكتب مشترياتك بشكل حر وسريع:</string>
     <string name="create_order_quick_hint">اكتب كل مادة في سطر منفصل، مثال:\nحليب ٢ لتر\nخبز ٣ ربطات\nكيلو سكر من سوبرماركت الخير</string>
-    <string name="create_order_quick_note">سيتم ترقيم المواد تلقائياً ويتولى الكابتن تأمينها بأفضل سرعة وجودة.</string>
+    <string name="create_order_quick_note">سيتم ترقيم المواد تلقائياً ويتولى المندوب تأمينها بأفضل سرعة وجودة.</string>
     <string name="create_order_item_combined_label">المادة والكمية (مثال: حليب المراعي ٢ لتر)</string>
     <string name="create_order_item_combined_hint">اسم المادة والكمية المطلوبة</string>
     <string name="create_order_store_options_title">خيارات المتجر</string>
@@ -383,7 +383,7 @@
     <string name="create_order_store_custom_label">أو حدد اسم المتجر المفضل</string>
 
     <!-- Address Setup Polish -->
-    <string name="address_permanent_note">سيُعتمد هذا الموقع كعنوان رئيسي ودائم لتسليم طلباتك في القنجرة.</string>
+    <string name="address_permanent_note">سيُعتمد هذا الموقع كعنوان رئيسي لتسليم طلباتك في القنجرة.</string>
 
     <!-- Order status labels (shared) -->
     <string name="status_out_for_delivery">في الطريق</string>
@@ -391,7 +391,7 @@
     <string name="status_in_progress_shopping">جاري الشراء من المتجر</string>
     <string name="status_out_for_delivery_to_you">في طريق التوصيل إليك</string>
     <string name="error_invalid_order_id">معرف الطلب غير صحيح</string>
-    <string name="label_runner_default">الكابتن</string>
+    <string name="label_runner_default">المندوب</string>
 
     <!-- Home Screen (redesign texts) -->
     <string name="label_avatar_fallback_letter">ف</string>
@@ -403,10 +403,10 @@
     <string name="home_cta_title">شو محتاج اليوم؟</string>
     <string name="home_cta_subtitle">حاجيات، طرود، أو مشوار — إحنا جاهزين</string>
     <string name="home_cta_button">اطلب الآن</string>
-    <string name="home_active_runner_name">الكابتن %1$s</string>
+    <string name="home_active_runner_name">المندوب %1$s</string>
     <string name="home_verified_runner">مندوب معتمد ✓</string>
-    <string name="label_runner_whatsapp">واتساب الكابتن</string>
-    <string name="label_runner_call">اتصال بالكابتن</string>
+    <string name="label_runner_whatsapp">واتساب المندوب</string>
+    <string name="label_runner_call">اتصال بالمندوب</string>
     <string name="home_step_picked_up">تم الاستلام</string>
     <string name="home_step_purchasing">جاري الشراء</string>
     <string name="home_step_on_the_way">في الطريق</string>
@@ -417,7 +417,7 @@
     <string name="home_quick_services_title">خدمات فَوْراً</string>
     <string name="home_quick_services_subtitle">توصيل سريع وموثوق في القنجرة</string>
     <string name="home_service_grocery_title">طلب بقالية ومشتريات</string>
-    <string name="home_service_grocery_subtitle">حدد طلبك وسيتولى الكابتن شراءه وتوصيله فوراً</string>
+    <string name="home_service_grocery_subtitle">حدد طلبك وسيتولى المندوب شراءه وتوصيله فوراً</string>
     <string name="home_service_grocery_btn">+ اطلب حاجياتك الآن</string>
     <string name="home_service_orders_title">طلباتي السابقة</string>
     <string name="home_service_orders_subtitle">استعرض طلباتك وأعد طلب قائمتك المفضلة</string>
@@ -425,7 +425,7 @@
     <string name="home_service_support_title">الدعم والمساعدة</string>
     <string name="home_service_support_subtitle">تواصل مباشرة مع إدارة فَوْراً عبر واتساب</string>
     <string name="home_service_support_btn">تواصل الآن</string>
-    <string name="home_awaiting_runner">جاري البحث عن كابتن متاح في الحي…</string>
+    <string name="home_awaiting_runner">جاري البحث عن مندوب متاح في الحي…</string>
     <string name="home_order_summary_format">%1$d مواد • الإجمالي: %2$d ل.س</string>
     <string name="home_stats_heading">ملخص حسابك مع فَوْراً</string>
     <string name="home_stats_month">خلال هذا الشهر</string>
@@ -443,26 +443,28 @@
     <string name="home_step_preparing">قيد التجهيز</string>
     <string name="home_banner_badge_instant">توصيل فَوْري</string>
     <string name="home_banner_location_tag">القنجرة 📍</string>
-    <string name="home_banner_promo_title">طلب بقالية ومشتريات طازجة\nكابتن فَوْراً يوصلك ع السريع</string>
-    <string name="home_runner_role">كابتن فَوْراً</string>
-    <string name="home_runner_role_certified">كابتن فَوْراً المعتمد</string>
+    <string name="home_banner_promo_title">طلب بقالية ومشتريات طازجة\nمندوب فَوْراً يوصل لعندك فوراً</string>
+    <string name="home_runner_role">مندوب فَوْراً</string>
+    <string name="home_runner_role_certified">مندوب فَوْراً المعتمد</string>
     <string name="home_active_order_label">طلب جاري</string>
     <string name="home_order_summary_full">رقم الطلب: %1$s • %2$d مواد • الإجمالي %3$d ل.س</string>
     <string name="home_track_order_action">متابعة تفاصيل وتتبع الطلب بدقة ←</string>
-    <string name="error_home_data_load_failed">تعذر تحميل البيانات</string>
+    <string name="error_home_data_load_failed">تعذر تحميل البيانات, حاول من جديد</string>
 
     <!-- Support (FAQ + default WhatsApp message) -->
     <string name="support_default_message">مرحباً إدارة فَوْراً، أحتاج إلى مساعدة واستفسار بخصوص التطبيق.</string>
     <string name="support_faq_1_question">كيف يعمل تطبيق فَوْراً في القنجرة؟</string>
-    <string name="support_faq_1_answer">تطبيق فَوْراً هو منصتك المحلية للطلب السريع في القنجرة. تطلب ما تحتاجه من بقالة أو أغراض، ويتولى الكابتن شراءها من المحلات المتاحة وتوصيلها حتى باب منزلك مع تتبع مباشر لحالة الطلب.</string>
+    <string name="support_faq_1_answer">تطبيق فَوْراً هو منصتك المحلية للطلب السريع في القنجرة. تطلب ما تحتاجه من بقالة أو أغراض، ويتولى المندوب شراءها من المحلات المتاحة وتوصيلها حتى باب منزلك مع تتبع مباشر لحالة الطلب.</string>
     <string name="support_faq_2_question">كيف يتم احتساب رسوم التوصيل؟</string>
-    <string name="support_faq_2_answer">رسوم التوصيل شفافة وتعتمد على إعدادات المنصة الحالية: رسم أساسي، ورسم للمناطق الطرية، ورسم لكل متجر إضافي. قد يضاف رسم إضافي للطلب مع سبب مبرر. تظهر لك الرسوم المحتكرة بدقة في تفاصيل الطلب قبل التأكيد.</string>
-    <string name="support_faq_3_question">كيف أتواصل مع الكابتن المسؤول عن طلبي؟</string>
-    <string name="support_faq_3_answer">بمجرد قبول وتعيين كابتن لطلبك، ستظهر لك بطاقة الكابتن في شاشة تفاصيل الطلب، وبإمكانك التواصل معه مباشرة عبر الواتساب أو الاتصال الهاتفي بضغطة زر واحدة.</string>
+    <string name="support_faq_2_answer">رسوم التوصيل شفافة وتعتمد على إعدادات المنصة الحالية: رسم أساسي، ورسم للمناطق البعيدة، ورسم لكل متجر إضافي. قد يضاف رسم إضافي للطلب مع سبب مبرر. تظهر لك الرسوم المحددة بدقة في تفاصيل الطلب قبل التأكيد.</string>
+    <string name="support_faq_3_question">كيف أتواصل مع المندوب المسؤول عن طلبي؟</string>
+    <string name="support_faq_3_answer">بمجرد قبول وتعيين مندوب لطلبك، ستظهر لك بطاقة المندوب في شاشة تفاصيل الطلب، وبإمكانك التواصل معه مباشرة عبر الواتساب أو الاتصال الهاتفي بضغطة زر واحدة.</string>
     <string name="support_faq_4_question">هل يمكنني تعديل أو إلغاء الطلب بعد إرساله؟</string>
-    <string name="support_faq_4_answer">يمكنك إلغاء الطلب مباشرة عبر زر إلغاء الطلب ما دام الطلب في مرحلة \'المراجعة والتدقيق\'. بعد بدء الكابتن بعملية الشراء لا يمكن الإلغاء آلياً ولكن يمكنك التواصل مباشرة مع الإدارة.</string>
+    <string name="support_faq_4_answer">يمكنك إلغاء الطلب مباشرة عبر زر إلغاء الطلب ما دام الطلب في مرحلة \'المراجعة والتدقيق\'. بعد بدء المندوب بعملية الشراء لا يمكن الإلغاء آلياً ولكن يمكنك التواصل مباشرة مع الإدارة.</string>
     <string name="support_faq_5_question">ما هي أوقات وساعات العمل المتاحة؟</string>
-    <string name="support_faq_5_answer">خدمة فَوْراً والكباتن متاحون يومياً من الساعة 8:00 صباحاً وحتى 12:00 منتصف الليل لتلبية كافة طلباتكم.</string>
+    <string name="support_faq_5_answer">خدمة فَوْراً والمندوبون متاحون يومياً من الساعة 8:00 صباحاً وحتى 12:00 منتصف الليل لتلبية كافة طلباتكم.</string>
+    <string name="support_faq_6_question">ما هي الخدمات التي ستنطلق قريباً؟</string>
+    <string name="support_faq_6_answer">1- خدمة توصيل الركاب داخل القنجرة وخارجها\n2- توصيل الطرود والأمانات ضمن القنجرة وخارجها (متاحة الآن عبر واتساب فقط)\n3- سيتم إضافة متاجر داخل التطبيق للتسوق منها بشكل مباشر ومشاهدة المواد المتوفرة والأسعار، واختيار المتجر المفضل لديك ضمن القنجرة\n4- البحث عن منتج معين ومعرفة مكان تواجده ومقارنة الأسعار قبل إجراء الطلب</string>
 
     <!-- Create Order validation -->
     <string name="create_order_validation_item_quantity_named">يرجى تحديد الكمية للمادة: %1$s</string>
@@ -510,7 +512,7 @@
     <string name="orders_subtitle">سجل ومتابعة طلباتك في فَوْراً</string>
     <string name="orders_active_count">%1$d جارية</string>
     <string name="orders_delivery_fee">رسوم التوصيل</string>
-    <string name="orders_runner_name">الكابتن: %1$s</string>
+    <string name="orders_runner_name">المندوب: %1$s</string>
 
     <!-- Create order screen -->
     <string name="create_order_address_ready">العنوان جاهز ✓</string>
@@ -530,11 +532,11 @@
     <!-- Admin Support & Runner Coordination -->
     <string name="home_admin_support_title">الدعم الفني والإدارة</string>
     <string name="home_admin_support_subtitle">تواصل مباشر لتنسيق أو تعديل طلبك</string>
-    <string name="home_awaiting_runner_badge">بانتظار كابتن</string>
-    <string name="tag_via_admin">عبر الإدارة</string>
-    <string name="tag_direct_coord">تنسيق مباشر</string>
-    <string name="order_detail_awaiting_runner_title">بانتظار تعيين كابتن للطلب</string>
-    <string name="order_detail_awaiting_runner_desc">طلبك قيد المتابعة وجاري تعيين كابتن متاح، يمكنك التنسيق مع الإدارة مباشرة</string>
+    <string name="home_awaiting_runner_badge">بانتظار مندوب</string>
+    <string name="tag_via_admin">واتساب</string>
+    <string name="tag_direct_coord">تواصل مباشر</string>
+    <string name="order_detail_awaiting_runner_title">بانتظار تعيين مندوب للطلب</string>
+    <string name="order_detail_awaiting_runner_desc">طلبك قيد المتابعة وجاري تعيين مندوب متاح، يمكنك التنسيق مع الإدارة مباشرة</string>
     <string name="order_detail_admin_support_title">الدعم الفني وإدارة فَوْراً</string>
     <string name="order_detail_admin_support_desc">لأي استفسار أو تعديل في تفاصيل الطلب</string>
 </resources>

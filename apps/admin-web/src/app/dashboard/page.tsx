@@ -316,7 +316,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-black text-slate-900">لوحة التحكم المركزية</h1>
           <p className="text-xs text-slate-500 mt-1">
-            إدارة مباشرة للطلبات الواردة، متابعة الكباتن، ومراقبة الإيرادات اللحظية
+            إدارة مباشرة للطلبات الواردة، متابعة المندوبين، ومراقبة الإيرادات اللحظية
           </p>
         </div>
 
@@ -356,7 +356,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-black text-slate-900">تحتاج إجراءً الآن</h2>
               <p className="text-xs text-slate-500">
-                الطلبات بانتظار التدقيق والاعتماد لبدء تعيين الكباتن والتوصيل (الأقدم أولاً)
+                الطلبات بانتظار التدقيق والاعتماد لبدء تعيين المندوبين والتوصيل (الأقدم أولاً)
               </p>
             </div>
           </div>

@@ -25,7 +25,7 @@ class SupportViewModelTest {
         val state = viewModel.uiState.value
 
         assertEquals(AppConfig.ADMIN_WHATSAPP_DISPLAY, state.adminPhone)
-        assertEquals(5, state.faqs.size)
+        assertEquals(6, state.faqs.size)
         assertTrue(state.faqs.none { it.isExpanded })
     }
 
