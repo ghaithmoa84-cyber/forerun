@@ -351,6 +351,7 @@ fawrun/
 | 2026-10-18 | `998ba56` — تفعيل Sentry وتكامل تنبيهات تلغرام في الإنتاج (بند S4): ضبط `SENTRY_DSN`، إصلاح `AllExceptionsFilter` لالتقاط 500 فقط، بناء `SentryWebhookController` بحماية HMAC-SHA256 المشددة ودعم `rawBody` وتوجيه الإشعارات إلى `TelegramService`. تم التحقق الحي الكامل بوصول إشعار Sentry الرسمي فورياً إلى بوت تلغرام (@forerun_notify_bot) بنجاح (430/430 اختبار). |
 | 2026-10-19 | `ccf9de6` — تدقيق وصقل النصوص العربية الشامل وتوحيد مسمى "المندوب" في كامل المنصة (D45)، دُمج في `master` عبر `git merge --no-ff` وبوابة جودة كاملة (456/456 API و 318/318 Android). |
 | 2026-10-19 | دمج دفعة صقل وظائف تطبيق العميل والـ API (القرار D46): تثبيت تقييم المندوب الظاهر للعميل (5 نجوم)، إخفاء أزرار تواصل الإدارة المكررة أثناء انتظار المندوب، ترقيم المواد تسلسلياً وإخفاء كمية=1، تقييد إنشاء الطلبات لـ 3 بالساعة لكل حساب، وتوضيح إلزامية رسالة واتساب لتفعيل الحساب (465/465 API و 318/318 Android). |
+| 2026-10-19 | استبدال محرك الخرائط بـ Google Maps عبر كامل المنظومة (القرار D47): اعتماد maps-compose للأندرويد، ومحمّل مخصص للويب (admin-web و runner-pwa) مع قيود Referrer وبصمة التطبيق (0$ شهرياً ضمن الخطة المجانية). تم التحقق البصري الميداني الصارم بنجاح على جهاز حقيقي بعد فحص Logcat الحي وتصحيح إعدادات Google Cloud (465/465 API و 319/319 Android). |
 
 ---
 
@@ -776,29 +777,26 @@ fawrun/
   - `pnpm lint`: صفر أخطاء وصفر تحذيرات عبر المنظومة.
   - اختبارات API: نجاح 465 من أصل 465 اختباراً في 34 ملف اختبار (+9 اختبارات جديدة).
   - اختبارات Android: نجاح 318 من أصل 318 اختباراً لوحدة الأندرويد (`testDebugUnitTest`).
-### D47 — استبدال محرك الخرائط بـ Google Maps عبر المنظومة مع الحفاظ على الخطة المجانية 0$ (2026-10-19)
-- **الخلفية:** استبدال محركات الخرائط السابقة (MapLibre على Android و Leaflet على الويب) بمحرك خرائط غوغل (Google Maps) عبر كامل أسطح المنظومة (Android و admin-web و runner-pwa)، مع الالتزام الصارم بالخطة المجانية 0$ شهرياً (ضمن رصيد 200$ الشهري المجاني) ودون أي تغيير في آلية الـ Reverse Geocoding المعتمدة على Nominatim.
-- **التنفيذ المعماري:**
+### D47 — استبدال محرك الخرائط بـ Google Maps عبر كامل المنظومة (2026-10-19)
+- **الخلفية:** استبدال محركات الخرائط السابقة (MapLibre على Android و Leaflet على الويب) بمحرك خرائط غوغل (Google Maps) عبر كامل أسطح المنظومة (Android و admin-web و runner-pwa)، مع الالتزام الصارم بسقف التكلفة الصفرية (0$ شهرياً ضمن رصيد 200$ المجاني) وبقاء منطق الـ Reverse Geocoding معتمداً على Nominatim دون أي استهلاك مدفوع لـ Geocoding APIs.
+- **التنفيذ المعماري وإدارة المفاتيح:**
   1. **تطبيق الأندرويد (`apps/android`):**
-     - اعتماد مكتبة Compose الرسمية `com.google.maps.android:maps-compose:4.4.1` مع تثبيت `play-services-maps:18.2.0`.
-     - استبدال `MapLibreContainer` بـ `GoogleMap` داخل [AddressSetupScreen.kt](file:///d:/FAWRUNF/FAWRUN/apps/android/app/src/main/java/com/forerun/customer/ui/address/AddressSetupScreen.kt) مع الحفاظ الكامل على كافة الوظائف وسلاسة حركة الدبوس.
-     - حقن مفتاح الأندرويد بأمان عبر `manifestPlaceholders["MAPS_API_KEY"]` وقراءته من `local.properties` أو البيئة دون أي hardcode.
-     - تحصين بناء الـ Release عبر إضافة قواعد ProGuard الصريحة لـ `com.google.android.gms.maps.**` و `com.google.maps.android.compose.**` في [proguard-rules.pro](file:///d:/FAWRUNF/FAWRUN/apps/android/app/proguard-rules.pro) وإضافة إذن `ACCESS_NETWORK_STATE` في `AndroidManifest.xml`.
-  2. **لوحة الإدارة (`apps/admin-web`):**
-     - استبدال Leaflet بـ Google Maps JavaScript API في [OrderMap.tsx](file:///d:/FAWRUNF/FAWRUN/apps/admin-web/src/components/OrderMap.tsx) مع تحميل ديناميكي للسكربت وعزل المفتاح عبر `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
-     - إضافة 4 اختبارات عقد (Contract Tests) في `OrderMap.test.tsx` للتأكد من سلوك التحميل والـ cleanup وغياب أي أثر لـ Leaflet.
-  3. **تطبيق المندوب (`apps/runner-pwa`):**
-     - استبدال Leaflet في [MapView.tsx](file:///d:/FAWRUNF/FAWRUN/apps/runner-pwa/src/components/MapView.tsx) مع قراءة المفتاح من `VITE_GOOGLE_MAPS_API_KEY`.
-     - إضافة 4 اختبارات عقد في `MapView.test.tsx` مع تنظيف حزم Leaflet غير المستخدمة من الحزمة.
+     - استبدال `MapLibreContainer` الكلاسيكي بمكتبة Jetpack Compose الرسمية `com.google.maps.android:maps-compose:4.4.1` مع تثبيت `play-services-maps:18.2.0` داخل [AddressSetupScreen.kt](file:///d:/FAWRUNF/FAWRUN/apps/android/app/src/main/java/com/forerun/customer/ui/address/AddressSetupScreen.kt).
+     - **أمان المفتاح وقيده:** حقن المفتاح عبر `manifestPlaceholders["MAPS_API_KEY"]` من `local.properties` المحمي (أو البيئة) دون أي hardcode في الكود. تقييد المفتاح في Google Cloud بـ **Android Apps** حصراً (اسم الحزمة `com.forerun.customer` مع بصمتي SHA-1 للـ Debug والـ Release)، وتقييد الـ API حصراً بـ **Maps SDK for Android**.
+     - **تحصين الـ Release:** إضافة قواعد ProGuard الصريحة في [proguard-rules.pro](file:///d:/FAWRUNF/FAWRUN/apps/android/app/proguard-rules.pro) لمنع تجريد R8 لكلاسات Google Maps و Maps Compose، وإضافة إذن `ACCESS_NETWORK_STATE` الصريح في `AndroidManifest.xml`.
+  2. **لوحة الإدارة وتطبيق المندوب (`admin-web` و `runner-pwa`):**
+     - استبدال Leaflet بـ Google Maps JavaScript API في [OrderMap.tsx](file:///d:/FAWRUNF/FAWRUN/apps/admin-web/src/components/OrderMap.tsx) و [MapView.tsx](file:///d:/FAWRUNF/FAWRUN/apps/runner-pwa/src/components/MapView.tsx) عبر محمّل مخصص غير متزامن (Dynamic async loader) يمنع التكرار ويدعم التدمير النظيف (cleanup) للـ DOM.
+     - **أمان المفتاح وقيده:** قراءة المفتاح عبر متغيرات البيئة العامة (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` و `VITE_GOOGLE_MAPS_API_KEY`)، مع تقييده في Google Cloud بـ **HTTP Referrers** (نطاقات الإنتاج لـ admin-web و runner-pwa ومسارات localhost للتطوير)، وتقييد الـ API حصراً بـ **Maps JavaScript API**.
+     - إضافة 8 اختبارات عقد (Contract Tests) تغطي سلوك التحميل والتعامل مع الأخطاء والـ unmount وغياب أي بقايا لـ Leaflet.
 - **التحقق الميداني الصارم (Zero-Trust Field Verification):**
-  - فحص ثنائي الـ APK المترجم عبر `aapt2 dump xmltree` وإثبات حقن المفتاح الصريح بنسبة 100%.
-  - فحص شهادة التوقيع عبر `apksigner` وتأكيد بصمة الـ Release: `35:D5:F0:85:9A:BB:EB:95:23:2C:1B:E7:93:F4:FB:27:D8:2A:A9:EA`.
-  - سحب وتشخيص سجل Logcat الحي من جهاز المالك الحقيقي (PID 836) ورصد رسالة `Authorization failure` من خوادم Google، وتحديد السبب في نقص قيد بصمة الـ Release وخدمة `Maps SDK for Android`.
-  - معالجة القيد وتأكيد اختفاء الخطأ تماماً من الـ Logcat وظهور الخريطة بنجاح وتفاعلها الحي على الهاتف.
-- **بوابات الجودة (Quality Gates):**
-  - اختبارات API: 465 من أصل 465 اختباراً ناجحاً بنسبة 100%.
-  - اختبارات Android: 319 من أصل 319 اختبار وحدة ناجحاً بنسبة 100%.
-  - فحص الأنواع (Typecheck) والبناء والتدقيق (Lint): 6 من أصل 6 حزم ناجحة دون أي أخطاء.
+  - فحص الـ Manifest الثنائي المترجم داخل APK الـ Release الموقّع عبر `aapt2 dump xmltree` وإثبات حقن المفتاح الصريح بنسبة 100%.
+  - فحص شهادة التوقيع الرسمية عبر `apksigner` ومطابقة بصمة الـ Release مع هوية التطبيق في `forerun-release.jks`.
+  - سحب وتشخيص سجل Logcat الحي من جهاز المالك الحقيقي (PID 836) ورصد رسالة `Authorization failure` المباشرة من سيرفرات غوغل (`IApiTokenService`).
+  - معالجة إعدادات Google Cloud بإضافة بصمة شهادة الـ Release وتفعيل `Maps SDK for Android`، وتأكيد اختفاء الخطأ تماماً من الـ Logcat وظهور خريطة غوغل وتفاعلها الحي على الهاتف بعد إغلاق التطبيق وإعادة فتحه.
+- **بوابات الجودة (Quality Gates) على `master`:**
+  - اختبارات API: 465 من أصل 465 اختباراً ناجحاً بنسبة 100% عبر 34 ملف اختبار.
+  - اختبارات Android: 319 من أصل 319 اختبار وحدة ناجحاً بنسبة 100% (`./gradlew testDebugUnitTest`).
+  - فحص الأنواع (Typecheck) والبناء والتدقيق (Lint): نجاح كامل (6 من أصل 6 حزم) بنتيجة صفر أخطاء.
 
 ---
 
