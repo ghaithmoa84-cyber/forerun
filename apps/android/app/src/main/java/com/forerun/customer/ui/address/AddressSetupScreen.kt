@@ -48,7 +48,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,18 +63,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.forerun.customer.R
 import com.forerun.customer.ui.theme.Dimens
@@ -94,10 +89,11 @@ import com.forerun.customer.ui.theme.ForerunTextPrimary
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.rememberCameraPositionState
 
 private const val TAG = "AddressSetupScreen"
 
@@ -112,7 +108,24 @@ fun AddressSetupScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     @StringRes var mapLoadError by rememberSaveable { mutableStateOf<Int?>(null) }
-    var googleMapInstance by remember { mutableStateOf<GoogleMap?>(null) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 14.5f)
+    }
+
+    var isInitialPositionSet by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiState.lat, uiState.lng, uiState.isEditMode) {
+        if (!isInitialPositionSet && uiState.isEditMode) {
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 14.5f)
+            isInitialPositionSet = true
+        }
+    }
+
+    LaunchedEffect(cameraPositionState.isMoving) {
+        if (!cameraPositionState.isMoving) {
+            val target = cameraPositionState.position.target
+            viewModel.onIntent(AddressSetupIntent.UpdateCoordinates(target.latitude, target.longitude))
+        }
+    }
 
     LaunchedEffect(viewModel.events) {
         viewModel.events.collect { event ->
@@ -162,9 +175,11 @@ fun AddressSetupScreen(
                         viewModel.onIntent(
                             AddressSetupIntent.UpdateCoordinates(location.latitude, location.longitude)
                         )
-                        googleMapInstance?.animateCamera(
-                            CameraUpdateFactory.newLatLngZoom(target, 15.0f)
-                        )
+                        coroutineScope.launch {
+                            cameraPositionState.animate(
+                                CameraUpdateFactory.newLatLngZoom(target, 15.0f)
+                            )
+                        }
                     } else {
                         fusedLocationClient.lastLocation.addOnSuccessListener { lastLoc ->
                             if (lastLoc != null) {
@@ -172,9 +187,11 @@ fun AddressSetupScreen(
                                 viewModel.onIntent(
                                     AddressSetupIntent.UpdateCoordinates(lastLoc.latitude, lastLoc.longitude)
                                 )
-                                googleMapInstance?.animateCamera(
-                                    CameraUpdateFactory.newLatLngZoom(target, 15.0f)
-                                )
+                                coroutineScope.launch {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(target, 15.0f)
+                                    )
+                                }
                             } else {
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(locationPrecisionMessage)
@@ -302,18 +319,19 @@ fun AddressSetupScreen(
                         }
                     }
                 } else {
-                    GoogleMapContainer(
-                        initialLat = uiState.lat,
-                        initialLng = uiState.lng,
-                        onMapReady = { map ->
-                            googleMapInstance = map
-                        },
-                        onCameraIdle = { lat, lng ->
-                            viewModel.onIntent(AddressSetupIntent.UpdateCoordinates(lat, lng))
-                        },
-                        onError = { error ->
-                            Log.e(TAG, "GoogleMap error: $error")
-                            mapLoadError = R.string.address_map_fallback_note
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        uiSettings = remember {
+                            MapUiSettings(
+                                compassEnabled = false,
+                                myLocationButtonEnabled = false,
+                                mapToolbarEnabled = false,
+                                rotationGesturesEnabled = true,
+                                scrollGesturesEnabled = true,
+                                tiltGesturesEnabled = false,
+                                zoomGesturesEnabled = true
+                            )
                         }
                     )
 
@@ -549,82 +567,3 @@ fun AddressSetupScreen(
     }
 }
 
-@Composable
-private fun GoogleMapContainer(
-    initialLat: Double,
-    initialLng: Double,
-    onMapReady: (GoogleMap) -> Unit,
-    onCameraIdle: (Double, Double) -> Unit,
-    onError: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val mapView = remember {
-        MapView(context).apply {
-            onCreate(Bundle())
-        }
-    }
-
-    DisposableEffect(lifecycle, mapView) {
-        val observer = LifecycleEventObserver { _, event ->
-            try {
-                when (event) {
-                    Lifecycle.Event.ON_START -> mapView.onStart()
-                    Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                    Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                    Lifecycle.Event.ON_STOP -> mapView.onStop()
-                    Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
-                    else -> Unit
-                }
-            } catch (t: Throwable) {
-                Log.e(TAG, "MapView lifecycle error", t)
-                onError(t.localizedMessage ?: "MapView lifecycle error")
-            }
-        }
-        lifecycle.addObserver(observer)
-        onDispose {
-            lifecycle.removeObserver(observer)
-            try {
-                mapView.onDestroy()
-            } catch (t: Throwable) {
-                Log.e(TAG, "MapView onDestroy error", t)
-            }
-        }
-    }
-
-    AndroidView(
-        factory = {
-            mapView.apply {
-                getMapAsync { googleMap ->
-                    try {
-                        onMapReady(googleMap)
-                        googleMap.moveCamera(
-                            CameraUpdateFactory.newLatLngZoom(
-                                LatLng(initialLat, initialLng),
-                                14.5f
-                            )
-                        )
-                        googleMap.uiSettings.apply {
-                            isCompassEnabled = false
-                            isMyLocationButtonEnabled = false
-                            isMapToolbarEnabled = false
-                            isRotateGesturesEnabled = true
-                            isScrollGesturesEnabled = true
-                            isTiltGesturesEnabled = false
-                            isZoomGesturesEnabled = true
-                        }
-                        googleMap.setOnCameraIdleListener {
-                            val target = googleMap.cameraPosition.target
-                            onCameraIdle(target.latitude, target.longitude)
-                        }
-                    } catch (t: Throwable) {
-                        Log.e(TAG, "GoogleMap setup error", t)
-                        onError(t.localizedMessage ?: "Failed to initialize Google Maps")
-                    }
-                }
-            }
-        },
-        modifier = modifier.fillMaxSize()
-    )
-}
