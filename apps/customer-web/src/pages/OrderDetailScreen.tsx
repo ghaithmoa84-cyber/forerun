@@ -427,7 +427,7 @@ export function OrderDetailScreen() {
       {/* Assigned Runner Details with WhatsApp and Call buttons */}
       {order.runner && (
         <div className="card">
-          <h2 className="section-title">الكابتن المندوب</h2>
+          <h2 className="section-title">المندوب المسؤول</h2>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: (order.runner.whatsapp || order.runner.phone) ? '12px' : 0 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-h)' }}>
@@ -436,7 +436,7 @@ export function OrderDetailScreen() {
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {order.runner.avgRating
                   ? `تقييم المندوب: ${order.runner.avgRating.toFixed(1)} من 5 (${order.runner.totalRatings} تقييم)`
-                  : 'كابتن معتمد جديد'}
+                  : 'مندوب معتمد جديد'}
               </div>
             </div>
             <span className="badge badge-assigned">مُعيّن للطلب</span>
@@ -450,7 +450,7 @@ export function OrderDetailScreen() {
                 <a
                   href={formatWhatsappUrl(
                     order.runner.whatsapp,
-                    `مرحباً كابتن ${order.runner.name}، بخصوص طلبي رقم ${order.orderNumber}`,
+                    `مرحباً ${order.runner.name}، بخصوص طلبي رقم ${order.orderNumber}`,
                   )}
                   target="_blank"
                   rel="noopener noreferrer"

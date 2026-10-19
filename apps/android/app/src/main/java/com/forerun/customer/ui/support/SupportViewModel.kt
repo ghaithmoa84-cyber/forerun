@@ -71,6 +71,11 @@ class SupportViewModel @Inject constructor(
                 id = 5,
                 question = context.getString(R.string.support_faq_5_question),
                 answer = context.getString(R.string.support_faq_5_answer)
+            ),
+            FaqItem(
+                id = 6,
+                question = context.getString(R.string.support_faq_6_question),
+                answer = context.getString(R.string.support_faq_6_answer)
             )
         )
     }

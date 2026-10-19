@@ -23,8 +23,8 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   DRAFT: 'مسودة',
   PENDING_REVIEW: 'بانتظار المراجعة',
   UNDER_REVIEW: 'قيد التدقيق',
-  AWAITING_RUNNER: 'بانتظار كابتن',
-  AWAITING_PREFERRED_RUNNER: 'بانتظار كابتن مفضل',
+  AWAITING_RUNNER: 'بانتظار مندوب',
+  AWAITING_PREFERRED_RUNNER: 'بانتظار مندوب مفضل',
   ASSIGNED: 'معين لمندوب',
   IN_PROGRESS: 'جاري التنفيذ',
   OUT_FOR_DELIVERY: 'في الطريق للتسليم',
@@ -603,7 +603,7 @@ export default function OrderDetailPage() {
                         </span>
                         <WhatsAppButton
                           phone={order.runner.whatsapp}
-                          text={`مرحباً كابتن ${order.runner.name}، بخصوص الطلب رقم ${order.orderNumber}`}
+                          text={`مرحباً ${order.runner.name}، بخصوص الطلب رقم ${order.orderNumber}`}
                           size="xs"
                         />
                       </>
@@ -637,7 +637,7 @@ export default function OrderDetailPage() {
                     </div>
                   )}
                   <div>
-                    الانتظار: {order.waitForPreferred ? 'العميل فضّل انتظار كابتنه المفضل' : 'لا ينتظر (أي كابتن متاح)'}
+                    الانتظار: {order.waitForPreferred ? 'العميل فضّل انتظار مندوبه المفضل' : 'لا ينتظر (أي مندوب متاح)'}
                   </div>
                 </div>
               </div>

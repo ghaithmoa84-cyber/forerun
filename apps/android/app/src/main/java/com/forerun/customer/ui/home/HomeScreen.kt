@@ -733,7 +733,7 @@ private fun ActiveOrderCard(
 
                 Spacer(modifier = Modifier.height(Dimens.Space14))
 
-                // Runner Information Bar (أو رسالة انتظار تعيين الكابتن)
+                // Runner Information Bar (أو رسالة انتظار تعيين المندوب)
                 if (order.runnerName != null) {
                     Row(
                         modifier = Modifier

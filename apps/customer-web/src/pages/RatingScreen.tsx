@@ -89,7 +89,7 @@ export function RatingScreen() {
       <div style={{ marginBottom: '20px' }}>
         <h1 className="page-title">تقييم تجربة التوصيل</h1>
         <p className="page-subtitle">
-          {order ? `طلب #${order.orderNumber}` : ''} — رأيك يساعدنا على تحسين الجودة وتقدير كباتننا
+          {order ? `طلب #${order.orderNumber}` : ''} — رأيك يساعدنا على تحسين الجودة وتقدير مندوبينا
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export function RatingScreen() {
               {order.runner.name.charAt(0)}
             </div>
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-h)', marginBottom: '2px' }}>
-              الكابتن {order.runner.name}
+              المندوب {order.runner.name}
             </h3>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
               كيف كانت سرعة ولطافة التوصيل؟

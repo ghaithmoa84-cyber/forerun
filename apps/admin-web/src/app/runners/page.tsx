@@ -196,7 +196,7 @@ const RUNNER_STATUS_DOT: Record<RunnerStatus, string> = {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">إدارة المندوبين والكباتن</h1>
+          <h1 className="text-2xl font-black text-slate-900">إدارة المندوبين</h1>
           <p className="text-xs text-slate-500 mt-1">متابعة جاهزية الأسطول، التقييمات، والظهور في التطبيق</p>
         </div>
 
