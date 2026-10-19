@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
@@ -23,6 +23,7 @@ import { BannersModule } from './modules/banners/banners.module.js';
 import { SystemModule } from './modules/system/system.module.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
+import { UserThrottlerGuard } from './common/guards/user-throttler.guard.js';
 import { jwtConfig } from './config/jwt.config.js';
 
 @Module({
@@ -138,11 +139,11 @@ import { jwtConfig } from './config/jwt.config.js';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: JwtAuthGuard,
     },
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: UserThrottlerGuard,
     },
     {
       provide: APP_GUARD,
