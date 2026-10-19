@@ -600,7 +600,7 @@ export class CustomerOrdersService {
         ? {
             id: order.runner.id,
             name: order.runner.user.name,
-            avgRating: order.runner.avgRating,
+            avgRating: 5,
             totalRatings: order.runner.totalRatings,
             status: order.runner.status,
             whatsapp: ACTIVE_RUNNER_CONTACT_STATUSES.has(order.status)

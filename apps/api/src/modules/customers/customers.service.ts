@@ -218,7 +218,7 @@ export class CustomersService {
     return runners.map((runner) => ({
       id: runner.id,
       name: runner.user.name,
-      avgRating: runner.avgRating,
+      avgRating: 5,
       totalRatings: runner.totalRatings,
       status: runner.status,
     }));
