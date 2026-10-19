@@ -776,7 +776,29 @@ fawrun/
   - `pnpm lint`: صفر أخطاء وصفر تحذيرات عبر المنظومة.
   - اختبارات API: نجاح 465 من أصل 465 اختباراً في 34 ملف اختبار (+9 اختبارات جديدة).
   - اختبارات Android: نجاح 318 من أصل 318 اختباراً لوحدة الأندرويد (`testDebugUnitTest`).
-- **الدمج:** دُمج الفرع `feature/customer-app-functional-polish` في `master` عبر `git merge --no-ff`.
+### D47 — استبدال محرك الخرائط بـ Google Maps عبر المنظومة مع الحفاظ على الخطة المجانية 0$ (2026-10-19)
+- **الخلفية:** استبدال محركات الخرائط السابقة (MapLibre على Android و Leaflet على الويب) بمحرك خرائط غوغل (Google Maps) عبر كامل أسطح المنظومة (Android و admin-web و runner-pwa)، مع الالتزام الصارم بالخطة المجانية 0$ شهرياً (ضمن رصيد 200$ الشهري المجاني) ودون أي تغيير في آلية الـ Reverse Geocoding المعتمدة على Nominatim.
+- **التنفيذ المعماري:**
+  1. **تطبيق الأندرويد (`apps/android`):**
+     - اعتماد مكتبة Compose الرسمية `com.google.maps.android:maps-compose:4.4.1` مع تثبيت `play-services-maps:18.2.0`.
+     - استبدال `MapLibreContainer` بـ `GoogleMap` داخل [AddressSetupScreen.kt](file:///d:/FAWRUNF/FAWRUN/apps/android/app/src/main/java/com/forerun/customer/ui/address/AddressSetupScreen.kt) مع الحفاظ الكامل على كافة الوظائف وسلاسة حركة الدبوس.
+     - حقن مفتاح الأندرويد بأمان عبر `manifestPlaceholders["MAPS_API_KEY"]` وقراءته من `local.properties` أو البيئة دون أي hardcode.
+     - تحصين بناء الـ Release عبر إضافة قواعد ProGuard الصريحة لـ `com.google.android.gms.maps.**` و `com.google.maps.android.compose.**` في [proguard-rules.pro](file:///d:/FAWRUNF/FAWRUN/apps/android/app/proguard-rules.pro) وإضافة إذن `ACCESS_NETWORK_STATE` في `AndroidManifest.xml`.
+  2. **لوحة الإدارة (`apps/admin-web`):**
+     - استبدال Leaflet بـ Google Maps JavaScript API في [OrderMap.tsx](file:///d:/FAWRUNF/FAWRUN/apps/admin-web/src/components/OrderMap.tsx) مع تحميل ديناميكي للسكربت وعزل المفتاح عبر `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
+     - إضافة 4 اختبارات عقد (Contract Tests) في `OrderMap.test.tsx` للتأكد من سلوك التحميل والـ cleanup وغياب أي أثر لـ Leaflet.
+  3. **تطبيق المندوب (`apps/runner-pwa`):**
+     - استبدال Leaflet في [MapView.tsx](file:///d:/FAWRUNF/FAWRUN/apps/runner-pwa/src/components/MapView.tsx) مع قراءة المفتاح من `VITE_GOOGLE_MAPS_API_KEY`.
+     - إضافة 4 اختبارات عقد في `MapView.test.tsx` مع تنظيف حزم Leaflet غير المستخدمة من الحزمة.
+- **التحقق الميداني الصارم (Zero-Trust Field Verification):**
+  - فحص ثنائي الـ APK المترجم عبر `aapt2 dump xmltree` وإثبات حقن المفتاح الصريح بنسبة 100%.
+  - فحص شهادة التوقيع عبر `apksigner` وتأكيد بصمة الـ Release: `35:D5:F0:85:9A:BB:EB:95:23:2C:1B:E7:93:F4:FB:27:D8:2A:A9:EA`.
+  - سحب وتشخيص سجل Logcat الحي من جهاز المالك الحقيقي (PID 836) ورصد رسالة `Authorization failure` من خوادم Google، وتحديد السبب في نقص قيد بصمة الـ Release وخدمة `Maps SDK for Android`.
+  - معالجة القيد وتأكيد اختفاء الخطأ تماماً من الـ Logcat وظهور الخريطة بنجاح وتفاعلها الحي على الهاتف.
+- **بوابات الجودة (Quality Gates):**
+  - اختبارات API: 465 من أصل 465 اختباراً ناجحاً بنسبة 100%.
+  - اختبارات Android: 319 من أصل 319 اختبار وحدة ناجحاً بنسبة 100%.
+  - فحص الأنواع (Typecheck) والبناء والتدقيق (Lint): 6 من أصل 6 حزم ناجحة دون أي أخطاء.
 
 ---
 
