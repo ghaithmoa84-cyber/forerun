@@ -1399,6 +1399,7 @@ private fun StoresAndItemsCard(
             Spacer(modifier = Modifier.height(Dimens.Space12))
 
             if (stores.isNotEmpty()) {
+                var itemCounter = 1
                 stores.forEachIndexed { sIndex, store ->
                     Column(
                         modifier = Modifier
@@ -1449,21 +1450,26 @@ private fun StoresAndItemsCard(
 
                         Spacer(modifier = Modifier.height(Dimens.Space8))
                         store.items.forEach { item ->
+                            val currentNumber = itemCounter++
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "• ${item.itemName}",
+                                    text = "$currentNumber- ${item.itemName}",
                                     fontSize = 13.sp,
                                     color = ForerunTextPrimary
                                 )
-                                Text(
-                                    text = item.quantity,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = ForerunTextMuted
-                                )
+                                val trimmedQty = item.quantity.trim()
+                                val hideQty = trimmedQty.isEmpty() || trimmedQty == "1" || trimmedQty == "١"
+                                if (!hideQty) {
+                                    Text(
+                                        text = item.quantity,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = ForerunTextMuted
+                                    )
+                                }
                             }
                         }
                     }
@@ -1473,7 +1479,7 @@ private fun StoresAndItemsCard(
                 }
             } else {
                 // Fallback to items list
-                items.forEach { item ->
+                items.forEachIndexed { itemIndex, item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1481,16 +1487,20 @@ private fun StoresAndItemsCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "• ${item.itemName}",
+                            text = "${itemIndex + 1}- ${item.itemName}",
                             fontSize = 14.sp,
                             color = ForerunTextPrimary
                         )
-                        Text(
-                            text = item.quantity,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = ForerunTextMuted
-                        )
+                        val trimmedQty = item.quantity.trim()
+                        val hideQty = trimmedQty.isEmpty() || trimmedQty == "1" || trimmedQty == "١"
+                        if (!hideQty) {
+                            Text(
+                                text = item.quantity,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ForerunTextMuted
+                            )
+                        }
                     }
                 }
             }

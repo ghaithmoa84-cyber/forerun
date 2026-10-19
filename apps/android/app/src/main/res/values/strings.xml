@@ -169,7 +169,7 @@
     <string name="create_order_no_address_warning">لم تقم بتحديد عنوان توصيل بعد</string>
     <string name="create_order_set_address_now">تحديد العنوان الآن</string>
     <string name="create_order_items_section">قائمة المواد المطلوبة</string>
-    <string name="create_order_item_header">المادة رقم %1$d</string>
+    <string name="create_order_item_header">%1$d- المادة</string>
     <string name="create_order_add_item">+ إضافة مادة أخرى</string>
     <string name="create_order_item_name_label">اسم المادة</string>
     <string name="create_order_item_name_hint">مثال: بزر شمس، سكر، خبز سياحي</string>
