@@ -1191,8 +1191,6 @@ private fun RunnerCard(
 private fun OrderDetailAwaitingRunnerCard(
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(Dimens.RadiusLarge),
@@ -1252,69 +1250,6 @@ private fun OrderDetailAwaitingRunnerCard(
                         fontSize = 12.sp,
                         color = ForerunTextMuted,
                         lineHeight = 18.sp
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(Dimens.Space12))
-            HorizontalDivider(color = ForerunSoftSurface, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(Dimens.Space12))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)
-            ) {
-                Button(
-                    onClick = {
-                        val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        } catch (_: Exception) {}
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(Dimens.ButtonHeight),
-                    colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.Space4))
-                    Text(
-                        text = stringResource(R.string.home_btn_whatsapp),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        try {
-                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${AppConfig.ADMIN_SUPPORT_PHONE}")))
-                        } catch (_: Exception) {}
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(Dimens.ButtonHeight),
-                    shape = RoundedCornerShape(Dimens.RadiusMedium)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Call,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = ForerunTextPrimary
-                    )
-                    Spacer(modifier = Modifier.width(Dimens.Space4))
-                    Text(
-                        text = stringResource(R.string.home_btn_call),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ForerunTextPrimary
                     )
                 }
             }
@@ -1464,6 +1399,7 @@ private fun StoresAndItemsCard(
             Spacer(modifier = Modifier.height(Dimens.Space12))
 
             if (stores.isNotEmpty()) {
+                var itemCounter = 1
                 stores.forEachIndexed { sIndex, store ->
                     Column(
                         modifier = Modifier
@@ -1514,21 +1450,26 @@ private fun StoresAndItemsCard(
 
                         Spacer(modifier = Modifier.height(Dimens.Space8))
                         store.items.forEach { item ->
+                            val currentNumber = itemCounter++
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "• ${item.itemName}",
+                                    text = "$currentNumber- ${item.itemName}",
                                     fontSize = 13.sp,
                                     color = ForerunTextPrimary
                                 )
-                                Text(
-                                    text = item.quantity,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = ForerunTextMuted
-                                )
+                                val trimmedQty = item.quantity.trim()
+                                val hideQty = trimmedQty.isEmpty() || trimmedQty == "1" || trimmedQty == "١"
+                                if (!hideQty) {
+                                    Text(
+                                        text = item.quantity,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = ForerunTextMuted
+                                    )
+                                }
                             }
                         }
                     }
@@ -1538,7 +1479,7 @@ private fun StoresAndItemsCard(
                 }
             } else {
                 // Fallback to items list
-                items.forEach { item ->
+                items.forEachIndexed { itemIndex, item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1546,16 +1487,20 @@ private fun StoresAndItemsCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "• ${item.itemName}",
+                            text = "${itemIndex + 1}- ${item.itemName}",
                             fontSize = 14.sp,
                             color = ForerunTextPrimary
                         )
-                        Text(
-                            text = item.quantity,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = ForerunTextMuted
-                        )
+                        val trimmedQty = item.quantity.trim()
+                        val hideQty = trimmedQty.isEmpty() || trimmedQty == "1" || trimmedQty == "١"
+                        if (!hideQty) {
+                            Text(
+                                text = item.quantity,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ForerunTextMuted
+                            )
+                        }
                     }
                 }
             }

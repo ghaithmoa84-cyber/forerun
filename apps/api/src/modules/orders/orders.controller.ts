@@ -68,7 +68,7 @@ export class OrdersController {
 
   @Post('customer/orders')
   @Roles('CUSTOMER')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   async create(
     @Body(new ZodValidationPipe(CreateOrderSchema)) dto: CreateOrderRequest,
     @CurrentUser() user: { userId: string; role: string; status: string },

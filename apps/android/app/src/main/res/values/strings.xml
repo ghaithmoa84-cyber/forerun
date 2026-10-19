@@ -76,7 +76,7 @@
 
     <!-- Pending Verification -->
     <string name="pending_title">الحساب قيد المراجعة</string>
-    <string name="pending_desc">شكراً لتسجيلك في فَوْراً! حسابك الآن قيد التحقق من قِبل إدارة فَوْراً. للتفعيل يرجى ارسال  سريع مباشرة عبر واتساب.</string>
+    <string name="pending_desc">شكراً لتسجيلك في فَوْراً! حسابك بانتظار التفعيل. يُرجى العلم أن إرسال رسالة التفعيل عبر واتساب إلى إدارة فَوْراً هو شرط إلزامي لإتمام تفعيل الحساب والبدء بالطلب.</string>
     <string name="contact_whatsapp">ارسال طلب التفعيل واتساب</string>
     <string name="check_verification_status">التحقق من حالة الحساب الآن</string>
     <string name="checking_verification_status">جاري التحقق من التفعيل…</string>
@@ -169,7 +169,7 @@
     <string name="create_order_no_address_warning">لم تقم بتحديد عنوان توصيل بعد</string>
     <string name="create_order_set_address_now">تحديد العنوان الآن</string>
     <string name="create_order_items_section">قائمة المواد المطلوبة</string>
-    <string name="create_order_item_header">المادة رقم %1$d</string>
+    <string name="create_order_item_header">%1$d- المادة</string>
     <string name="create_order_add_item">+ إضافة مادة أخرى</string>
     <string name="create_order_item_name_label">اسم المادة</string>
     <string name="create_order_item_name_hint">مثال: بزر شمس، سكر، خبز سياحي</string>

@@ -902,34 +902,6 @@ private fun ActiveOrderCard(
                                 )
                             }
                         }
-
-                        // Contact Admin button when awaiting runner
-                        Button(
-                            onClick = {
-                                val url = "https://wa.me/${AppConfig.ADMIN_SUPPORT_WHATSAPP}"
-                                try {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                } catch (_: Exception) {}
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = WhatsAppGreen),
-                            shape = RoundedCornerShape(Dimens.RadiusPill),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                            modifier = Modifier.height(30.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Chat,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = stringResource(R.string.tag_via_admin),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
                     }
                 }
 

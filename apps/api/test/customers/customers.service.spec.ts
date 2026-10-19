@@ -26,6 +26,9 @@ interface MockPrisma {
   refreshToken: {
     updateMany: ReturnType<typeof vi.fn>;
   };
+  runner: {
+    findMany: ReturnType<typeof vi.fn>;
+  };
   $transaction: (cb: (tx: MockPrisma) => Promise<unknown>) => Promise<unknown>;
 }
 
@@ -95,6 +98,9 @@ describe('SEC-05 — Current password requirement on profile update', () => {
         },
         refreshToken: {
           updateMany: vi.fn(),
+        },
+        runner: {
+          findMany: vi.fn(),
         },
         $transaction: vi.fn(async (cb) => {
           return cb(mockPrisma);
@@ -248,5 +254,35 @@ describe('SEC-05 — Current password requirement on profile update', () => {
         expect.anything(),
       );
     });
+
+    describe('listAvailableRunners — fixed 5 star rating for customer', () => {
+      it('returns avgRating = 5 regardless of runner avgRating stored in DB', async () => {
+        mockPrisma.runner.findMany.mockResolvedValue([
+          {
+            id: 'run_1',
+            avgRating: 3.2,
+            totalRatings: 15,
+            status: 'AVAILABLE',
+            user: { name: 'سامر المندوب' },
+          },
+          {
+            id: 'run_2',
+            avgRating: 1.0,
+            totalRatings: 2,
+            status: 'AVAILABLE',
+            user: { name: 'عمر المندوب' },
+          },
+        ]);
+
+        const res = await service.listAvailableRunners();
+        expect(res).toHaveLength(2);
+        expect(res[0].avgRating).toBe(5);
+        expect(res[1].avgRating).toBe(5);
+        expect(res[0].name).toBe('سامر المندوب');
+        expect(res[1].name).toBe('عمر المندوب');
+      });
+    });
   });
 });
+
+
