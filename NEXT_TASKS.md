@@ -1,8 +1,21 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-20
+> **آخر تحديث:** 2026-10-21
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
+
+---
+
+## عمل معلّق بانتظار عامل خارجي (External Blocker)
+
+### تفعيل CORS_ORIGINS للدومين الجديد على Railway
+- **السبب:** عطل منصة Railway العالمي بتاريخ 2026-10-21 (لوحة التحكم / API / CLI معطّلة، وعمليات البناء الجديدة متوقفة في كافة المناطق: Builds paused).
+- **الإجراء المطلوب:** فور استعادة خدمة Railway للعمل، ادخل إلى Railway Console ← مشروع FORERUN ← خدمة `api` ← تبويب `Variables` ← عدّل متغير `CORS_ORIGINS`.
+- **القيمة الجاهزة كاملة للصق المباشر في Railway Variables فور عودة الخدمة:**
+  ```text
+  https://admin.faow.run,https://runner.faow.run,https://faow.run,https://www.faow.run,https://fawrun-admin.vercel.app,https://fawrun-runner-pwa-steel.vercel.app,https://fawrun-customer-web-three.vercel.app
+  ```
+- ⚠️ **تحذير صريح:** الروابط الرسمية الجديدة (`admin.faow.run`, `runner.faow.run`, `faow.run`) **منشورة لكن غير وظيفية حتى تُنفَّذ هذه الخطوة** (محظورة بمتصفحات المستخدمين بسبب سياسة CORS حتى يُحدَّث الـ Backend) — **لا تُوزَّع لمستخدمين حقيقيين قبلها**.
 
 ---
 
