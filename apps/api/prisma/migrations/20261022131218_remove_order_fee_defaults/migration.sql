@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ALTER COLUMN "baseFee" DROP DEFAULT,
+ALTER COLUMN "totalFee" DROP DEFAULT;

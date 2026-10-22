@@ -124,10 +124,10 @@ model Order {
   deliveryLng       Float
   deliveryDesc      String
   isPeripheral      Boolean         @default(false)
-  baseFee           Int             @default(60)
+  baseFee           Int
   peripheralFee     Int             @default(0)
   extraStoresFee    Int             @default(0)
-  totalFee          Int             @default(60)
+  totalFee          Int
   preferredRunnerId String?
   waitForPreferred  Boolean         @default(false)
   notes             String?
