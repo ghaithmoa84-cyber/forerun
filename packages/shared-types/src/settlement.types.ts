@@ -22,8 +22,6 @@ export const SettlementItemSchema = z.object({
   settlementId: z.string(),
   orderId: z.string(),
   orderFee: z.number().int(),
-  runnerShare: z.number().int(),
-  platformShare: z.number().int(),
 });
 
 export type SettlementItem = z.infer<typeof SettlementItemSchema>;
@@ -38,8 +36,6 @@ export const SettlementSchema = z.object({
   status: z.enum(SETTLEMENT_STATUS_VALUES),
   totalOrders: z.number().int(),
   totalFees: z.number().int(),
-  runnerShare: z.number().int(),
-  platformShare: z.number().int(),
   notes: z.string().nullable(),
   closedAt: z.date().nullable(),
   closedByAdminId: z.string().nullable(),
@@ -84,8 +80,6 @@ export const RunnerSettlementSchema = z.object({
   status: z.enum(['PENDING', 'SETTLED']),
   totalOrders: z.number().int(),
   totalFees: z.number().int(),
-  runnerShare: z.number().int(),
-  platformShare: z.number().int(),
 });
 
 export type RunnerSettlement = z.infer<typeof RunnerSettlementSchema>;
