@@ -1,6 +1,6 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-21
+> **آخر تحديث:** 2026-10-22
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
@@ -22,6 +22,7 @@
 ## حالة فروع العمل وشجرة الكود (Branch Status)
 
 - ✅ **لا توجد فروع معلّقة حالياً بانتظار الدمج:** كافة الفروع منتهية ومدموجة محلياً في `master` بانتظار إذن git push للإنتاج.
+  - دفعة الديون الآمنة الأربعة (D12، C-7، 6B-6، 6B-7) دُمجت جميعاً في `master` عبر `git merge --no-ff` (القرار D48 — مع 472/472 اختبارات API و319/319 اختبارات Android، وإثبات إقلاع DI الحي بدون أخطاء).
   - صقل وتحديث نصوص بطاقات الخدمات وتصغير أيقونة التطبيق (`feature/services-cards-copy-polish`) دُمجت في `master` (مع 465/465 اختبارات API و319/319 اختبارات Android).
   - هجرة محرك الخرائط إلى Google Maps (`feature/google-maps-migration`) دُمجت في `master` (القرار D47 — مع 465/465 اختبارات API و319/319 اختبارات Android، وتأكيد عملي على هاتف حقيقي).
   - دفعة صقل وظائف تطبيق العميل والـ API (`feature/customer-app-functional-polish`) دُمجت في `master` (القرار D46 — مع 465/465 اختبارات API و318/318 اختبارات Android).
@@ -137,7 +138,7 @@
 
 > **ديون فنية مؤجلة بقرارات معتمدة:**
 > 1. **حذف `@default(60)` من `baseFee` و`totalFee`:** يُنفَّذ كـ migration مستقل لاحق لتفادي خلط التعديلات (القرار D19).
-> 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500`:** حساب صحيح لحماية الحصص وتفادي انحرافات الفواصل (القرار D12).
+> 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500` (القرار D12):** ✅ أُغلق بالحذف النهائي (لا الترقية) — تم حذف كود الحصص الميت (`splitShares`، `RUNNER_SHARE`، `PLATFORM_SHARE`) كلياً في الفرع الأول من دفعة الديون (القرار D48).
 
 ### سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid) — ✅ مُكتمل
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
@@ -147,8 +148,8 @@
 | 6B-3 | إضافة customFee/customFeeReason في Android OrderDetailDtos.kt + واجهة العرض | عالية | ✅ **مُنجَز** | @feature-dev | مدمج في 86ac39a — DTO + domain model + mapper + PricingCard + strings.xml |
 | 6B-4 | تعديل نص strings.xml:359 («ثابتة» + «60 ل.س» → مرن) | متوسطة | ✅ **مُنجَز** | @feature-dev | مدمج في 86ac39a — النص يصف التسعير الديناميكي |
 | 6B-5 | إضافة estimatedFee.customFee في حمولة order:assigned للمندوب | متوسطة | ✅ **مُنجَز** | @feature-dev | مدمج في aaf2d8 — WebSocket payload يحمل customFee/customFeeReason |
-| 6B-6 | اختبارات وحدة مخصصة لـ DeviceToken | منخفضة | ⏸️ مؤجل | @test-engineer | لم يُنفَّذ — تغطية CRUD DeviceToken و FCM integration |
-| 6B-7 |,rightن TTL في PricingService بدل دوال *ForTesting | منخفضة | ⏸️ مؤجل | @feature-dev | لم يُنفَّذ — تحسين قابلية الاختبار وإزالة دوال الاختبار الخاصة |
+| 6B-6 | اختبارات وحدة مخصصة لـ DeviceToken | منخفضة | ✅ **مُنجَز** | @test-engineer | تم إنشاء 15 اختبار وحدة لـ DeviceToken CRUD و+5 اختبارات لـ FCM integration بنجاح ومدموج في master (القرار D48) |
+| 6B-7 | حقن TTL في PricingService بدل دوال *ForTesting | منخفضة | ✅ **مُنجَز** | @feature-dev | تم استبدال دوال الاختبار بحقن PricingCacheOptions عبر @Optional() مع فحص DI وقت التشغيل بنجاح ومدموج في master (القرار D48) |
 
 ---
 
