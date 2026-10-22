@@ -165,4 +165,224 @@ describe('FcmService', () => {
       expect.any(Error),
     );
   });
+
+  it('5. should construct valid MulticastMessage and not delete tokens on 100% success', async () => {
+    mockConfigService.get = vi.fn((key: string) => {
+      if (key === 'FIREBASE_SERVICE_ACCOUNT_JSON') {
+        return JSON.stringify({
+          projectId: 'test-project',
+          privateKey: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+          clientEmail: 'test@test.iam.gserviceaccount.com',
+        });
+      }
+      return undefined;
+    });
+
+    const service = new FcmService(
+      mockConfigService as unknown as ConfigService,
+      mockPrisma as unknown as PrismaService,
+    );
+    service.onModuleInit();
+
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { id: '1', token: 'token-alpha' },
+      { id: '2', token: 'token-beta' },
+    ]);
+
+    mockSendEachForMulticast.mockResolvedValue({
+      responses: [
+        { success: true },
+        { success: true },
+      ],
+    });
+
+    await service.sendToUser('user-1', {
+      title: 'طلبك قيد التوصيل 🛵',
+      body: 'المندوب في طريقه إليك',
+      orderId: 'ord-555',
+      type: 'order:status_changed',
+      data: { customMeta: 'extra_info' },
+    });
+
+    expect(mockSendEachForMulticast).toHaveBeenCalledWith({
+      tokens: ['token-alpha', 'token-beta'],
+      notification: {
+        title: 'طلبك قيد التوصيل 🛵',
+        body: 'المندوب في طريقه إليك',
+      },
+      data: {
+        title: 'طلبك قيد التوصيل 🛵',
+        body: 'المندوب في طريقه إليك',
+        customMeta: 'extra_info',
+        orderId: 'ord-555',
+        type: 'order:status_changed',
+        notification_type: 'order:status_changed',
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'forerun_orders_channel',
+          sound: 'default',
+        },
+      },
+    });
+
+    expect(mockPrisma.deviceToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('6. should swallow network error (best-effort D7/D8) and not delete tokens when multicast rejects', async () => {
+    mockConfigService.get = vi.fn((key: string) => {
+      if (key === 'FIREBASE_SERVICE_ACCOUNT_JSON') {
+        return JSON.stringify({
+          projectId: 'test-project',
+          privateKey: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+          clientEmail: 'test@test.iam.gserviceaccount.com',
+        });
+      }
+      return undefined;
+    });
+
+    const service = new FcmService(
+      mockConfigService as unknown as ConfigService,
+      mockPrisma as unknown as PrismaService,
+    );
+    service.onModuleInit();
+
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { id: '1', token: 'valid-tok' },
+    ]);
+
+    mockSendEachForMulticast.mockRejectedValue(
+      new Error('getaddrinfo ENOTFOUND fcm.googleapis.com'),
+    );
+
+    await expect(
+      service.sendToUser('user-1', {
+        title: 'Title',
+        body: 'Body',
+      }),
+    ).resolves.not.toThrow();
+
+    expect(loggerErrorSpy).toHaveBeenCalledWith(
+      'Failed to send FCM notification to user user-1',
+      expect.objectContaining({ message: 'getaddrinfo ENOTFOUND fcm.googleapis.com' }),
+    );
+    expect(mockPrisma.deviceToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('7. should prune token with messaging/invalid-registration-token error code', async () => {
+    mockConfigService.get = vi.fn((key: string) => {
+      if (key === 'FIREBASE_SERVICE_ACCOUNT_JSON') {
+        return JSON.stringify({
+          projectId: 'test-project',
+          privateKey: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+          clientEmail: 'test@test.iam.gserviceaccount.com',
+        });
+      }
+      return undefined;
+    });
+
+    const service = new FcmService(
+      mockConfigService as unknown as ConfigService,
+      mockPrisma as unknown as PrismaService,
+    );
+    service.onModuleInit();
+
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { id: '1', token: 'corrupted-syntax-token' },
+    ]);
+
+    mockSendEachForMulticast.mockResolvedValue({
+      responses: [
+        { success: false, error: { code: 'messaging/invalid-registration-token' } },
+      ],
+    });
+
+    await service.sendToUser('user-1', {
+      title: 'Title',
+      body: 'Body',
+    });
+
+    expect(mockPrisma.deviceToken.deleteMany).toHaveBeenCalledWith({
+      where: { token: { in: ['corrupted-syntax-token'] } },
+    });
+  });
+
+  it('8. should NOT prune token on temporary server error (e.g. messaging/internal-error)', async () => {
+    mockConfigService.get = vi.fn((key: string) => {
+      if (key === 'FIREBASE_SERVICE_ACCOUNT_JSON') {
+        return JSON.stringify({
+          projectId: 'test-project',
+          privateKey: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+          clientEmail: 'test@test.iam.gserviceaccount.com',
+        });
+      }
+      return undefined;
+    });
+
+    const service = new FcmService(
+      mockConfigService as unknown as ConfigService,
+      mockPrisma as unknown as PrismaService,
+    );
+    service.onModuleInit();
+
+    mockPrisma.deviceToken.findMany.mockResolvedValue([
+      { id: '1', token: 'good-token-temporary-failure' },
+    ]);
+
+    mockSendEachForMulticast.mockResolvedValue({
+      responses: [
+        { success: false, error: { code: 'messaging/internal-error' } },
+      ],
+    });
+
+    await service.sendToUser('user-1', {
+      title: 'Title',
+      body: 'Body',
+    });
+
+    expect(mockPrisma.deviceToken.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('9. should accurately filter only invalid tokens in mixed batch of successes, invalid tokens, and server errors', async () => {
+    mockConfigService.get = vi.fn((key: string) => {
+      if (key === 'FIREBASE_SERVICE_ACCOUNT_JSON') {
+        return JSON.stringify({
+          projectId: 'test-project',
+          privateKey: '-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
+          clientEmail: 'test@test.iam.gserviceaccount.com',
+        });
+      }
+      return undefined;
+    });
+
+    const service = new FcmService(
+      mockConfigService as unknown as ConfigService,
+      mockPrisma as unknown as PrismaService,
+    );
+    service.onModuleInit();
+
+    const tokens = ['tok-ok', 'tok-unregistered', 'tok-invalid', 'tok-quota-error'];
+    mockPrisma.deviceToken.findMany.mockResolvedValue(
+      tokens.map((token, index) => ({ id: `${index + 1}`, token })),
+    );
+
+    mockSendEachForMulticast.mockResolvedValue({
+      responses: [
+        { success: true },
+        { success: false, error: { code: 'messaging/registration-token-not-registered' } },
+        { success: false, error: { code: 'messaging/invalid-registration-token' } },
+        { success: false, error: { code: 'messaging/quota-exceeded' } },
+      ],
+    });
+
+    await service.sendToUser('user-1', {
+      title: 'Batch test',
+      body: 'Body',
+    });
+
+    expect(mockPrisma.deviceToken.deleteMany).toHaveBeenCalledWith({
+      where: { token: { in: ['tok-unregistered', 'tok-invalid'] } },
+    });
+  });
 });
