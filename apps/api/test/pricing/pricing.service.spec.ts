@@ -599,8 +599,6 @@ describe('PricingService', () => {
     });
 
     it('returns fallback when row contains negative or non-integer values', async () => {
-      service.disableCacheForTesting();
-
       // Case 1: negative baseFee
       prisma.platformPricing.findUnique.mockResolvedValue({
         id: 'default',
@@ -634,8 +632,15 @@ describe('PricingService', () => {
       });
     });
 
-    it('caches config in-memory for TTL duration (two calls within 30s make one DB query)', async () => {
-      service.enableCacheForTesting(30_000);
+    it('caches config in-memory for TTL duration (two calls within 30s make one DB query, expired call re-queries)', async () => {
+      let currentTime = 1_000_000;
+      const ttlService = new PricingService(
+        prisma as unknown as PrismaService,
+        auditService as unknown as AuditService,
+        notificationsService as unknown as NotificationsService,
+        { ttlMs: 30_000, clock: () => currentTime },
+      );
+
       prisma.platformPricing.findUnique.mockResolvedValue({
         id: 'default',
         baseFee: 75,
@@ -643,15 +648,29 @@ describe('PricingService', () => {
         extraStoreFee: 15,
       });
 
-      const config1 = await service.getPricingConfig();
-      const config2 = await service.getPricingConfig();
-
-      expect(config1).toEqual(config2);
+      const config1 = await ttlService.getPricingConfig();
       expect(prisma.platformPricing.findUnique).toHaveBeenCalledTimes(1);
+
+      // Call within 30s TTL (+10s) -> cache hit, no new DB query
+      currentTime += 10_000;
+      const config2 = await ttlService.getPricingConfig();
+      expect(config2).toEqual(config1);
+      expect(prisma.platformPricing.findUnique).toHaveBeenCalledTimes(1);
+
+      // Call past 30s TTL (+31s total from start) -> cache expired, re-queries DB
+      currentTime += 21_000;
+      const config3 = await ttlService.getPricingConfig();
+      expect(config3).toEqual(config1);
+      expect(prisma.platformPricing.findUnique).toHaveBeenCalledTimes(2);
     });
 
-    it('bypasses cache when disableCacheForTesting is called', async () => {
-      service.disableCacheForTesting();
+    it('bypasses cache when ttlMs is configured to 0', async () => {
+      const zeroTtlService = new PricingService(
+        prisma as unknown as PrismaService,
+        auditService as unknown as AuditService,
+        notificationsService as unknown as NotificationsService,
+        { ttlMs: 0 },
+      );
       prisma.platformPricing.findUnique.mockResolvedValue({
         id: 'default',
         baseFee: 75,
@@ -659,8 +678,8 @@ describe('PricingService', () => {
         extraStoreFee: 15,
       });
 
-      await service.getPricingConfig();
-      await service.getPricingConfig();
+      await zeroTtlService.getPricingConfig();
+      await zeroTtlService.getPricingConfig();
 
       expect(prisma.platformPricing.findUnique).toHaveBeenCalledTimes(2);
     });
@@ -906,7 +925,6 @@ describe('PricingService', () => {
 
   describe('pricing wired from PlatformPricing row (Sprint 6A-3.1b)', () => {
     it('previewFee reads extraStoreFee from the DB row (3 stores, row extraStoreFee=30 -> 60)', async () => {
-      service.disableCacheForTesting();
       prisma.platformPricing.findUnique.mockResolvedValue({
         id: 'default',
         baseFee: 80,
@@ -936,7 +954,6 @@ describe('PricingService', () => {
     });
 
     it('previewFee keeps the order baseFee snapshot when dto.baseFee is absent, even if the row differs (D21)', async () => {
-      service.disableCacheForTesting();
       prisma.platformPricing.findUnique.mockResolvedValue({
         id: 'default',
         baseFee: 500,

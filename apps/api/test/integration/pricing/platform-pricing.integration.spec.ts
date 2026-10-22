@@ -29,7 +29,7 @@ describe('PlatformPricing Integration (Sprint 6A Phase 1)', () => {
   });
 
   it('PricingService.getPricingConfig reads the default row from test DB correctly', async () => {
-    pricingService.disableCacheForTesting();
+    pricingService.clearCache();
     const config = await pricingService.getPricingConfig();
 
     expect(config).toEqual({
