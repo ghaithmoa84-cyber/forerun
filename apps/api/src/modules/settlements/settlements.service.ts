@@ -45,8 +45,6 @@ export interface CloseDayResult {
     status: string;
     totalOrders: number;
     totalFees: number;
-    runnerShare: number;
-    platformShare: number;
     notes: string | null;
     closedAt: Date | null;
     closedByAdminId: string | null;
@@ -135,21 +133,15 @@ export class SettlementsService {
     runnerOrders: Array<{ id: string; totalFee: number }>,
   ): {
     totalFees: number;
-    runnerShare: number;
-    platformShare: number;
     items: Array<{
       orderId: string;
       orderFee: number;
-      runnerShare: number;
-      platformShare: number;
     }>;
   } {
     let totalFees = 0;
     const items: Array<{
       orderId: string;
       orderFee: number;
-      runnerShare: number;
-      platformShare: number;
     }> = [];
 
     for (const order of runnerOrders) {
@@ -158,15 +150,10 @@ export class SettlementsService {
       items.push({
         orderId: order.id,
         orderFee: fee,
-        runnerShare: 0,
-        platformShare: fee,
       });
     }
 
-    // D26 / D28: المندوب موظف براتب ثابت خارج التطبيق، وبالتالي حصة المندوب = 0
-    // وكامل الرسوم تؤول إحصائياً للمنصة (platformShare = totalFees في Settlement و orderFee في SettlementItem).
-    // هذا يضمن التطابق التام بين رأس Settlement وبنود SettlementItem.
-    return { totalFees, runnerShare: 0, platformShare: totalFees, items };
+    return { totalFees, items };
   }
 
   /**
@@ -179,14 +166,10 @@ export class SettlementsService {
       operationalDate: string;
       totalOrders: number;
       totalFees: number;
-      runnerShare: number;
-      platformShare: number;
       notes: string | null;
       items: Array<{
         orderId: string;
         orderFee: number;
-        runnerShare: number;
-        platformShare: number;
       }>;
     },
   ) {
@@ -195,8 +178,6 @@ export class SettlementsService {
       operationalDate,
       totalOrders,
       totalFees,
-      runnerShare,
-      platformShare,
       notes,
       items,
     } = params;
@@ -207,8 +188,6 @@ export class SettlementsService {
         operationalDate,
         totalOrders,
         totalFees,
-        runnerShare,
-        platformShare,
         notes,
       },
     });
@@ -218,8 +197,6 @@ export class SettlementsService {
         settlementId: settlement.id,
         orderId: item.orderId,
         orderFee: item.orderFee,
-        runnerShare: item.runnerShare,
-        platformShare: item.platformShare,
       })),
     });
 
@@ -318,8 +295,6 @@ export class SettlementsService {
             operationalDate,
             totalOrders: runnerOrders.length,
             totalFees: calculated.totalFees,
-            runnerShare: calculated.runnerShare,
-            platformShare: calculated.platformShare,
             notes,
             items: calculated.items,
           });
@@ -385,7 +360,7 @@ export class SettlementsService {
         data: {
           runnerId: settlement.runnerId,
           type: 'SETTLEMENT_PAID',
-          amount: settlement.platformShare,
+          amount: settlement.totalFees,
           description: `Settlement ${id} settled for ${settlement.operationalDate}`,
         },
       });
@@ -465,8 +440,6 @@ export class SettlementsService {
       status: settlement.status,
       totalOrders: settlement.totalOrders,
       totalFees: settlement.totalFees,
-      runnerShare: settlement.runnerShare,
-      platformShare: settlement.platformShare,
     }));
 
     return {
@@ -516,8 +489,8 @@ export class SettlementsService {
         status: settlement.status as RunnerCurrentSettlement['status'],
         totalOrders: settlement.totalOrders,
         totalFees: settlement.totalFees,
-        estimatedRunnerShare: settlement.runnerShare,
-        estimatedPlatformShare: settlement.platformShare,
+        estimatedRunnerShare: 0,
+        estimatedPlatformShare: settlement.totalFees,
         orders,
       };
     }

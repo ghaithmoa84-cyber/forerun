@@ -253,8 +253,6 @@ model Settlement {
   status          SettlementStatus @default(PENDING)
   totalOrders     Int
   totalFees       Int
-  runnerShare     Int
-  platformShare   Int
   notes           String?
   closedAt        DateTime?
   closedByAdminId String?
@@ -272,8 +270,6 @@ model SettlementItem {
   settlementId  String
   orderId       String     @unique
   orderFee      Int
-  runnerShare   Int
-  platformShare Int
   order         Order      @relation(fields: [orderId], references: [id])
   settlement    Settlement @relation(fields: [settlementId], references: [id])
 }
