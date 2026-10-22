@@ -1321,9 +1321,9 @@ describe('PricingService', () => {
       // Strict check: no leaked internal fields
       const keys = Object.keys(result);
       expect(keys.sort()).toEqual(['baseFee', 'extraStoreFee', 'peripheralFee']);
-      expect((result as any).id).toBeUndefined();
-      expect((result as any).updatedAt).toBeUndefined();
-      expect((result as any).updatedByUserId).toBeUndefined();
+      expect((result as Record<string, unknown>).id).toBeUndefined();
+      expect((result as Record<string, unknown>).updatedAt).toBeUndefined();
+      expect((result as Record<string, unknown>).updatedByUserId).toBeUndefined();
     });
 
     it('falls back to DEFAULT_PRICING_CONFIG if DB row is missing', async () => {

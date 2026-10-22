@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { prisma } from '../setup';
 import { PricingService } from '../../../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../../../src/database/prisma.service';
