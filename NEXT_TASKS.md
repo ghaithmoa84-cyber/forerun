@@ -100,13 +100,13 @@
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |
 |---|---|---|---|---|---|
 | C-1 | مراجعة `getEntriesByRunner` (`ledger.service.ts:145`) — إما rename أو حذف | منخفضة | ✅ مُنجَز | @code-architect | حُذفت بالكامل كـ Dead Code بموجب D25 ودُمجت في master بـ `a71e421` (415/415 اختبار حي). |
-| C-2 | تنظيف عمودَي `runnerShare` و `platformShare` من جدولي `Settlement` و `SettlementItem` في migration مستقل بعد MVP | منخفضة | ⏳ مؤجل لما بعد MVP | @code-architect | حقول إرثية (Legacy) أصبحت ثابتة (0 و totalFees) بموجب D26 لتجنب تعديل schema في MVP |
+| C-2 | تنظيف عمودَي `runnerShare` و `platformShare` من جدولي `Settlement` و `SettlementItem` في migration مستقل بعد MVP | منخفضة | ✅ مُنجَز ومدمج محلياً | @code-architect | حُذفت الأعمدة وهجرة `20261022132205_remove_legacy_share_columns` جاهزة للنشر في Railway (D49). |
 | C-3 | AddressSetupScreen — تحويل `mapLoadError` من `remember` إلى `rememberSaveable` (بحفظ مفتاح `R.string` بدل النص) لتجنب فقدان رسالة الخطأ عند التدوير | منخفضة | ✅ مُنجَز | @android-dev | تحويلها إلى `@StringRes Int?` عبر `rememberSaveable` ودُمجت في master بـ `a71e421` (318/318 اختبار وحدة). |
 | C-4 | معالجة انحراف الـ migrations التاريخية في جداول (DeviceToken, LedgerEntry, OrderStore, RefreshToken, Settlement) عبر baseline migration مستقل لما بعد 7A | منخفضة | ✅ مُنجَز | @code-architect | تم إنشاء الهجرة 20261007120000_reconcile_token_defaults ومطابقة schema.prisma مع التاريخ (D31). |
 | C-5 | طبقة تحويل (Mapping Layer) في Android عبر `BannerRouteMapper` مع 7 اختبارات وحدة وربطها بالواجهة | متوسطة | ✅ مُنجَز | @android-dev | تم التنفيذ في `BannerRouteMapper` والدمج في `master` من `feature/banners-client-android` |
 | C-6 | فحص الـ Drift عبر نقطة تشخيصية في بيئة الإنتاج | منخفضة | ✅ مُنجَز | Ops / @code-architect | تم بناء GET /admin/system/schema-drift مع Throttle مزدوج وAuditLog وتحديث runbook. |
 | C-7 | توحيد onError في MapLibreContainer ليُرجع معرّف مورد نصي (@StringRes) بدل نص الاستثناء الخام (String) | منخفضة | ⊘ ملغى | @android-dev | ملغى — الكود المعني حُذف بالكامل ضمن D47 migration (استبدال محرك الخرائط بـ Google Maps، 2026-10-19)؛ لم يعد قابلاً للتطبيق. |
-| C-8 | توحيد عقد استجابة cancelOrder: إما تعديل Backend لإرجاع success/message فعلياً، أو تعديل Android DTO ليعكس الحقول الحقيقية المُرجَعة (id, orderNumber, status, cancelledAt) بدل الاعتماد على defaults وهمية | منخفضة | ⏳ معلّق | @feature-dev | اكتُشف أثناء تدقيق Nullability الشامل (2026-10-17)؛ لا خطر Crash، لكنه عقد صامت قد يُضلل أي استهلاك مستقبلي لـ success/message |
+| C-8 | توحيد عقد استجابة cancelOrder: إما تعديل Backend لإرجاع success/message فعلياً، أو تعديل Android DTO ليعكس الحقول الحقيقية المُرجَعة (id, orderNumber, status, cancelledAt) بدل الاعتماد على defaults وهمية | منخفضة | ✅ مُنجَز ومدمج محلياً | @feature-dev | تم تعديل `CancelOrderResponseDto` في Android لدعم العقد الحقيقي مع التوافق العكسي الكامل واختبارات وحدة 322/322 (D49). |
 | P-ORD-FILTER-1 | دعم فلترة المجموعات (ACTIVE) في GET /customer/orders | متوسطة | ⏳ مؤجل إلى Sprint 11 | @backend-dev | تطلّب تعديل API لدعم مصفوفة أو حالة مركّبة لـ ACTIVE بدل Enum مفرد (مستبعد من Sprint 9) |
 
 ### مهام المراقبة بعد النشر (Post-Deployment Monitoring)
@@ -137,7 +137,7 @@
 | 6A-3.1b | **ربط `getPricingConfig` بالمسارات الإنتاجية** (إنشاء الطلب / الاعتماد / recalculate) | ✅ **مُنجَز في `0b9a88b`** | @feature-dev | آخر خطوة في 6A: `previewFee` و`recalculateFee` و`approveOrder` و`createOrder` تقرأ صف `PlatformPricing` فعليًا (القرارات D21/D22/D23)، مع بقاء `baseFee` لقطةً للطلب عند الاعتماد. +9 اختبارات وحدة و+6 اختبارات تكامل (S2) ⇒ **355 وحدة + 44 تكامل**. جاهز لبوابة الدمج `git merge --no-ff` (والمالك فقط). |
 
 > **ديون فنية مؤجلة بقرارات معتمدة:**
-> 1. **حذف `@default(60)` من `baseFee` و`totalFee`:** يُنفَّذ كـ migration مستقل لاحق لتفادي خلط التعديلات (القرار D19).
+> 1. **حذف `@default(60)` من `baseFee` و`totalFee` (القرار D19):** ✅ مُنجَز ومدمج محلياً في master وهجرة `20261022131218_remove_order_fee_defaults` جاهزة للنشر في Railway (القرار D49).
 > 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500` (القرار D12):** ✅ أُغلق بالحذف النهائي (لا الترقية) — تم حذف كود الحصص الميت (`splitShares`، `RUNNER_SHARE`، `PLATFORM_SHARE`) كلياً في الفرع الأول من دفعة الديون (القرار D48).
 
 ### سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid) — ✅ مُكتمل
