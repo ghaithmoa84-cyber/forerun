@@ -186,19 +186,6 @@ describe('PricingService', () => {
         ),
       ).toThrow('purchasedStoreCount must be a non-negative integer');
     });
-
-    it('verifies fee sharing formulas floor(75%) and ceil(25%) without rounding loss', () => {
-      // Test across multiple total fee values
-      const testFees = [60, 75, 80, 85, 90, 100, 115, 120, 135];
-      for (const fee of testFees) {
-        const runnerShare = Math.floor(fee * PRICING.RUNNER_SHARE);
-        const platformShare = Math.ceil(fee * PRICING.PLATFORM_SHARE);
-
-        expect(runnerShare).toBe(Math.floor(fee * 0.75));
-        expect(platformShare).toBe(Math.ceil(fee * 0.25));
-        expect(runnerShare + platformShare).toBeGreaterThanOrEqual(fee);
-      }
-    });
   });
 
   describe('recalculateFee', () => {
@@ -758,7 +745,6 @@ describe('PricingService', () => {
       const result = await service.recalculateFee('ord-custom-1');
 
       // newFee: base=60 + peripheral=0 + extra=20 + custom=50 -> total=130
-      // splitShares(130): runner=97, platform=33
       expect(result.feeChanged).toBe(true);
       expect(result.newFee.baseFee).toBe(60);
       expect(result.newFee.extraStoresFee).toBe(20);
@@ -825,7 +811,7 @@ describe('PricingService', () => {
       });
     });
 
-    it('previews fee for peripheral order with customFee=50 (matches splitShares)', async () => {
+    it('previews fee for peripheral order with customFee=50', async () => {
       const mockOrder = {
         id: 'ord-prev-2',
         isPeripheral: false, // will be overridden by dto
@@ -841,7 +827,6 @@ describe('PricingService', () => {
       });
 
       // total = base 60 + peripheral 40 + extraStores 0 + custom 50 = 150
-      // splitShares(150): runner = 112 (floor(150*0.75)), platform = 38 (ceil(150*0.25))
       expect(result).toEqual({
         baseFee: 60,
         peripheralFee: 40,

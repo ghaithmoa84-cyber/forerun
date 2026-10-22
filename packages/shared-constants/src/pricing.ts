@@ -1,16 +1,7 @@
-/** @deprecated D28: نسب الحصص أُلغيت في MVP. المندوب موظف براتب ثابت. */
-export const RUNNER_SHARE = 0.75;
-/** @deprecated D28 */
-export const PLATFORM_SHARE = 0.25;
-
 export const PRICING = {
   BASE_FEE: 60,
   PERIPHERAL_FEE: 40,
   EXTRA_STORE_FEE: 20,
-  /** @deprecated D28 */
-  RUNNER_SHARE,
-  /** @deprecated D28 */
-  PLATFORM_SHARE,
 } as const;
 
 export const DEFAULT_PRICING_CONFIG = {
