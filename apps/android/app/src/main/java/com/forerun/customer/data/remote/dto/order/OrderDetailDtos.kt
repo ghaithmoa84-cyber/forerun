@@ -95,8 +95,10 @@ data class OrderRunnerDetailDto(
 
 @JsonClass(generateAdapter = true)
 data class CancelOrderResponseDto(
-    @Json(name = "success") val success: Boolean = true,
-    @Json(name = "message") val message: String? = null
+    @Json(name = "id") val id: String,
+    @Json(name = "orderNumber") val orderNumber: String,
+    @Json(name = "status") val status: String,
+    @Json(name = "cancelledAt") val cancelledAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)

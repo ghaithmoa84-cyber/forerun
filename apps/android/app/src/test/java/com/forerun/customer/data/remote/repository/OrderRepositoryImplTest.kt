@@ -44,7 +44,14 @@ class OrderRepositoryImplTest {
                 createdAt = "2026-10-01T10:00:00Z"
             )
         )
-        var cancelOrderResult: ApiResponse<CancelOrderResponseDto> = ApiResponse.Success(CancelOrderResponseDto())
+        var cancelOrderResult: ApiResponse<CancelOrderResponseDto> = ApiResponse.Success(
+            CancelOrderResponseDto(
+                id = "order_123",
+                orderNumber = "FW-000001",
+                status = "CANCELLED",
+                cancelledAt = "2026-10-22T12:00:00Z"
+            )
+        )
         var getPricingDisclosureResult: ApiResponse<com.forerun.customer.data.remote.dto.pricing.CustomerPricingDisclosureDto> =
             ApiResponse.Success(
                 com.forerun.customer.data.remote.dto.pricing.CustomerPricingDisclosureDto(
