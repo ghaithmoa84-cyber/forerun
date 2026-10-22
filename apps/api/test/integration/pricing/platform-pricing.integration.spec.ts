@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { prisma } from '../setup';
 import { PricingService } from '../../../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../../../src/database/prisma.service';
@@ -29,7 +29,7 @@ describe('PlatformPricing Integration (Sprint 6A Phase 1)', () => {
   });
 
   it('PricingService.getPricingConfig reads the default row from test DB correctly', async () => {
-    pricingService.disableCacheForTesting();
+    pricingService.clearCache();
     const config = await pricingService.getPricingConfig();
 
     expect(config).toEqual({

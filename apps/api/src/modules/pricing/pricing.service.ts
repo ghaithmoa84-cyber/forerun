@@ -1,5 +1,7 @@
 import {
   Injectable,
+  Inject,
+  Optional,
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -58,37 +60,42 @@ export interface RecalculateFeeResult {
   } | null;
 }
 
+export const PRICING_CACHE_OPTIONS = 'PRICING_CACHE_OPTIONS';
+
+export interface PricingCacheOptions {
+  /**
+   * In-memory cache TTL in milliseconds.
+   * Default: 30_000 (30 seconds, Decision D23).
+   * Setting to 0 disables in-memory caching.
+   */
+  ttlMs?: number;
+  /**
+   * Clock function returning the current time in ms.
+   * Default: () => Date.now().
+   * Injected for deterministic TTL testing without altering production behavior.
+   */
+  clock?: () => number;
+}
+
 @Injectable()
 export class PricingService {
   private readonly logger = new Logger(PricingService.name);
 
-  // In-memory cache for pricing config with 30s TTL
+  // In-memory cache for pricing config with 30s TTL (D23)
   private cachedConfig: { config: PricingConfig; expiresAt: number } | null = null;
-  private cacheTtlMs = 30_000;
-  private cacheEnabled = true;
+  private readonly cacheTtlMs: number;
+  private readonly clock: () => number;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
-  ) {}
-
-  /**
-   * Helper methods for controlling the cache during testing
-   */
-  disableCacheForTesting(): void {
-    this.cacheEnabled = false;
-    this.cachedConfig = null;
-  }
-
-  enableCacheForTesting(ttlMs: number = 30_000): void {
-    this.cacheEnabled = true;
-    this.cacheTtlMs = ttlMs;
-    this.cachedConfig = null;
-  }
-
-  clearCacheForTesting(): void {
-    this.cachedConfig = null;
+    @Optional()
+    @Inject(PRICING_CACHE_OPTIONS)
+    cacheOptions?: PricingCacheOptions,
+  ) {
+    this.cacheTtlMs = cacheOptions?.ttlMs ?? 30_000;
+    this.clock = cacheOptions?.clock ?? (() => Date.now());
   }
 
   /**
@@ -416,9 +423,10 @@ export class PricingService {
   async getPricingConfig(
     tx?: Prisma.TransactionClient,
   ): Promise<PricingConfig> {
-    const now = Date.now();
-    // Cache hit: only when no transaction is provided and cache is enabled & unexpired
-    if (!tx && this.cacheEnabled && this.cachedConfig && this.cachedConfig.expiresAt > now) {
+    const now = this.clock();
+    const isCacheActive = this.cacheTtlMs > 0;
+    // Cache hit: only when no transaction is provided, cache is active (ttlMs > 0), and unexpired
+    if (!tx && isCacheActive && this.cachedConfig && this.cachedConfig.expiresAt > now) {
       return this.cachedConfig.config;
     }
 
@@ -450,7 +458,7 @@ export class PricingService {
         extraStoreFee: row.extraStoreFee,
       });
 
-      if (!tx && this.cacheEnabled) {
+      if (!tx && isCacheActive) {
         this.cachedConfig = {
           config,
           expiresAt: now + this.cacheTtlMs,
