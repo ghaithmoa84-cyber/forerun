@@ -10,7 +10,6 @@ import {
 } from '../helpers/seed.helper';
 import { AdminOrderCommandService } from '../../../src/modules/orders/services/admin-order-command.service';
 import { getOperationalDate } from '../../../src/modules/settlements/settlements.service';
-import { splitShares } from '../../../src/modules/pricing/split-shares';
 
 describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Concurrency', () => {
   let request!: ReturnType<typeof getRequest>;
@@ -109,7 +108,7 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
     return { deliverRes, idempotencyKey };
   }
 
-  it('9. Full lifecycle with customFee (50 and 1): preserves customFee, matches splitShares, and verifies 0 drift in settlements', async () => {
+  it('9. Full lifecycle with customFee (50 and 1): preserves customFee and verifies 0 drift in settlements', async () => {
     // 1. Create Order A (single store, approved with customFee = 50)
     const createResA = await createCustomerOrder(['Store A']);
     expect(createResA.status).toBe(201);
