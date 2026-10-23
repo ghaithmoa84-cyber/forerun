@@ -40,14 +40,18 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
     await guard.onModuleInit();
   });
 
+  type GuardWithTracker = {
+    getTracker(req: Record<string, unknown>): Promise<string>;
+  };
+
   function createMockContext(options: {
     userId?: string;
     authHeader?: string;
     ip?: string;
-    handler?: (...args: any[]) => any;
-    classRef?: any;
+    handler?: (...args: unknown[]) => unknown;
+    classRef?: new (...args: unknown[]) => unknown;
   }): ExecutionContext {
-    const req: Record<string, any> = {
+    const req: Record<string, unknown> = {
       headers: {
         authorization: options.authHeader,
       },
@@ -62,7 +66,7 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
       };
     }
 
-    const res: Record<string, any> = {
+    const res: Record<string, unknown> = {
       header: () => res,
       setHeader: () => res,
     };
@@ -85,7 +89,7 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
     it('uses user ID as tracker when req.user is populated', async () => {
       const context = createMockContext({ userId: 'cust_abc_123', ip: '10.0.0.1' });
       const req = context.switchToHttp().getRequest();
-      const tracker = await (guard as any).getTracker(req);
+      const tracker = await (guard as unknown as GuardWithTracker).getTracker(req as Record<string, unknown>);
       expect(tracker).toBe('user:cust_abc_123');
     });
 
@@ -94,7 +98,7 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
       const fakeJwt = `header.${payloadBase64}.signature`;
       const context = createMockContext({ authHeader: `Bearer ${fakeJwt}`, ip: '10.0.0.1' });
       const req = context.switchToHttp().getRequest();
-      const tracker = await (guard as any).getTracker(req);
+      const tracker = await (guard as unknown as GuardWithTracker).getTracker(req as Record<string, unknown>);
       expect(tracker).toBe('10.0.0.1');
       expect(tracker).not.toContain('forged');
     });
@@ -136,14 +140,14 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
         handler: OrdersController.prototype.create,
       });
       const req = ctx.switchToHttp().getRequest();
-      const tracker = await (guard as any).getTracker(req);
+      const tracker = await (guard as unknown as GuardWithTracker).getTracker(req as Record<string, unknown>);
       expect(tracker).toBe(`user:${userA}`);
     });
 
     it('falls back to client IP for unauthenticated calls without any headers', async () => {
       const context = createMockContext({ ip: '203.0.113.195' });
       const req = context.switchToHttp().getRequest();
-      const tracker = await (guard as any).getTracker(req);
+      const tracker = await (guard as unknown as GuardWithTracker).getTracker(req as Record<string, unknown>);
       expect(tracker).toBe('203.0.113.195');
     });
   });
