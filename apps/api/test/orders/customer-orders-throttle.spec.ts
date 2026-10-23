@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { ThrottlerStorageService, ThrottlerException } from '@nestjs/throttler';
 import { UserThrottlerGuard } from '../../src/common/guards/user-throttler.guard.js';
 import { OrdersController } from '../../src/modules/orders/orders.controller.js';
+import { AuthController } from '../../src/modules/auth/auth.controller.js';
 
 describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
   let guard: UserThrottlerGuard;
@@ -20,6 +21,16 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
             name: 'default',
             ttl: 60000,
             limit: 300,
+          },
+          {
+            name: 'login',
+            ttl: 900000,
+            limit: 1000,
+          },
+          {
+            name: 'register',
+            ttl: 3600000,
+            limit: 1000,
           },
         ],
       },
@@ -78,16 +89,58 @@ describe('UserThrottlerGuard & Customer Orders Rate Limiting', () => {
       expect(tracker).toBe('user:cust_abc_123');
     });
 
-    it('extracts sub from Authorization header as fallback if req.user is not yet attached', async () => {
-      const payloadBase64 = Buffer.from(JSON.stringify({ sub: 'cust_token_456' })).toString('base64url');
+    it('SEC-AUDIT-01: never trusts unverified Authorization header when req.user is absent; always returns client IP', async () => {
+      const payloadBase64 = Buffer.from(JSON.stringify({ sub: 'forged_victim_or_attacker_sub' })).toString('base64url');
       const fakeJwt = `header.${payloadBase64}.signature`;
       const context = createMockContext({ authHeader: `Bearer ${fakeJwt}`, ip: '10.0.0.1' });
       const req = context.switchToHttp().getRequest();
       const tracker = await (guard as any).getTracker(req);
-      expect(tracker).toBe('user:cust_token_456');
+      expect(tracker).toBe('10.0.0.1');
+      expect(tracker).not.toContain('forged');
     });
 
-    it('falls back to client IP for unauthenticated calls', async () => {
+    it('SEC-AUDIT-01 attack simulation: multiple unauthenticated requests from same IP with rotating forged tokens share the same rate-limit bucket', async () => {
+      const attackerIp = '198.51.100.42';
+      const loginHandler = AuthController.prototype.login;
+
+      // 10 requests with completely different forged tokens are counted against the IP limit (10 on login)
+      for (let i = 1; i <= 10; i++) {
+        const payloadBase64 = Buffer.from(JSON.stringify({ sub: `fake_user_${i}` })).toString('base64url');
+        const fakeJwt = `header.${payloadBase64}.fake_sig`;
+        const ctx = createMockContext({
+          authHeader: `Bearer ${fakeJwt}`,
+          ip: attackerIp,
+          handler: loginHandler,
+          classRef: AuthController,
+        });
+        await expect(guard.canActivate(ctx)).resolves.toBe(true);
+      }
+
+      // 11th request from same IP with yet another new forged token is BLOCKED by rate-limiting on login!
+      const payload11 = Buffer.from(JSON.stringify({ sub: 'fake_user_11' })).toString('base64url');
+      const fakeJwt11 = `header.${payload11}.fake_sig`;
+      const ctx11 = createMockContext({
+        authHeader: `Bearer ${fakeJwt11}`,
+        ip: attackerIp,
+        handler: loginHandler,
+        classRef: AuthController,
+      });
+      await expect(guard.canActivate(ctx11)).rejects.toThrow(ThrottlerException);
+    });
+
+    it('verifies 6B-4: authenticated customer createOrder uses verified req.user.userId and is not impacted by SEC-AUDIT-01 fix', async () => {
+      const userA = 'customer_user_verified_123';
+      const ctx = createMockContext({
+        userId: userA,
+        ip: '203.0.113.5',
+        handler: OrdersController.prototype.create,
+      });
+      const req = ctx.switchToHttp().getRequest();
+      const tracker = await (guard as any).getTracker(req);
+      expect(tracker).toBe(`user:${userA}`);
+    });
+
+    it('falls back to client IP for unauthenticated calls without any headers', async () => {
       const context = createMockContext({ ip: '203.0.113.195' });
       const req = context.switchToHttp().getRequest();
       const tracker = await (guard as any).getTracker(req);
