@@ -68,5 +68,31 @@ describe('TRUST_PROXY resolution and Express IP extraction', () => {
       // Express treats string "1" as an IP address to match, fails, and returns remote socket address
       expect(clientIp).toBe('10.0.0.1');
     });
+
+    it('boots a live HTTP server with proxy-addr@2.0.8 and resolves client IP via real TCP socket', async () => {
+      const adapter = new ExpressAdapter();
+      const app = adapter.getInstance();
+      app.set('trust proxy', 1);
+      app.get('/live-ip', (req: { ip?: string }, res: { json: (data: unknown) => void }) => {
+        res.json({ ip: req.ip });
+      });
+
+      const server = await new Promise<import('net').Server>((resolve) => {
+        const s = app.listen(0, '127.0.0.1', () => resolve(s));
+      });
+
+      try {
+        const addr = server.address() as import('net').AddressInfo;
+        const port = addr.port;
+        const response = await fetch(`http://127.0.0.1:${port}/live-ip`, {
+          headers: { 'x-forwarded-for': '198.51.100.77' },
+        });
+        const body = (await response.json()) as { ip: string };
+        expect(body.ip).toBe('198.51.100.77');
+      } finally {
+        await new Promise((resolve) => server.close(resolve));
+      }
+    });
   });
 });
+

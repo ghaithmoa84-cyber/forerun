@@ -74,7 +74,7 @@ cd apps/android
 | Firebase App ID | `1:482968000948:android:0e623122ece7b9e604bae1` |
 | Keystore File | `forerun-release.jks` |
 | Key Alias | `forerun` |
-| موقع Keystore | `D:\FAWRUNF\FAWRUN\apps\android\forerun-release.jks` |
+| موقع Keystore | `D:\FAWRUNF\FAWRUN\apps\android\app\forerun-release.jks` |
 | نسخة احتياطية | `D:\Backups\FORERUN-KEYSTORE\` |
 
 ---
