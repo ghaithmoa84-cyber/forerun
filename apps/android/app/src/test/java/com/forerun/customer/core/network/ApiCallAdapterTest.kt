@@ -25,6 +25,12 @@ class ApiCallAdapterTest {
     interface TestApi {
         @GET("test")
         suspend fun getData(): ApiResponse<TestData>
+
+        @GET("empty")
+        suspend fun getNullable(): ApiResponse<TestData?>
+
+        @GET("unit")
+        suspend fun getUnit(): ApiResponse<Unit>
     }
 
     @JsonClass(generateAdapter = true)
@@ -108,5 +114,33 @@ class ApiCallAdapterTest {
         val error = result as ApiResponse.Error
         assertEquals(-1, error.statusCode)
         assertEquals("NETWORK_ERROR", error.error)
+    }
+
+    @Test
+    fun `test 204 response returns ApiResponse Success with null for nullable type`() = runBlocking {
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(204)
+        )
+
+        val result = testApi.getNullable()
+
+        assertTrue(result is ApiResponse.Success)
+        val success = result as ApiResponse.Success
+        org.junit.Assert.assertNull(success.data)
+    }
+
+    @Test
+    fun `test 204 response returns ApiResponse Success with Unit for Unit type`() = runBlocking {
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(204)
+        )
+
+        val result = testApi.getUnit()
+
+        assertTrue(result is ApiResponse.Success)
+        val success = result as ApiResponse.Success
+        assertEquals(Unit, success.data)
     }
 }

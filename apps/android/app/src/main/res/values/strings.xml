@@ -539,4 +539,16 @@
     <string name="order_detail_awaiting_runner_desc">طلبك قيد المتابعة وجاري تعيين مندوب متاح، يمكنك التنسيق مع الإدارة مباشرة</string>
     <string name="order_detail_admin_support_title">الدعم الفني وإدارة فَوْراً</string>
     <string name="order_detail_admin_support_desc">لأي استفسار أو تعديل في تفاصيل الطلب</string>
+
+    <!-- App Update Strings -->
+    <string name="update_required_title">تحديث إلزامي متوفر</string>
+    <string name="update_required_subtitle">يتوفر إصدار جديد من تطبيق فَوْراً (%1$s). يرجى التحديث للمتابعة لضمان استقرار الخدمة وتوافقها مع النظام.</string>
+    <string name="update_notes_title">ما الجديد في هذا الإصدار:</string>
+    <string name="update_download_button">تحميل وتثبيت التحديث الآن</string>
+    <string name="update_support_button">مساعدة في التحديث عبر واتساب</string>
+    <string name="update_support_whatsapp_msg">مرحباً إدارة فَوْراً، أواجه مشكلة في تحديث التطبيق إلى الإصدار الجديد.</string>
+    <string name="update_optional_banner_title">يتوفر إصدار جديد (%1$s)</string>
+    <string name="update_optional_banner_desc">حدّث الآن للاستفادة من آخر التحسينات وتجربة استخدام أفضل.</string>
+    <string name="update_optional_banner_btn">تحديث الآن</string>
+    <string name="update_optional_banner_dismiss">تذكيري لاحقاً</string>
 </resources>

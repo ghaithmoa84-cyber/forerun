@@ -9,13 +9,19 @@ import com.forerun.customer.domain.usecase.CheckSessionUseCase
 import com.forerun.customer.data.FakeOrderEventsGateway
 import com.forerun.customer.domain.model.WebSocketEvent
 import com.forerun.customer.domain.usecase.ObserveOrderEventsUseCase
+import com.forerun.customer.core.version.AppUpdateHolder
+import com.forerun.customer.domain.model.AppVersion
+import com.forerun.customer.domain.repository.AppVersionRepository
+import com.forerun.customer.domain.usecase.CheckAppVersionUseCase
 import com.forerun.customer.util.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SplashViewModelTest {
@@ -203,6 +209,108 @@ class SplashViewModelTest {
             val updatedDestination = awaitItem()
             assertEquals(SplashDestination.Home, updatedDestination)
 
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun splash_whenMandatoryUpdateAvailable_routesToUpdateRequiredAndBlocks() = runTest {
+        val fakeAuthRepo = FakeAuthRepository().apply {
+            sessionStateResult = SessionState.Authenticated(
+                User("u1", "Verified User", "CUSTOMER", UserStatus.VERIFIED)
+            )
+        }
+        val mandatoryVersion = AppVersion(
+            platform = "android",
+            latestVersionCode = 10,
+            latestVersionName = "2.0.0",
+            minSupportedVersionCode = 8,
+            downloadUrl = "https://faow.run/download/app.apk",
+            releaseNotes = "Major security upgrade"
+        )
+        val fakeVersionRepo = object : AppVersionRepository {
+            override suspend fun getAppVersion(platform: String) = Result.success(mandatoryVersion)
+        }
+        val checkVersionUseCase = CheckAppVersionUseCase(fakeVersionRepo)
+        val updateHolder = AppUpdateHolder()
+
+        val viewModel = SplashViewModel(
+            checkSessionUseCase = CheckSessionUseCase(fakeAuthRepo),
+            checkAppVersionUseCase = checkVersionUseCase,
+            appUpdateHolder = updateHolder,
+            deepLinkHolder = com.forerun.customer.core.notification.DeepLinkHolder()
+        )
+
+        viewModel.destination.test {
+            advanceTimeBy(600)
+            val destination = awaitItem()
+            assertEquals(SplashDestination.UpdateRequired(mandatoryVersion), destination)
+            assertEquals(mandatoryVersion, updateHolder.mandatoryUpdate.value)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun splash_whenOptionalUpdateAvailable_setsHolderAndProceedsToHome() = runTest {
+        val fakeAuthRepo = FakeAuthRepository().apply {
+            sessionStateResult = SessionState.Authenticated(
+                User("u1", "Verified User", "CUSTOMER", UserStatus.VERIFIED)
+            )
+        }
+        val optionalVersion = AppVersion(
+            platform = "android",
+            latestVersionCode = 10,
+            latestVersionName = "2.0.0",
+            minSupportedVersionCode = 1,
+            downloadUrl = "https://faow.run/download/app.apk",
+            releaseNotes = "New features"
+        )
+        val fakeVersionRepo = object : AppVersionRepository {
+            override suspend fun getAppVersion(platform: String) = Result.success(optionalVersion)
+        }
+        val checkVersionUseCase = CheckAppVersionUseCase(fakeVersionRepo)
+        val updateHolder = AppUpdateHolder()
+
+        val viewModel = SplashViewModel(
+            checkSessionUseCase = CheckSessionUseCase(fakeAuthRepo),
+            checkAppVersionUseCase = checkVersionUseCase,
+            appUpdateHolder = updateHolder,
+            deepLinkHolder = com.forerun.customer.core.notification.DeepLinkHolder()
+        )
+
+        viewModel.destination.test {
+            advanceTimeBy(600)
+            val destination = awaitItem()
+            assertEquals(SplashDestination.Home, destination)
+            assertEquals(optionalVersion, updateHolder.optionalUpdate.value)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun splash_whenVersionCheckFailsOnNetwork_gracefullyProceedsToHome() = runTest {
+        val fakeAuthRepo = FakeAuthRepository().apply {
+            sessionStateResult = SessionState.Authenticated(
+                User("u1", "Verified User", "CUSTOMER", UserStatus.VERIFIED)
+            )
+        }
+        val fakeVersionRepo = object : AppVersionRepository {
+            override suspend fun getAppVersion(platform: String) = Result.failure<AppVersion?>(IOException("Timeout"))
+        }
+        val checkVersionUseCase = CheckAppVersionUseCase(fakeVersionRepo)
+        val updateHolder = AppUpdateHolder()
+
+        val viewModel = SplashViewModel(
+            checkSessionUseCase = CheckSessionUseCase(fakeAuthRepo),
+            checkAppVersionUseCase = checkVersionUseCase,
+            appUpdateHolder = updateHolder,
+            deepLinkHolder = com.forerun.customer.core.notification.DeepLinkHolder()
+        )
+
+        viewModel.destination.test {
+            advanceTimeBy(600)
+            val destination = awaitItem()
+            assertEquals(SplashDestination.Home, destination)
             cancelAndIgnoreRemainingEvents()
         }
     }

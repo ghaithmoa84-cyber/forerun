@@ -25,6 +25,7 @@ import com.forerun.customer.core.notification.NotificationPayloadParser
 import com.forerun.customer.ui.navigation.ForerunNavGraph
 import com.forerun.customer.ui.navigation.Routes
 import com.forerun.customer.ui.theme.ForerunTheme
+import com.forerun.customer.core.version.AppUpdateHolder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -45,6 +46,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var deepLinkHolder: DeepLinkHolder
+
+    @Inject
+    lateinit var appUpdateHolder: AppUpdateHolder
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -104,7 +108,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     ForerunNavGraph(
                         navController = navController,
-                        sessionExpiryNotifier = sessionExpiryNotifier
+                        sessionExpiryNotifier = sessionExpiryNotifier,
+                        appUpdateHolder = appUpdateHolder
                     )
                 }
             }

@@ -52,6 +52,7 @@
 ## حالة فروع العمل وشجرة الكود (Branch Status)
 
 - ✅ **لا توجد فروع معلّقة حالياً بانتظار الدمج:** كافة الفروع منتهية ومدموجة محلياً في `master` بانتظار إذن git push للإنتاج.
+  - فرع `feature/app-update-check` (القرار D51 — نظام التحقق من إصدار التطبيق والتحديث الإلزامي/الاختياري للأندرويد: مسار عام GET `/app/version` بدون تسريب ومسارات إدارة محمية مع قفل تفاؤلي `updatedAt` وقائمة بيضاء للروابط ومحاكاة Sideloading وشاشة حظر كاملة وبانر اختياري. نجاح 487/487 API و 14/14 تكامل و 338/338 Android و0 drift).
   - فرع `fix/sec-audit-03-proxy-addr-override` (القرار D50 — ترقية `proxy-addr` إلى `>= 2.0.8` لسد CVE-2024-52798 مع اختبار TCP حي، وتوثيق تأجيل كوكيز الواجهات وترقية Next 15، مع 475/475 اختباراً).
   - فرع `fix/sec-audit-01-throttler-bypass` (القرار D49 — سد ثغرة تجاوز Rate Limit في المسارات العامة وحظر التخمين بـ `fa28b17` مع 474/474 اختباراً).
   - دفعة ديون Schema والعقود (D19، C-2، C-8) دُمجت في `master` (إزالة defaults، إخفاء كود الحصص، وتوحيد أنواع التسويات).
@@ -64,6 +65,34 @@
   - فرع `feature/customer-fee-disclosure-modal` دُمج في `master` بـ `feb0f6b` (القرار D40).
   - فروع الميزات الأخيرة (D41، D42، D43، استعادة التقييم، وتحديث الأيقونة) دُمجت جميعاً بـ `git merge --no-ff`.
   - تم تنظيف وإغلاق كافة الفروع البعيدة القديمة على GitHub.
+
+---
+
+## ديون اختبارات تكامل مكتشفة على master — يجب إصلاحها قبل أي دمج مستقبلي يعتمد عليها
+
+> ⚠️ **سياق الاكتشاف (Zero-Trust Audit 2026-10-23):**
+> أثناء التحقق الحازم وإسقاط وتفريغ قاعدة `forerun_test` وتطبيق الهجرات الرسمية من الصفر (`prisma migrate deploy`) وتشغيل `pnpm --filter forerun-api test:integration` كحزمة متتابعة كاملة، ظهر رسوب 7 ملفات اختبار تكامل إرثية سابقة من أصل 20 ملفاً.
+> هذا الخلل **مستقل عن ميزة App Version** وهو دَين فني كامن على فرع `master` نفسه لم يُكتشف سابقاً بسبب تشغيل الاختبارات كوحدات منفصلة أو عدم تشغيل كامل جناح التكامل على قاعدة منشأة بالترتيب الرسمي من الصفر.
+
+### الفئة 1: عدم تحديث توقعات الحصص بعد إزالة الأعمدة (4 ملفات)
+- **الملفات المتأثرة:**
+  1. `test/integration/pricing/pricing-behavior.integration.spec.ts` (6 اختبارات تفحص `createdSettlement.runnerShare`).
+  2. `test/integration/_audit/audit-close-day-fixed.integration.spec.ts` (فحص `settlementItem.runnerShare`).
+  3. `test/integration/_audit/audit-e2e-final-verification.integration.spec.ts` (فحص `settlement.runnerShare`).
+  4. `test/integration/orders/approve-order-custom-fee.integration.spec.ts` (فحص `createdSettlement.runnerShare`).
+- **السبب الجذري:** الهجرة `20261022132205_remove_legacy_share_columns` (القرار C-2 في D48) حذفت عمودي `runnerShare` و `platformShare` نهائياً من جدولي `Settlement` و `SettlementItem` في قاعدة البيانات. تم تحديث اختبارات الوحدة في `settlements.service.spec.ts`، لكن تم إغفال تحديث ملفات التكامل الأربعة المذكورة لتوقع `undefined` أو الاكتفاء بـ `totalFees`، فبقيت تفحص `expect(runnerShare).toBe(0)`.
+- **الإصلاح المطلوب:** تعديل التوكيدات في الملفات الأربعة لتتوافق مع نموذج البيانات الحالي (الاعتماد على `totalFees` فقط وفق D26/D48).
+
+### الفئة 2: تداخل حالة محدد الطلبات ومخلفات الجلسات عند التشغيل التتابعي (3 ملفات)
+- **الملفات المتأثرة:**
+  1. `test/integration/pricing/customer-pricing-disclosure.integration.spec.ts` (تصادم عند البذر المتوازي في بيئة مشتركة).
+  2. `test/integration/banners/banners.integration.spec.ts` (سباق قيود أجنبية `RefreshToken_userId_fkey` أثناء `cleanDatabase`).
+  3. `test/integration/_audit/audit-user-state-escalation-fixed.integration.spec.ts` (فشل `loginAs` برمز 401 نتيجة 429).
+- **السبب الجذري:** عند تشغيل الـ 20 ملفاً تتابعياً في عملية Vitest واحدة (`singleFork: true`):
+  1. يصطدم استدعاء `loginAs` المتكرر في الملفات اللاحقة بمحدد الطلبات الصارم لمسار `/auth/login` (الحد 10 طلبات لكل 15 دقيقة لكل IP المفروض بموجب D49)، لعدم عزل ذاكرة `ThrottlerStorage` بالكامل بين الملفات أثناء الـ Test Run الطويل.
+  2. حدوث تداخل بين تفريغ الجداول في `setup.ts` وحركات إدراج سريعة لـ `RefreshToken`.
+  (ملاحظة إثبات: كل ملف من هذه الملفات الثلاثة ينجح 100% وبصفر أخطاء عند تشغيله منفرداً).
+- **الإصلاح المطلوب:** تحسين عزل الـ Test Harness في `setup.ts` وتجاوز حد الـ login throttler في بيئة اختبارات التكامل بالكامل أو إعادة تصفير عداد الـ IP بين أجنحة الاختبار.
 
 ---
 
@@ -90,6 +119,9 @@
 
 ## تحسينات واجهات الإدارة المؤجلة (Admin UI Improvements)
 
+- [ ] **بناء واجهة إدارة إصدارات التطبيق (App Version Management UI) في لوحة الأدمن (`admin-web`):**
+  - **السياق:** تم بناء مساري الـ API (`GET /api/v1/admin/app-version` و `PUT /api/v1/admin/app-version`) بنمط API-first (curl/Postman) ضمن الفرع `feature/app-update-check` (القرار D51).
+  - **المطلوب:** بناء صفحة تحكم مرئية في `apps/admin-web` تتيح للأدمن استعراض الإعدادات الحالية وتعديلها (رقم الإصدار الأخير، رقم الإصدار الأدنى، رابط APK على `faow.run`، وملاحظات الإصدار) مع إرسال رمز القفل التفاؤلي (`updatedAt`) لمعالجة تعارض الجلسات (409 Conflict) عبر Toast تنبيهي (مؤجل تماشياً مع نمط D36 لتوثيق العمل المؤجل).
 - [x] **تحسين رسالة فك التعليق في admin-web (Unsuspend UX):** ✅ مُنجَز (2026-10-13)
   - **التنفيذ:** تصحيح مسميات الأزرار إلى «فك التعليق» بدلاً من «إعادة تفعيل»، وحصرها على الحسابات المعلّقة فقط (`SUSPENDED`)، مع إبراز حالة الحسابات المرفوضة (`REJECTED`) كحالة نهائية بدون أزرار غير صالحة.
   - **التوضيح والمعالجة:** إضافة تنبيه تفسيري داخل الـ Modal يوضح أن فك التعليق يستعيد الحالة السابقة، ومعالجة خطأ 422 بـ Toast عربي صريح يوضح سبب الرفض عند محاولة فك تعليق حساب كان مرفوضاً قبل التعليق. (ملاحظة تدقيقية: تم التحقق عبر سكربت محاكاة منطقي Node script يختبر صحة منطق تحويل أخطاء 422/409 بمعزل عن React runtime، وليس اختبار E2E/DOM تفاعلياً).

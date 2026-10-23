@@ -25,6 +25,7 @@ model User {
   customer        Customer?
   cancelledOrders Order[]           @relation("CancelledByUser")
   PlatformPricing PlatformPricing[]
+  AppVersion      AppVersion[]
   deviceTokens  DeviceToken[]
   refreshTokens   RefreshToken[]
   runner          Runner?
@@ -299,6 +300,19 @@ model PlatformPricing {
   updatedAt       DateTime @default(now())
   updatedByUserId String?
   User            User?    @relation(fields: [updatedByUserId], references: [id])
+}
+
+model AppVersion {
+  id                      String   @id @default(cuid())
+  platform                String   @unique
+  latestVersionCode       Int
+  latestVersionName       String
+  minSupportedVersionCode Int
+  downloadUrl             String
+  releaseNotes            String?
+  updatedAt               DateTime @default(now())
+  updatedByUserId         String?
+  User                    User?    @relation(fields: [updatedByUserId], references: [id])
 }
 
 enum UserRole {

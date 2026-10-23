@@ -67,6 +67,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
@@ -115,6 +116,9 @@ import com.forerun.customer.ui.theme.WhatsAppGreen
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.CompositionLocalProvider
+import com.forerun.customer.core.version.AppUpdateHolder
+import com.forerun.customer.domain.model.AppVersion
+import com.forerun.customer.ui.version.OptionalUpdateBanner
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,11 +128,13 @@ fun HomeScreen(
     onNavigateToOrderDetail: (String) -> Unit = {},
     onNavigateToRoute: (String) -> Unit = {},
     modifier: Modifier = Modifier,
+    appUpdateHolder: AppUpdateHolder? = null,
     viewModel: HomeViewModel = hiltViewModel(),
     bannerViewModel: BannerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val bannerUiState by bannerViewModel.uiState.collectAsStateWithLifecycle()
+    val optionalUpdate by appUpdateHolder?.optionalUpdate?.collectAsStateWithLifecycle() ?: remember { mutableStateOf<AppVersion?>(null) }
 
     LaunchedEffect(viewModel) {
         viewModel.navigateToLogin.collect {
@@ -214,7 +220,9 @@ fun HomeScreen(
                         bannerUiState = bannerUiState,
                         onNewOrderClick = onNavigateToCreateOrder,
                         onOrderDetailClick = onNavigateToOrderDetail,
-                        onNavigateToRoute = onNavigateToRoute
+                        onNavigateToRoute = onNavigateToRoute,
+                        optionalUpdate = optionalUpdate,
+                        onDismissOptionalUpdate = { appUpdateHolder?.dismissOptionalUpdate() }
                     )
                 }
             }
@@ -230,7 +238,9 @@ fun HomeContent(
     onNewOrderClick: () -> Unit,
     onOrderDetailClick: (String) -> Unit,
     onNavigateToRoute: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    optionalUpdate: AppVersion? = null,
+    onDismissOptionalUpdate: () -> Unit = {}
 ) {
     var showServiceDialog by rememberSaveable { mutableStateOf(false) }
     var activeComingSoonFeature by rememberSaveable { mutableStateOf<ComingSoonFeature?>(null) }
@@ -311,6 +321,14 @@ fun HomeContent(
             profile = profile,
             onLocationClick = { onNavigateToRoute("account") }
         )
+
+        if (optionalUpdate != null) {
+            Spacer(modifier = Modifier.height(Dimens.Space14))
+            OptionalUpdateBanner(
+                version = optionalUpdate,
+                onDismiss = onDismissOptionalUpdate
+            )
+        }
 
         Spacer(modifier = Modifier.height(Dimens.Space14))
 

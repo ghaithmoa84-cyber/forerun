@@ -15,6 +15,6 @@ class ApiCallAdapter<T>(
     override fun responseType(): Type = responseType
 
     override fun adapt(call: Call<T>): Call<ApiResponse<T>> {
-        return ApiCall(call, moshi, context)
+        return ApiCall(call, responseType, moshi, context)
     }
 }
