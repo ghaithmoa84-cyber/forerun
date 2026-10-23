@@ -9,12 +9,20 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.io.IOException
+import java.lang.reflect.Type
 
 internal class ApiCall<T>(
     private val delegate: Call<T>,
+    private val successType: Type,
     private val moshi: Moshi,
     private val context: Context? = null
 ) : Call<ApiResponse<T>> {
+
+    private val isUnitType: Boolean =
+        successType == Unit::class.java ||
+        successType.typeName == "kotlin.Unit" ||
+        successType.typeName == "void" ||
+        successType.typeName == "java.lang.Void"
 
     override fun enqueue(callback: Callback<ApiResponse<T>>) {
         delegate.enqueue(object : Callback<T> {
@@ -25,7 +33,11 @@ internal class ApiCall<T>(
                         ApiResponse.Success(body)
                     } else if (response.code() == 204 || delegate.request().method == "HEAD") {
                         @Suppress("UNCHECKED_CAST")
-                        ApiResponse.Success(Unit as T)
+                        if (isUnitType) {
+                            ApiResponse.Success(Unit as T)
+                        } else {
+                            ApiResponse.Success(null as T)
+                        }
                     } else {
                         @Suppress("UNCHECKED_CAST")
                         ApiResponse.Success(body as T)
@@ -71,7 +83,11 @@ internal class ApiCall<T>(
                     ApiResponse.Success(body)
                 } else if (response.code() == 204 || delegate.request().method == "HEAD") {
                     @Suppress("UNCHECKED_CAST")
-                    ApiResponse.Success(Unit as T)
+                    if (isUnitType) {
+                        ApiResponse.Success(Unit as T)
+                    } else {
+                        ApiResponse.Success(null as T)
+                    }
                 } else {
                     @Suppress("UNCHECKED_CAST")
                     ApiResponse.Success(body as T)
@@ -107,7 +123,7 @@ internal class ApiCall<T>(
 
     override fun isCanceled(): Boolean = delegate.isCanceled
 
-    override fun clone(): Call<ApiResponse<T>> = ApiCall(delegate.clone(), moshi, context)
+    override fun clone(): Call<ApiResponse<T>> = ApiCall(delegate.clone(), successType, moshi, context)
 
     override fun request(): Request = delegate.request()
 

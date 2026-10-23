@@ -59,4 +59,10 @@ abstract class RepositoryModule {
     abstract fun bindBannerRepository(
         bannerRepositoryImpl: com.forerun.customer.data.remote.repository.BannerRepositoryImpl
     ): com.forerun.customer.domain.repository.BannerRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAppVersionRepository(
+        appVersionRepositoryImpl: com.forerun.customer.data.remote.repository.AppVersionRepositoryImpl
+    ): com.forerun.customer.domain.repository.AppVersionRepository
 }

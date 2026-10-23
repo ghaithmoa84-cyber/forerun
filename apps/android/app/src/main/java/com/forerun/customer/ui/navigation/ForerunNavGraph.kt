@@ -27,9 +27,12 @@ import androidx.navigation.navDeepLink
 import com.forerun.customer.ui.order.confirmation.OrderConfirmationScreen
 import com.forerun.customer.ui.splash.SplashDestination
 import com.forerun.customer.ui.splash.SplashScreen
+import com.forerun.customer.core.version.AppUpdateHolder
 import com.forerun.customer.ui.support.SupportScreen
+import com.forerun.customer.ui.version.UpdateRequiredScreen
 
 object Routes {
+    const val UPDATE_REQUIRED = "update_required"
     const val SPLASH = "splash"
     const val ONBOARDING = "onboarding"
     const val LOGIN = "login"
@@ -56,7 +59,8 @@ fun ForerunNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
     startDestination: String = Routes.SPLASH,
-    sessionExpiryNotifier: SessionExpiryNotifier? = null
+    sessionExpiryNotifier: SessionExpiryNotifier? = null,
+    appUpdateHolder: AppUpdateHolder? = null
 ) {
     if (sessionExpiryNotifier != null) {
         LaunchedEffect(sessionExpiryNotifier) {
@@ -145,6 +149,11 @@ fun ForerunNavGraph(
                                 launchSingleTop = true
                             }
                         }
+                        is SplashDestination.UpdateRequired -> {
+                            navController.navigate(Routes.UPDATE_REQUIRED) {
+                                popUpTo(Routes.SPLASH) { inclusive = true }
+                            }
+                        }
                     }
                 }
             )
@@ -215,6 +224,11 @@ fun ForerunNavGraph(
                 }
             )
         }
+        composable(Routes.UPDATE_REQUIRED) {
+            if (appUpdateHolder != null) {
+                UpdateRequiredScreen(appUpdateHolder = appUpdateHolder)
+            }
+        }
         composable(Routes.HOME) {
             HomeScreen(
                 onNavigateToLogin = {
@@ -228,6 +242,7 @@ fun ForerunNavGraph(
                 onNavigateToOrderDetail = { orderId ->
                     navController.navigate(Routes.orderDetail(orderId))
                 },
+                appUpdateHolder = appUpdateHolder,
                 onNavigateToRoute = { route ->
                     if (route == Routes.HOME) {
                         navController.navigate(Routes.HOME) {

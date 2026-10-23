@@ -21,6 +21,7 @@ import { RatingsModule } from './modules/ratings/ratings.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { BannersModule } from './modules/banners/banners.module.js';
 import { SystemModule } from './modules/system/system.module.js';
+import { AppVersionModule } from './modules/app-version/app-version.module.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard.js';
@@ -135,6 +136,7 @@ import { jwtConfig } from './config/jwt.config.js';
      PricingModule,
      BannersModule,
      SystemModule,
+     AppVersionModule,
    ],
   providers: [
     {

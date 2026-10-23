@@ -65,6 +65,7 @@ export async function cleanDatabase() {
     prisma.customer.deleteMany(),
     prisma.runner.deleteMany(),
     prisma.banner.deleteMany(),
+    prisma.appVersion.deleteMany(),
     prisma.admin.deleteMany(),
     prisma.user.deleteMany(),
   ]);
