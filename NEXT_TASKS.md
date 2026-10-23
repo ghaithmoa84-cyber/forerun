@@ -1,6 +1,6 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-22
+> **آخر تحديث:** 2026-10-23
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
@@ -8,14 +8,44 @@
 
 ## عمل معلّق بانتظار عامل خارجي (External Blocker)
 
-### تفعيل CORS_ORIGINS للدومين الجديد على Railway
-- **السبب:** عطل منصة Railway العالمي بتاريخ 2026-10-21 (لوحة التحكم / API / CLI معطّلة، وعمليات البناء الجديدة متوقفة في كافة المناطق: Builds paused).
-- **الإجراء المطلوب:** فور استعادة خدمة Railway للعمل، ادخل إلى Railway Console ← مشروع FORERUN ← خدمة `api` ← تبويب `Variables` ← عدّل متغير `CORS_ORIGINS`.
-- **القيمة الجاهزة كاملة للصق المباشر في Railway Variables فور عودة الخدمة:**
-  ```text
-  https://admin.faow.run,https://runner.faow.run,https://faow.run,https://www.faow.run,https://fawrun-admin.vercel.app,https://fawrun-runner-pwa-steel.vercel.app,https://fawrun-customer-web-three.vercel.app
-  ```
-- ⚠️ **تحذير صريح:** الروابط الرسمية الجديدة (`admin.faow.run`, `runner.faow.run`, `faow.run`) **منشورة لكن غير وظيفية حتى تُنفَّذ هذه الخطوة** (محظورة بمتصفحات المستخدمين بسبب سياسة CORS حتى يُحدَّث الـ Backend) — **لا تُوزَّع لمستخدمين حقيقيين قبلها**.
+### نافذة الصيانة الموحَّدة عند عودة Railway (نافذتان منفصلتان إلزامياً)
+
+**السبب:** عطل منصة Railway العالمي بتاريخ 2026-10-21 (Console/API/CLI معطّلة، Builds متوقفة بكل المناطق)، يحتاج يومين تقريباً للعودة.
+
+**الحالة:** كل الكود مدموج ومختبر محلياً على `master` (475/475 API، 322/322 Android)، جاهز للنشر فور عودة الخدمة. لا دمج إضافي بانتظار — فقط النشر نفسه.
+
+**القاعدة الإلزامية: فصل تام بين النافذتين، لا تنفيذهما معاً.** الهدف عزل أسباب أي عطل محتمل.
+
+---
+
+#### النافذة 1 — نشر migrations وإصلاحات الأمان (أولاً)
+يشمل: D19 (حذف fee defaults)، C-2 (حذف أعمدة الحصص الإرثية)، C-8 (مدموج فعلياً مسبقاً، لا يحتاج نشراً منفصلاً إذ هو Android فقط)، D49 (SEC-AUDIT-01)، D50 (proxy-addr).
+
+خطوات التنفيذ الكاملة والمتسلسلة:
+1. نسخة احتياطية حقيقية: `pg_dump $DATABASE_URL > backup_pre_phase2_$(date +%Y%m%d_%H%M%S).sql`
+2. `git push origin master` — تحقق من نجاح البناء على Railway قبل المتابعة
+3. من Railway Console: `pnpm exec prisma migrate status` — **توقف وتأكد أن الـ pending هي فقط `remove_order_fee_defaults` و`remove_legacy_share_columns`، لا شيء آخر**
+4. `pnpm exec prisma migrate deploy`
+5. تحقق فوري: `pnpm exec prisma migrate status` + `node scripts/diff-schema.js $DATABASE_URL`
+6. فحص صحي: `curl https://fawrun-api-production.up.railway.app/api/v1` + تحقق شاشة تسوية حقيقية تعرض `totalFees` بشكل صحيح
+7. اختبار حي لإصلاح SEC-AUDIT-01: عدة محاولات `/auth/login` خاطئة بترويسة Authorization مزوَّرة مختلفة، تأكيد 429 بعد المحاولة العاشرة فعلياً على الإنتاج
+8. **مراقبة Sentry/Telegram 15 دقيقة كحد أدنى دون أي تنبيه قبل اعتبار النافذة منتهية**
+9. عند أي خطأ: تفعيل [`docs/ROLLBACK_PLAN_phase2_schema_debts.md`](docs/ROLLBACK_PLAN_phase2_schema_debts.md) فوراً
+
+---
+
+#### النافذة 2 — تفعيل CORS (بعد تأكيد استقرار النافذة 1 فقط، لا قبل)
+1. Railway Console → مشروع FORERUN → خدمة `api` → `Variables` → عدّل `CORS_ORIGINS`:
+   ```text
+   https://admin.faow.run,https://runner.faow.run,https://faow.run,https://www.faow.run,https://fawrun-admin.vercel.app,https://fawrun-runner-pwa-steel.vercel.app,https://fawrun-customer-web-three.vercel.app
+   ```
+2. تحقق: `curl -I -X OPTIONS .../auth/login -H "Origin: https://admin.faow.run" -H "Access-Control-Request-Method: POST"` → توقَّع 204
+3. اختبار فعلي في المتصفح على الدومينات الجديدة الثلاثة
+4. مراقبة 10 دقائق إضافية قبل اعتبار الدومينات الجديدة جاهزة للتوزيع الفعلي
+
+⚠️ **تحذير قائم:** الروابط الرسمية الجديدة منشورة لكن غير وظيفية حتى تُنفَّذ هذه الخطوة — لا تُوزَّع لمستخدمين حقيقيين قبلها.
+
+**بعد إتمام كلا النافذتين:** احذف هذا القسم بالكامل من هنا، وأضف سطراً موثَّقاً في `PROJECT_STATUS.md §9` بالتاريخ والوقت الفعلي ونتائج كل خطوة.
 
 ---
 
