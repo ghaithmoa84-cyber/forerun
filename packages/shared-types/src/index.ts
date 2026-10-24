@@ -12,4 +12,5 @@ export * from './device-token.types.js';
 export * from './pricing.types.js';
 export * from './banner.types.js';
 export * from './app-version.types.js';
+export * from './sentry.types.js';
 

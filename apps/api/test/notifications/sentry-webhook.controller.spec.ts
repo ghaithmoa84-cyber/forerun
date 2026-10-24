@@ -1,10 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { UnauthorizedException } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { BadRequestException, UnauthorizedException, type INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Request } from 'express';
 import * as crypto from 'crypto';
+import supertest from 'supertest';
+import { Test } from '@nestjs/testing';
 import { SentryWebhookController } from '../../src/modules/notifications/sentry-webhook.controller.js';
-import type { TelegramService } from '../../src/modules/notifications/telegram.service.js';
+import { TelegramService } from '../../src/modules/notifications/telegram.service.js';
+import { ZodValidationPipe } from '../../src/common/pipes/zod-validation.pipe.js';
+import { SentryWebhookPayloadSchema } from '@forerun/shared-types';
 
 describe('SentryWebhookController', () => {
   let controller: SentryWebhookController;
@@ -212,4 +216,175 @@ describe('SentryWebhookController', () => {
     expect(sentMessage).toContain('https://org.sentry.io/issues/54321');
     expect(sentMessage).toContain('🔗 فتح المشكلة في Sentry');
   });
+
+  describe('ZodValidationPipe & Schema Validation', () => {
+    const pipe = new ZodValidationPipe(SentryWebhookPayloadSchema);
+
+    it('11. should reject malformed payload with wrong data types via ZodValidationPipe before reaching internal logic', () => {
+      const malformedPayloads = [
+        { action: 12345 },
+        { data: 'not-an-object' },
+        { issue: 9999 },
+        { level: true },
+        { url: ['invalid-array'] },
+        { data: { issue: { id: false } } },
+        { data: { event: 123 } },
+      ];
+
+      for (const malformed of malformedPayloads) {
+        expect(() =>
+          pipe.transform(malformed, {} as Parameters<ZodValidationPipe['transform']>[1]),
+        ).toThrow(BadRequestException);
+      }
+
+      // Proves that internal notification dispatch logic was never reached
+      expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('12. should validate well-formed payload and execute controller logic with valid HMAC signature', async () => {
+      const payload = {
+        action: 'created',
+        data: {
+          issue: {
+            id: '98765',
+            shortId: 'FAWRUN-PROD-99',
+            title: 'Critical server exception',
+            level: 'error',
+            permalink: 'https://fawrun-api.sentry.io/issues/98765',
+            project: { slug: 'fawrun-api' },
+          },
+        },
+      };
+
+      const { signature, buffer } = createSignature(payload);
+      const mockReq = { rawBody: buffer } as Request & { rawBody?: Buffer };
+
+      // Passes through validation pipe
+      const validatedPayload = pipe.transform(
+        payload,
+        {} as Parameters<ZodValidationPipe['transform']>[1],
+      );
+      expect(validatedPayload).toBeDefined();
+
+      // Passes to controller
+      const response = await controller.handleSentryWebhook(
+        validatedPayload,
+        mockReq,
+        signature,
+      );
+
+      expect(response).toEqual({ status: 'success', handled: true });
+      expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
+      const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
+      expect(sentMessage).toContain('Critical server exception');
+      expect(sentMessage).toContain('FAWRUN-PROD-99');
+    });
+
+    it('13. should accept payloads with optional and nullable fields without false rejection', () => {
+      const payloadWithNulls = {
+        action: 'created',
+        project_name: 'fawrun-api',
+        message: 'Non-fatal warning',
+        description: null,
+        culprit: null,
+        url: null,
+        issue: {
+          id: '123',
+          culprit: null,
+          permalink: null,
+          project: {
+            slug: 'fawrun-api',
+          },
+        },
+        data: {
+          description: null,
+        },
+        // Extra fields should be preserved via .passthrough()
+        installation: { uuid: 'ext-uuid-123' },
+        actor: { type: 'application', id: 'sentry' },
+      };
+
+      const validated = pipe.transform(
+        payloadWithNulls,
+        {} as Parameters<ZodValidationPipe['transform']>[1],
+      );
+
+      expect(validated).toBeDefined();
+      expect(validated.message).toBe('Non-fatal warning');
+      expect(validated.culprit).toBeNull();
+      expect((validated as Record<string, unknown>).installation).toEqual({ uuid: 'ext-uuid-123' });
+    });
+  });
+
+  describe('SentryWebhookController HTTP Pipeline (E2E with NestJS)', () => {
+    let app: INestApplication;
+    let request: ReturnType<typeof supertest>;
+
+    beforeEach(async () => {
+      const moduleRef = await Test.createTestingModule({
+        controllers: [SentryWebhookController],
+        providers: [
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: TelegramService, useValue: mockTelegramService },
+        ],
+      }).compile();
+
+      app = moduleRef.createNestApplication({ rawBody: true });
+      await app.init();
+      request = supertest(app.getHttpServer());
+    });
+
+    afterAll(async () => {
+      if (app) {
+        await app.close();
+      }
+    });
+
+    it('14. should reject malformed payload with 400 Bad Request before controller logic even with valid HMAC signature', async () => {
+      const malformedPayload = {
+        action: 12345, // Invalid type: expected string, got number
+        data: 'corrupted-data-string', // Invalid type: expected object, got string
+      };
+
+      const { signature } = createSignature(malformedPayload);
+
+      const res = await request
+        .post('/webhooks/sentry')
+        .set('sentry-hook-signature', signature)
+        .send(malformedPayload);
+
+      expect(res.status).toBe(400);
+      expect(mockTelegramService.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('15. should accept well-formed payload with 200 OK through HTTP pipeline and dispatch alert', async () => {
+      const validPayload = {
+        action: 'created',
+        data: {
+          issue: {
+            id: '54321',
+            shortId: 'FAWRUN-CRITICAL-1',
+            title: 'Critical DB disconnection',
+            level: 'error',
+            permalink: 'https://fawrun-api.sentry.io/issues/54321',
+            project: { slug: 'fawrun-api' },
+          },
+        },
+      };
+
+      const { signature } = createSignature(validPayload);
+
+      const res = await request
+        .post('/webhooks/sentry')
+        .set('sentry-hook-signature', signature)
+        .send(validPayload);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ status: 'success', handled: true });
+      expect(mockTelegramService.sendMessage).toHaveBeenCalledTimes(1);
+      const sentMessage = mockTelegramService.sendMessage.mock.calls[0][0];
+      expect(sentMessage).toContain('Critical DB disconnection');
+    });
+  });
 });
+
