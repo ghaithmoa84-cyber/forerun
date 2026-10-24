@@ -35,7 +35,11 @@ function makeService() {
     customer: { findUnique: vi.fn() },
     order: { findUnique: vi.fn() },
     rating: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    runner: { findUnique: vi.fn(), update: vi.fn() },
+    runner: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+    },
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation(async (fn: any) => fn(prisma));
@@ -100,8 +104,8 @@ describe('RatingsService', () => {
           expiresAt: expect.any(Date),
         },
       });
-      expect(prisma.runner.update).toHaveBeenCalledWith({
-        where: { id: 'runner-1' },
+      expect(prisma.runner.updateMany).toHaveBeenCalledWith({
+        where: { id: 'runner-1', totalRatings: 0, avgRating: null },
         data: { avgRating: 5, totalRatings: 1 },
       });
       expect(auditService.log).toHaveBeenCalledWith(
@@ -135,8 +139,8 @@ describe('RatingsService', () => {
 
       await service.createRating('order-1', CUSTOMER, { stars: 5 });
 
-      expect(prisma.runner.update).toHaveBeenCalledWith({
-        where: { id: 'runner-1' },
+      expect(prisma.runner.updateMany).toHaveBeenCalledWith({
+        where: { id: 'runner-1', totalRatings: 1, avgRating: 4 },
         data: { avgRating: 4.5, totalRatings: 2 },
       });
     });
@@ -243,8 +247,8 @@ describe('RatingsService', () => {
         where: { id: 'rating-1' },
         data: { stars: 5, note: 'updated' },
       });
-      expect(prisma.runner.update).toHaveBeenCalledWith({
-        where: { id: 'runner-1' },
+      expect(prisma.runner.updateMany).toHaveBeenCalledWith({
+        where: { id: 'runner-1', totalRatings: 5, avgRating: 4 },
         data: { avgRating: 4.2 },
       });
       expect(auditService.log).toHaveBeenCalledWith(

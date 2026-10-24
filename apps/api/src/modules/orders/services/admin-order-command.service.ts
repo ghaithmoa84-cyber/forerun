@@ -1081,7 +1081,7 @@ export class AdminOrderCommandService {
 
         const now = new Date();
         const updated = await tx.order.updateMany({
-          where: { id: order.id, status: { not: 'CANCELLED' } },
+          where: { id: order.id, status: order.status },
           data: {
             status: transitionResult.to,
             cancelledByUserId: adminId,
@@ -1090,7 +1090,7 @@ export class AdminOrderCommandService {
           },
         });
         if (updated.count !== 1) {
-          throw new ConflictException('ORDER_ALREADY_CANCELLED');
+          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
         }
         const updatedOrder = await tx.order.findUniqueOrThrow({
           where: { id: order.id },

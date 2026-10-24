@@ -453,9 +453,16 @@ export class RunnerOrdersService {
           );
         }
 
-        const updatedStore = await tx.orderStore.update({
-          where: { id: store.id },
+        const updated = await tx.orderStore.updateMany({
+          where: { id: store.id, status: 'PENDING', isDeleted: false },
           data: { isDeleted: true, deletedAt: new Date() },
+        });
+        if (updated.count === 0) {
+          throw new ConflictException('ORDER_STATUS_CHANGED_CONCURRENTLY');
+        }
+
+        const updatedStore = await tx.orderStore.findFirstOrThrow({
+          where: { id: store.id, includeDeleted: true } as Prisma.OrderStoreWhereInput,
         });
 
         await this.auditService.log(
