@@ -8,6 +8,10 @@ import { SettlementsService } from '../../src/modules/settlements/settlements.se
 import type { PrismaService } from '../../src/database/prisma.service.js';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import {
+  RunnerCurrentSettlementSchema,
+  RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES,
+} from '@forerun/shared-types';
 
 describe('SettlementsService (Critical Settlement Paths)', () => {
   let service: SettlementsService;
@@ -31,6 +35,14 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
   };
   let prisma: {
     $transaction: ReturnType<typeof vi.fn>;
+    settlement: {
+      findUnique: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      count: ReturnType<typeof vi.fn>;
+    };
+    order: {
+      findMany: ReturnType<typeof vi.fn>;
+    };
   };
   let auditService: {
     log: ReturnType<typeof vi.fn>;
@@ -61,6 +73,14 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
 
     prisma = {
       $transaction: vi.fn().mockImplementation((callback) => callback(txClient)),
+      settlement: {
+        findUnique: vi.fn(),
+        findMany: vi.fn(),
+        count: vi.fn(),
+      },
+      order: {
+        findMany: vi.fn(),
+      },
     };
 
     auditService = {
@@ -415,4 +435,164 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       );
     });
   });
+
+  describe('getCurrentSettlement', () => {
+    const runnerId = 'runner-test-id';
+
+    it('returns NOT_CLOSED status and valid RunnerCurrentSettlement schema when day is unclosed (no DB settlement)', async () => {
+      prisma.settlement.findUnique.mockResolvedValue(null);
+      prisma.order.findMany.mockResolvedValue([
+        {
+          orderNumber: 'FW-000001',
+          totalFee: 80,
+          deliveredAt: new Date('2026-10-24T12:00:00Z'),
+        },
+        {
+          orderNumber: 'FW-000002',
+          totalFee: 100,
+          deliveredAt: new Date('2026-10-24T13:00:00Z'),
+        },
+      ]);
+
+      const result = await service.getCurrentSettlement(runnerId);
+
+      expect(result.status).toBe('NOT_CLOSED');
+      expect(result.totalOrders).toBe(2);
+      expect(result.totalFees).toBe(180);
+      expect(result.estimatedRunnerShare).toBe(0);
+      expect(result.estimatedPlatformShare).toBe(180);
+      expect(result.orders).toHaveLength(2);
+      expect(result.orders[0].orderNumber).toBe('FW-000001');
+
+      // Contract validation: RunnerCurrentSettlementSchema.parse() succeeds without error
+      const parsed = RunnerCurrentSettlementSchema.parse(result);
+      expect(parsed).toEqual(result);
+      expect(parsed.status).toBe('NOT_CLOSED');
+    });
+
+    it('returns PENDING status and valid schema when day is closed with PENDING settlement in DB', async () => {
+      const mockSettlement = {
+        id: 'set-pending-1',
+        runnerId,
+        operationalDate: '2026-10-24',
+        status: 'PENDING' as const,
+        totalOrders: 2,
+        totalFees: 180,
+        items: [
+          {
+            orderFee: 80,
+            order: {
+              orderNumber: 'FW-000001',
+              deliveredAt: new Date('2026-10-24T12:00:00Z'),
+            },
+          },
+          {
+            orderFee: 100,
+            order: {
+              orderNumber: 'FW-000002',
+              deliveredAt: new Date('2026-10-24T13:00:00Z'),
+            },
+          },
+        ],
+      };
+
+      prisma.settlement.findUnique.mockResolvedValue(mockSettlement);
+
+      const result = await service.getCurrentSettlement(runnerId);
+
+      expect(result.status).toBe('PENDING');
+      expect(result.operationalDate).toBe('2026-10-24');
+      expect(result.totalOrders).toBe(2);
+      expect(result.totalFees).toBe(180);
+      expect(result.estimatedRunnerShare).toBe(0);
+      expect(result.estimatedPlatformShare).toBe(180);
+      expect(result.orders).toHaveLength(2);
+      expect(result.orders[0].orderNumber).toBe('FW-000001');
+      expect(result.orders[1].orderNumber).toBe('FW-000002');
+
+      // Contract validation: RunnerCurrentSettlementSchema.parse() succeeds without error
+      const parsed = RunnerCurrentSettlementSchema.parse(result);
+      expect(parsed).toEqual(result);
+      expect(parsed.status).toBe('PENDING');
+    });
+
+    it('returns SETTLED status and valid schema when day is closed with SETTLED settlement in DB', async () => {
+      const mockSettlement = {
+        id: 'set-settled-1',
+        runnerId,
+        operationalDate: '2026-10-24',
+        status: 'SETTLED' as const,
+        totalOrders: 1,
+        totalFees: 90,
+        items: [
+          {
+            orderFee: 90,
+            order: {
+              orderNumber: 'FW-000003',
+              deliveredAt: new Date('2026-10-24T14:00:00Z'),
+            },
+          },
+        ],
+      };
+
+      prisma.settlement.findUnique.mockResolvedValue(mockSettlement);
+
+      const result = await service.getCurrentSettlement(runnerId);
+
+      expect(result.status).toBe('SETTLED');
+      expect(result.operationalDate).toBe('2026-10-24');
+      expect(result.totalOrders).toBe(1);
+      expect(result.totalFees).toBe(90);
+      expect(result.estimatedRunnerShare).toBe(0);
+      expect(result.estimatedPlatformShare).toBe(90);
+      expect(result.orders).toHaveLength(1);
+      expect(result.orders[0].orderNumber).toBe('FW-000003');
+
+      // Contract validation: RunnerCurrentSettlementSchema.parse() succeeds without error
+      const parsed = RunnerCurrentSettlementSchema.parse(result);
+      expect(parsed).toEqual(result);
+      expect(parsed.status).toBe('SETTLED');
+    });
+
+    it('validates that RunnerCurrentSettlementSchema enforces strictly defined statuses', () => {
+      expect(RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES).toEqual([
+        'NOT_CLOSED',
+        'PENDING',
+        'SETTLED',
+      ]);
+
+      const basePayload = {
+        operationalDate: '2026-10-24',
+        totalOrders: 1,
+        totalFees: 50,
+        estimatedRunnerShare: 0,
+        estimatedPlatformShare: 50,
+        orders: [
+          {
+            orderNumber: 'FW-000001',
+            totalFee: 50,
+            deliveredAt: new Date(),
+          },
+        ],
+      };
+
+      // All 3 valid statuses pass
+      for (const validStatus of RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES) {
+        const parsed = RunnerCurrentSettlementSchema.parse({
+          ...basePayload,
+          status: validStatus,
+        });
+        expect(parsed.status).toBe(validStatus);
+      }
+
+      // Invalid status fails parse
+      expect(() =>
+        RunnerCurrentSettlementSchema.parse({
+          ...basePayload,
+          status: 'INVALID_STATUS',
+        }),
+      ).toThrow();
+    });
+  });
 });
+

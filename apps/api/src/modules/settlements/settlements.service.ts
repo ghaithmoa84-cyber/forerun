@@ -484,15 +484,15 @@ export class SettlementsService {
         deliveredAt: item.order.deliveredAt!,
       }));
 
-      return {
+      return RunnerCurrentSettlementSchema.parse({
         operationalDate: settlement.operationalDate,
-        status: settlement.status as RunnerCurrentSettlement['status'],
+        status: settlement.status,
         totalOrders: settlement.totalOrders,
         totalFees: settlement.totalFees,
         estimatedRunnerShare: 0,
         estimatedPlatformShare: settlement.totalFees,
         orders,
-      };
+      });
     }
 
     const { start, end } = getUtcRangeForOperationalDate(operationalDate);
