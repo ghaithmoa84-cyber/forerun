@@ -91,9 +91,18 @@ export const RunnerSettlementListResponseSchema = z.object({
 
 export type RunnerSettlementListResponse = z.infer<typeof RunnerSettlementListResponseSchema>;
 
+export const RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES = [
+  'NOT_CLOSED',
+  'PENDING',
+  'SETTLED',
+] as const;
+
+export type RunnerCurrentSettlementStatus =
+  (typeof RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES)[number];
+
 export const RunnerCurrentSettlementSchema = z.object({
   operationalDate: z.string(),
-  status: z.literal('NOT_CLOSED'),
+  status: z.enum(RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES),
   totalOrders: z.number().int(),
   totalFees: z.number().int(),
   estimatedRunnerShare: z.number().int(),
