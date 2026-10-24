@@ -76,16 +76,8 @@ describe('Audit: Settlement closeDay Remediation & Zero Drift Verification (Post
     });
     expect(settlementItem).not.toBeNull();
     expect(settlementItem?.orderFee).toBe(60);
-    // Decision D26: Runner share is 0 (salary), platform share is 60
-    expect(settlementItem?.runnerShare).toBe(0);
-    expect(settlementItem?.platformShare).toBe(60);
-
-    // Manual recalculation check:
-    // Total Fee = baseFee (60) = 60
-    // Runner Share = 0
-    // Platform Share = 60
-    // Zero Drift: 60 - (0 + 60) = 0
-    expect(settlementItem!.runnerShare + settlementItem!.platformShare).toBe(settlementItem!.orderFee);
+    // Decision D26/D48: runnerShare/platformShare columns were dropped from SettlementItem in C-2 migration; verify orderFee matches settlement totalFees
+    expect(settlementItem?.orderFee).toBe(resToday.body.settlements[0].totalFees);
 
     // 2. Attempting to re-close today must be explicitly rejected with 409 Conflict (no silent drop)
     const resReclose = await request

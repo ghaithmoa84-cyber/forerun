@@ -213,9 +213,8 @@ describe('Sprint 6A-6: approveOrder Integration with customFee, baseFee, and Con
     expect(closeDayRes.status).toBe(201);
     const createdSettlement = closeDayRes.body.settlements[0];
     expect(createdSettlement.totalFees).toBe(totalFeesSum);
-    expect(createdSettlement.runnerShare).toBe(0);
-    expect(createdSettlement.platformShare).toBe(totalFeesSum);
-    expect(createdSettlement.runnerShare).toBe(currentRes.body.estimatedRunnerShare);
+    // D26/D48: runnerShare/platformShare dropped from Settlement model in C-2 migration; verify totalFees matches preview
+    expect(createdSettlement.totalFees).toBe(currentRes.body.totalFees);
   });
 
   it('10. Concurrency: parallel approveOrder calls on the same order result in 1 success and 1 ConflictException', async () => {

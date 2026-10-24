@@ -60,6 +60,7 @@ export async function cleanDatabase() {
     prisma.orderItem.deleteMany(),
     prisma.orderStore.deleteMany(),
     prisma.order.deleteMany(),
+    prisma.deviceToken.deleteMany(),
     prisma.refreshToken.deleteMany(),
     prisma.customerAddress.deleteMany(),
     prisma.customer.deleteMany(),
