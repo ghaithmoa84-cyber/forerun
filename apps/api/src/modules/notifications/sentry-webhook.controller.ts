@@ -14,40 +14,12 @@ import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import * as crypto from 'crypto';
 import { Public } from '../../common/decorators/public.decorator.js';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
+import {
+  SentryWebhookPayloadSchema,
+  type SentryWebhookPayload,
+} from '@forerun/shared-types';
 import { TelegramService, escapeTelegramHtml } from './telegram.service.js';
-
-interface SentryWebhookIssue {
-  id?: string;
-  title?: string;
-  culprit?: string;
-  permalink?: string;
-  level?: string;
-  shortId?: string;
-  project?: {
-    slug?: string;
-  };
-}
-
-interface SentryWebhookPayload {
-  action?: string;
-  project_name?: string;
-  message?: string;
-  description?: string;
-  level?: string;
-  url?: string;
-  web_url?: string;
-  culprit?: string;
-  issue?: SentryWebhookIssue;
-  data?: {
-    issue?: SentryWebhookIssue;
-    description?: string;
-    event?: {
-      title?: string;
-      message?: string;
-    };
-  };
-}
-
 
 function isValidSentryUrl(urlStr: string): boolean {
   if (!urlStr || typeof urlStr !== 'string') return false;
@@ -80,7 +52,7 @@ export class SentryWebhookController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   async handleSentryWebhook(
-    @Body() body: SentryWebhookPayload,
+    @Body(new ZodValidationPipe(SentryWebhookPayloadSchema)) body: SentryWebhookPayload,
     @Req() req: Request & { rawBody?: Buffer },
     @Headers('sentry-hook-signature') signature?: string,
   ): Promise<{ status: string; handled: boolean }> {
