@@ -73,7 +73,6 @@ export class RunnersService {
       isVisible: runner.isVisible,
       avgRating: runner.avgRating ?? null,
       totalRatings: runner.totalRatings,
-      notes: runner.notes ?? null,
     };
   }
 
