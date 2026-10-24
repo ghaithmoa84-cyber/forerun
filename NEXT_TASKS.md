@@ -51,7 +51,10 @@
 
 ## حالة فروع العمل وشجرة الكود (Branch Status)
 
-- ✅ **لا توجد فروع معلّقة حالياً بانتظار الدمج:** كافة الفروع منتهية ومدموجة محلياً في `master` بانتظار إذن git push للإنتاج.
+- ⏳ **عمل معلّق بانتظار إذن الدمج إلى `master`:**
+  - فرع `fix/integration-test-debt-settlement-shares`: إصلاح توكيدات الحصص الإرثية في اختبارات التكامل الـ 4 لتوقع `totalFees` بدلاً من الأعمدة المحذوفة بموجب D26/D48 (`remove_legacy_share_columns`)، مع تصحيح نظافة بنيوي بإضافة `DeviceToken` المفقود إلى `cleanDatabase` في `setup.ts`. إثبات نجاح كامل حزمة الـ 20 ملفاً تتابعياً بنسبة 100% (135/135) عبر 5 تشغيلات متتالية من الصفر، وتوثيق أن أعراض الفئة الثانية السابقة (Throttler / Foreign Key race) كانت غير قابلة لإعادة الإنتاج (Non-reproducible / Flaky) للمراقبة المستمرة.
+
+- ✅ **الفروع المدموجة سابقاً:**
   - فرع `feature/app-update-check` (القرار D51 — نظام التحقق من إصدار التطبيق والتحديث الإلزامي/الاختياري للأندرويد: مسار عام GET `/app/version` بدون تسريب ومسارات إدارة محمية مع قفل تفاؤلي `updatedAt` وقائمة بيضاء للروابط ومحاكاة Sideloading وشاشة حظر كاملة وبانر اختياري. نجاح 487/487 API و 14/14 تكامل و 338/338 Android و0 drift).
   - فرع `fix/sec-audit-03-proxy-addr-override` (القرار D50 — ترقية `proxy-addr` إلى `>= 2.0.8` لسد CVE-2024-52798 مع اختبار TCP حي، وتوثيق تأجيل كوكيز الواجهات وترقية Next 15، مع 475/475 اختباراً).
   - فرع `fix/sec-audit-01-throttler-bypass` (القرار D49 — سد ثغرة تجاوز Rate Limit في المسارات العامة وحظر التخمين بـ `fa28b17` مع 474/474 اختباراً).
@@ -65,34 +68,6 @@
   - فرع `feature/customer-fee-disclosure-modal` دُمج في `master` بـ `feb0f6b` (القرار D40).
   - فروع الميزات الأخيرة (D41، D42، D43، استعادة التقييم، وتحديث الأيقونة) دُمجت جميعاً بـ `git merge --no-ff`.
   - تم تنظيف وإغلاق كافة الفروع البعيدة القديمة على GitHub.
-
----
-
-## ديون اختبارات تكامل مكتشفة على master — يجب إصلاحها قبل أي دمج مستقبلي يعتمد عليها
-
-> ⚠️ **سياق الاكتشاف (Zero-Trust Audit 2026-10-23):**
-> أثناء التحقق الحازم وإسقاط وتفريغ قاعدة `forerun_test` وتطبيق الهجرات الرسمية من الصفر (`prisma migrate deploy`) وتشغيل `pnpm --filter forerun-api test:integration` كحزمة متتابعة كاملة، ظهر رسوب 7 ملفات اختبار تكامل إرثية سابقة من أصل 20 ملفاً.
-> هذا الخلل **مستقل عن ميزة App Version** وهو دَين فني كامن على فرع `master` نفسه لم يُكتشف سابقاً بسبب تشغيل الاختبارات كوحدات منفصلة أو عدم تشغيل كامل جناح التكامل على قاعدة منشأة بالترتيب الرسمي من الصفر.
-
-### الفئة 1: عدم تحديث توقعات الحصص بعد إزالة الأعمدة (4 ملفات)
-- **الملفات المتأثرة:**
-  1. `test/integration/pricing/pricing-behavior.integration.spec.ts` (6 اختبارات تفحص `createdSettlement.runnerShare`).
-  2. `test/integration/_audit/audit-close-day-fixed.integration.spec.ts` (فحص `settlementItem.runnerShare`).
-  3. `test/integration/_audit/audit-e2e-final-verification.integration.spec.ts` (فحص `settlement.runnerShare`).
-  4. `test/integration/orders/approve-order-custom-fee.integration.spec.ts` (فحص `createdSettlement.runnerShare`).
-- **السبب الجذري:** الهجرة `20261022132205_remove_legacy_share_columns` (القرار C-2 في D48) حذفت عمودي `runnerShare` و `platformShare` نهائياً من جدولي `Settlement` و `SettlementItem` في قاعدة البيانات. تم تحديث اختبارات الوحدة في `settlements.service.spec.ts`، لكن تم إغفال تحديث ملفات التكامل الأربعة المذكورة لتوقع `undefined` أو الاكتفاء بـ `totalFees`، فبقيت تفحص `expect(runnerShare).toBe(0)`.
-- **الإصلاح المطلوب:** تعديل التوكيدات في الملفات الأربعة لتتوافق مع نموذج البيانات الحالي (الاعتماد على `totalFees` فقط وفق D26/D48).
-
-### الفئة 2: تداخل حالة محدد الطلبات ومخلفات الجلسات عند التشغيل التتابعي (3 ملفات)
-- **الملفات المتأثرة:**
-  1. `test/integration/pricing/customer-pricing-disclosure.integration.spec.ts` (تصادم عند البذر المتوازي في بيئة مشتركة).
-  2. `test/integration/banners/banners.integration.spec.ts` (سباق قيود أجنبية `RefreshToken_userId_fkey` أثناء `cleanDatabase`).
-  3. `test/integration/_audit/audit-user-state-escalation-fixed.integration.spec.ts` (فشل `loginAs` برمز 401 نتيجة 429).
-- **السبب الجذري:** عند تشغيل الـ 20 ملفاً تتابعياً في عملية Vitest واحدة (`singleFork: true`):
-  1. يصطدم استدعاء `loginAs` المتكرر في الملفات اللاحقة بمحدد الطلبات الصارم لمسار `/auth/login` (الحد 10 طلبات لكل 15 دقيقة لكل IP المفروض بموجب D49)، لعدم عزل ذاكرة `ThrottlerStorage` بالكامل بين الملفات أثناء الـ Test Run الطويل.
-  2. حدوث تداخل بين تفريغ الجداول في `setup.ts` وحركات إدراج سريعة لـ `RefreshToken`.
-  (ملاحظة إثبات: كل ملف من هذه الملفات الثلاثة ينجح 100% وبصفر أخطاء عند تشغيله منفرداً).
-- **الإصلاح المطلوب:** تحسين عزل الـ Test Harness في `setup.ts` وتجاوز حد الـ login throttler في بيئة اختبارات التكامل بالكامل أو إعادة تصفير عداد الـ IP بين أجنحة الاختبار.
 
 ---
 

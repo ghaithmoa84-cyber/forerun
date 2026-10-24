@@ -318,7 +318,7 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
   // 4. Settlement Verifications
   // =========================================================================
   describe('4. Settlement Verifications', () => {
-    it('4.1 Full Flow: should verify Settlement and SettlementItem match totalFees and zeroed runnerShare per D26', async () => {
+    it('4.1 Full Flow: should verify Settlement and SettlementItem match totalFees per D26/D48', async () => {
       const { order1Id, order2Id } = await setupTwoDeliveredOrders();
 
       const ledgerEntries = await prisma.ledgerEntry.findMany({
@@ -357,24 +357,18 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       const createdSettlement = closeDayRes.body.settlements[0];
       expect(createdSettlement.totalOrders).toBe(2);
       expect(createdSettlement.totalFees).toBe(180);
-      expect(createdSettlement.runnerShare).toBe(0);
-      expect(createdSettlement.platformShare).toBe(180);
+      // D26/D48: runnerShare/platformShare columns were dropped from Settlement model
 
-      // Verify SettlementItem breakdown in DB
+      // Verify SettlementItem breakdown in DB (D26/D48: runnerShare/platformShare columns removed from SettlementItem)
       const settlementItems = await prisma.settlementItem.findMany({
         where: { settlementId: createdSettlement.id },
       });
       expect(settlementItems).toHaveLength(2);
 
-      const sumItemsRunnerShare = settlementItems.reduce((sum, item) => sum + item.runnerShare, 0);
-      const sumItemsPlatformShare = settlementItems.reduce((sum, item) => sum + item.platformShare, 0);
       const sumItemsOrderFee = settlementItems.reduce((sum, item) => sum + item.orderFee, 0);
 
-      expect(sumItemsRunnerShare).toBe(0);
-      expect(sumItemsPlatformShare).toBe(180);
       expect(sumItemsOrderFee).toBe(180);
-      expect(createdSettlement.platformShare).toBe(sumItemsPlatformShare);
-      expect(createdSettlement.runnerShare).toBe(sumItemsRunnerShare);
+      expect(createdSettlement.totalFees).toBe(sumItemsOrderFee);
     });
 
     it('4.2 (i) should verify getCurrentSettlement returns runnerShare = 0 and platformShare = totalFees', async () => {
@@ -390,7 +384,7 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(res.body.estimatedPlatformShare).toBe(180);
     });
 
-    it('4.3 (ii) should verify closeDay created settlement has runnerShare = 0 and platformShare = totalFees', async () => {
+    it('4.3 (ii) should verify closeDay created settlement matches totalFees per D26/D48', async () => {
       await setupTwoDeliveredOrders();
 
       const operationalDate = getOperationalDate();
@@ -402,11 +396,10 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(closeDayRes.status).toBe(201);
       const createdSettlement = closeDayRes.body.settlements[0];
       expect(createdSettlement.totalFees).toBe(180);
-      expect(createdSettlement.runnerShare).toBe(0);
-      expect(createdSettlement.platformShare).toBe(180);
+      // D26/D48: runnerShare/platformShare dropped from Settlement model
     });
 
-    it('4.4 (iii) should verify sum of SettlementItem matches Settlement totals with unified shares', async () => {
+    it('4.4 (iii) should verify sum of SettlementItem matches Settlement totals per D26/D48', async () => {
       await setupTwoDeliveredOrders();
 
       const operationalDate = getOperationalDate();
@@ -430,17 +423,10 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
         const orderTotal = orderLedger.find((e) => e.type === 'ORDER_FEE_TOTAL')!.amount;
 
         expect(item.orderFee).toBe(orderTotal);
-        expect(item.runnerShare).toBe(0);
-        expect(item.platformShare).toBe(orderTotal);
       }
 
-      const sumRunner = settlementItems.reduce((sum, item) => sum + item.runnerShare, 0);
-      const sumPlatform = settlementItems.reduce((sum, item) => sum + item.platformShare, 0);
       const sumTotal = settlementItems.reduce((sum, item) => sum + item.orderFee, 0);
 
-      expect(sumRunner).toBe(0);
-      expect(sumRunner).toBe(createdSettlement.runnerShare);
-      expect(sumPlatform).toBe(createdSettlement.platformShare);
       expect(sumTotal).toBe(createdSettlement.totalFees);
     });
   });
@@ -457,10 +443,9 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
         .set('Authorization', `Bearer ${runnerToken}`);
 
       expect(currentRes.status).toBe(200);
-      const currentRunnerShare = currentRes.body.estimatedRunnerShare;
-      const currentPlatformShare = currentRes.body.estimatedPlatformShare;
-      expect(currentRunnerShare).toBe(0);
-      expect(currentPlatformShare).toBe(122);
+      expect(currentRes.body.totalFees).toBe(122);
+      expect(currentRes.body.estimatedRunnerShare).toBe(0);
+      expect(currentRes.body.estimatedPlatformShare).toBe(122);
 
       const operationalDate = getOperationalDate();
       const closeDayRes = await request
@@ -469,35 +454,31 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
         .send({ operationalDate, notes: 'Rounding regression guard test' });
 
       expect(closeDayRes.status).toBe(201);
-      const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
-      const closedPlatformShare = closeDayRes.body.settlements[0].platformShare;
-      expect(closedRunnerShare).toBe(0);
-      expect(closedPlatformShare).toBe(122);
+      const closedSettlement = closeDayRes.body.settlements[0];
+      expect(closedSettlement.totalFees).toBe(122);
 
-      // Zero drift between live preview and closed daily settlement
-      expect(currentRunnerShare - closedRunnerShare).toBe(0);
-      expect(currentPlatformShare - closedPlatformShare).toBe(0);
+      // Zero drift between live preview and closed daily settlement (D26/D48: totalFees invariant)
+      expect(currentRes.body.totalFees - closedSettlement.totalFees).toBe(0);
     });
 
-    it('5.2 (Desired Invariant) getCurrentSettlement must equal closeDay on odd fees (both runnerShare=0 and platformShare=totalFees)', async () => {
+    it('5.2 (Desired Invariant) getCurrentSettlement must equal closeDay on odd fees (totalFees matching per D26/D48)', async () => {
       await setupTwoDeliveredOrdersWithOddFees();
 
       const currentRes = await request
         .get('/api/v1/runner/settlements/current')
         .set('Authorization', `Bearer ${runnerToken}`);
-      const currentRunnerShare = currentRes.body.estimatedRunnerShare;
-      const currentPlatformShare = currentRes.body.estimatedPlatformShare;
 
       const operationalDate = getOperationalDate();
       const closeDayRes = await request
         .post('/api/v1/admin/settlements/close-day')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ operationalDate, notes: 'Rounding invariant target test' });
-      const closedRunnerShare = closeDayRes.body.settlements[0].runnerShare;
-      const closedPlatformShare = closeDayRes.body.settlements[0].platformShare;
+      const closedSettlement = closeDayRes.body.settlements[0];
 
-      expect(currentRunnerShare).toBe(closedRunnerShare);
-      expect(currentPlatformShare).toBe(closedPlatformShare);
+      // D26/D48: Both reflect the unified totalFees and zero runner share
+      expect(currentRes.body.totalFees).toBe(closedSettlement.totalFees);
+      expect(currentRes.body.estimatedRunnerShare).toBe(0);
+      expect(currentRes.body.estimatedPlatformShare).toBe(closedSettlement.totalFees);
     });
 
     it('5.3 should verify ΣLedger[ORDER_FEE_TOTAL] equals closeDay.totalFees and getCurrentSettlement.totalFees when orders delivered with 61 SYP', async () => {
@@ -547,7 +528,7 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(currentRes.body.estimatedRunnerShare).toBe(0);
       expect(currentRes.body.estimatedPlatformShare).toBe(122);
 
-      // 3. Verify closeDay: totalFees = 122, runnerShare = 0, platformShare = 122
+      // 3. Verify closeDay: totalFees = 122 (D26/D48: runnerShare/platformShare dropped)
       const operationalDate = getOperationalDate();
       const closeDayRes = await request
         .post('/api/v1/admin/settlements/close-day')
@@ -556,8 +537,6 @@ describe('Sprint 6A: Pricing Behavior Baseline (S1)', () => {
       expect(closeDayRes.status).toBe(201);
       const closedSettlement = closeDayRes.body.settlements[0];
       expect(closedSettlement.totalFees).toBe(122);
-      expect(closedSettlement.runnerShare).toBe(0);
-      expect(closedSettlement.platformShare).toBe(122);
 
       // Invariant: ΣLedger[ORDER_FEE_TOTAL] === getCurrentSettlement.totalFees === closeDay.totalFees
       expect(sumLedgerTotalFee).toBe(currentRes.body.totalFees);

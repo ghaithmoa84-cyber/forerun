@@ -148,16 +148,10 @@ describe('Audit: Final Comprehensive E2E Verification & Concurrency Stress Test'
     expect(settlement.totalOrders).toBe(1);
     expect(settlement.totalFees).toBe(60);
 
-    // Manual Recalculation Verification:
-    // Base fee: 60
-    // Extra stores: 0
-    // Total fee: 60
-    // Runner share: 0 (Salary model Decision D26)
-    // Platform share: 60
-    // Zero Drift check: 60 === 0 + 60
-    expect(settlement.runnerShare).toBe(0);
-    expect(settlement.platformShare).toBe(60);
-    expect(settlement.runnerShare + settlement.platformShare).toBe(settlement.totalFees);
+    // Verification per D26/D48:
+    // Base fee: 60, Extra stores: 0, Total fee: 60
+    // Settlement model tracks totalFees only (legacy share columns dropped in C-2 migration)
+    expect(settlement.totalFees).toBe(60);
 
     // 9. Admin marks settlement as settled
     const resMarkSettled = await request
