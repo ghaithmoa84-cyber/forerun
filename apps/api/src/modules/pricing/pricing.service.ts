@@ -401,6 +401,11 @@ export class PricingService {
     if (!Number.isInteger(customFee) || customFee < 0) {
       throw new BadRequestException('customFee must be a non-negative integer');
     }
+    if (customFee > CUSTOM_FEE_CAP) {
+      throw new BadRequestException(
+        `customFee cannot exceed ${CUSTOM_FEE_CAP}`,
+      );
+    }
 
     const baseFee = config.baseFee;
     const peripheralFee = params.isPeripheral

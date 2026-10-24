@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { PRICING, DEFAULT_PRICING_CONFIG } from '@forerun/shared-constants';
+import { PRICING, DEFAULT_PRICING_CONFIG, CUSTOM_FEE_CAP } from '@forerun/shared-constants';
 import { PricingService } from '../../src/modules/pricing/pricing.service.js';
 import type { PrismaService } from '../../src/database/prisma.service.js';
 import type { Prisma } from '@prisma/client';
@@ -738,6 +738,57 @@ describe('PricingService', () => {
       expect(() =>
         service.calculateFee(
           { isPeripheral: false, purchasedStoreCount: 1, customFee: 10.5 },
+          DEFAULT_PRICING_CONFIG,
+        ),
+      ).toThrow(BadRequestException);
+    });
+
+    it('calculateFee accepts customFee exactly equal to CUSTOM_FEE_CAP (500)', () => {
+      const result = service.calculateFee(
+        {
+          isPeripheral: false,
+          purchasedStoreCount: 1,
+          customFee: CUSTOM_FEE_CAP,
+        },
+        DEFAULT_PRICING_CONFIG,
+      );
+
+      expect(result.customFee).toBe(CUSTOM_FEE_CAP);
+      expect(result.totalFee).toBe(PRICING.BASE_FEE + CUSTOM_FEE_CAP);
+    });
+
+    it('calculateFee rejects customFee above CUSTOM_FEE_CAP (CUSTOM_FEE_CAP + 1)', () => {
+      expect(() =>
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: 1,
+            customFee: CUSTOM_FEE_CAP + 1,
+          },
+          DEFAULT_PRICING_CONFIG,
+        ),
+      ).toThrow(BadRequestException);
+
+      expect(() =>
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: 1,
+            customFee: CUSTOM_FEE_CAP + 1,
+          },
+          DEFAULT_PRICING_CONFIG,
+        ),
+      ).toThrow(`customFee cannot exceed ${CUSTOM_FEE_CAP}`);
+    });
+
+    it('calculateFee rejects customFee significantly above CUSTOM_FEE_CAP (1000)', () => {
+      expect(() =>
+        service.calculateFee(
+          {
+            isPeripheral: false,
+            purchasedStoreCount: 1,
+            customFee: 1000,
+          },
           DEFAULT_PRICING_CONFIG,
         ),
       ).toThrow(BadRequestException);
