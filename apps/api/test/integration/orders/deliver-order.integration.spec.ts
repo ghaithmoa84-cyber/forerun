@@ -120,6 +120,18 @@ describe('deliverOrder — Integration', () => {
       .send({ idempotencyKey });
     expect(deliverRes.status).toBe(200);
 
+    // DTO Least Privilege: verify customerId and ledgerEntries are strictly excluded
+    expect(deliverRes.body).not.toHaveProperty('customerId');
+    expect(deliverRes.body).not.toHaveProperty('ledgerEntries');
+    expect(deliverRes.body).not.toHaveProperty('runnerId');
+    expect('customerId' in deliverRes.body).toBe(false);
+    expect('ledgerEntries' in deliverRes.body).toBe(false);
+    expect('runnerId' in deliverRes.body).toBe(false);
+    expect(deliverRes.body).toMatchObject({
+      orderId,
+      status: 'DELIVERED',
+    });
+
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     expect(order).not.toBeNull();
     expect(order!.status).toBe('DELIVERED');
@@ -161,6 +173,9 @@ describe('deliverOrder — Integration', () => {
       .send({ idempotencyKey });
     expect(firstDeliverRes.status).toBe(200);
     expect(firstDeliverRes.body.idempotent).toBe(false);
+    expect('customerId' in firstDeliverRes.body).toBe(false);
+    expect('ledgerEntries' in firstDeliverRes.body).toBe(false);
+    expect('runnerId' in firstDeliverRes.body).toBe(false);
 
     // Idempotent retry: same key should return 200 with idempotent: true and no duplicate ledger entries
     const duplicateDeliverRes = await request
@@ -169,6 +184,9 @@ describe('deliverOrder — Integration', () => {
       .send({ idempotencyKey });
     expect(duplicateDeliverRes.status).toBe(200);
     expect(duplicateDeliverRes.body.idempotent).toBe(true);
+    expect('customerId' in duplicateDeliverRes.body).toBe(false);
+    expect('ledgerEntries' in duplicateDeliverRes.body).toBe(false);
+    expect('runnerId' in duplicateDeliverRes.body).toBe(false);
 
     // Mismatched idempotency key on delivered order should return 409 Conflict
     const mismatchRes = await request

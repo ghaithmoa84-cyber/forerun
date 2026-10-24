@@ -1069,9 +1069,6 @@ export class RunnerOrdersService {
   ): Promise<
     RunnerOrderActionResponse & {
       idempotent: boolean;
-      ledgerEntries: unknown[];
-      runnerId: string | null;
-      customerId: string;
     }
   > {
     const result = await this.prisma.$transaction(
@@ -1137,9 +1134,6 @@ export class RunnerOrdersService {
       orderNumber: result.order.orderNumber!,
       status: result.order.status,
       idempotent: result.idempotent,
-      ledgerEntries: result.ledgerEntries ?? [],
-      runnerId: result.order.runnerId,
-      customerId: result.order.customerId,
     };
   }
 }
