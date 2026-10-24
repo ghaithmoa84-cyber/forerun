@@ -101,27 +101,44 @@ export class RatingsService {
         },
       });
 
-      const runner = await tx.runner.findUnique({
-        where: { id: order.runnerId },
-      });
-      if (!runner) {
-        throw new NotFoundException('Runner not found');
-      }
-      const oldTotal = runner.totalRatings;
-      const oldAvg = runner.avgRating;
-      const newTotal = oldTotal + 1;
-      const newAvg =
-        oldAvg === null || oldTotal === 0
-          ? dto.stars
-          : (oldAvg * oldTotal + dto.stars) / newTotal;
+      let updateSuccess = false;
+      const MAX_RETRIES = 5;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const runner = await tx.runner.findUnique({
+          where: { id: order.runnerId },
+        });
+        if (!runner) {
+          throw new NotFoundException('Runner not found');
+        }
+        const oldTotal = runner.totalRatings;
+        const oldAvg = runner.avgRating;
+        const newTotal = oldTotal + 1;
+        const newAvg =
+          oldAvg === null || oldTotal === 0
+            ? dto.stars
+            : (oldAvg * oldTotal + dto.stars) / newTotal;
 
-      await tx.runner.update({
-        where: { id: order.runnerId },
-        data: {
-          avgRating: newAvg,
-          totalRatings: newTotal,
-        },
-      });
+        const updated = await tx.runner.updateMany({
+          where: {
+            id: order.runnerId,
+            totalRatings: oldTotal,
+            ...(oldAvg === null ? { avgRating: null } : { avgRating: oldAvg }),
+          },
+          data: {
+            avgRating: newAvg,
+            totalRatings: newTotal,
+          },
+        });
+
+        if (updated.count === 1) {
+          updateSuccess = true;
+          break;
+        }
+      }
+
+      if (!updateSuccess) {
+        throw new ConflictException('CONCURRENT_RUNNER_RATING_UPDATE');
+      }
 
       await this.auditService.log(
         {
@@ -217,23 +234,43 @@ export class RatingsService {
       });
 
       if (rating.runnerId) {
-        const runner = await tx.runner.findUnique({
-          where: { id: rating.runnerId },
-        });
-        if (!runner) {
-          throw new NotFoundException('Runner not found');
-        }
-        const totalCount = runner.totalRatings;
-        if (totalCount > 0) {
-          const newAvg =
-            ((runner.avgRating ?? 0) * totalCount -
-              rating.stars +
-              dto.stars) /
-            totalCount;
-          await tx.runner.update({
+        let updateSuccess = false;
+        const MAX_RETRIES = 5;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          const runner = await tx.runner.findUnique({
             where: { id: rating.runnerId },
+          });
+          if (!runner) {
+            throw new NotFoundException('Runner not found');
+          }
+          const totalCount = runner.totalRatings;
+          if (totalCount === 0) {
+            updateSuccess = true;
+            break;
+          }
+          const currentAvg = runner.avgRating ?? 0;
+          const newAvg =
+            (currentAvg * totalCount - rating.stars + dto.stars) / totalCount;
+
+          const updated = await tx.runner.updateMany({
+            where: {
+              id: rating.runnerId,
+              totalRatings: totalCount,
+              ...(runner.avgRating === null
+                ? { avgRating: null }
+                : { avgRating: runner.avgRating }),
+            },
             data: { avgRating: newAvg },
           });
+
+          if (updated.count === 1) {
+            updateSuccess = true;
+            break;
+          }
+        }
+
+        if (!updateSuccess) {
+          throw new ConflictException('CONCURRENT_RUNNER_RATING_UPDATE');
         }
 
         await this.auditService.log(

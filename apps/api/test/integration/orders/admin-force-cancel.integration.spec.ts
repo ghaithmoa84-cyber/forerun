@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient, OrderStatus, UserRole, UserStatus, LedgerEntryType } from '@prisma/client';
 import supertest from 'supertest';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../../../src/database/prisma.service';
 import { createTestApp, closeTestApp } from '../helpers/app.helper';
 import { seedAdmin, seedRunner, seedCustomer, loginAs } from '../helpers/seed.helper';
 import { cleanDatabase } from '../setup';
@@ -170,6 +171,58 @@ describe('Admin Force Cancel Order Integration Tests (Decision D39)', () => {
 
       expect(res.status).toBe(409);
       expect(res.body.message).toBe('ORDER_ALREADY_CANCELLED');
+    });
+
+    it('concurrent status transition: fails with 409 Conflict when order transitions to DELIVERED before cancellation update', async () => {
+      // 1. Create order in ASSIGNED state with runner
+      await prisma.runner.update({
+        where: { id: runnerId },
+        data: { status: 'ON_MISSION' },
+      });
+      const order = await createTestOrder(OrderStatus.ASSIGNED, runnerId);
+
+      // 2. Intercept Prisma transaction to simulate race condition:
+      // Read order as ASSIGNED, then an external concurrent transaction completes delivery
+      const prismaService = app.get(PrismaService);
+      const realTransaction = prismaService.$transaction.bind(prismaService);
+
+      const transactionSpy = vi.spyOn(prismaService, '$transaction').mockImplementation(async (cb: any, options?: any) => {
+        return realTransaction(async (tx: any) => {
+          const origFindUnique = tx.order.findUnique.bind(tx.order);
+          tx.order.findUnique = async (...args: any[]) => {
+            const foundOrder = await origFindUnique(...args);
+            // Simulate parallel transaction completing delivery before cancellation update
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                status: OrderStatus.DELIVERED,
+                deliveredAt: new Date(),
+              },
+            });
+            return foundOrder;
+          };
+          return cb(tx);
+        }, options);
+      });
+
+      try {
+        const res = await request
+          .put(`/api/v1/admin/orders/${order.id}/cancel`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ reason: 'Admin attempting cancel during concurrent delivery' });
+
+        expect(res.status).toBe(409);
+        expect(res.body.message).toBe('ORDER_STATUS_CHANGED_CONCURRENTLY');
+
+        // Confirm database integrity: Order remains DELIVERED and was NOT overwritten to CANCELLED
+        const dbOrder = await prisma.order.findUnique({
+          where: { id: order.id },
+        });
+        expect(dbOrder!.status).toBe(OrderStatus.DELIVERED);
+        expect(dbOrder!.cancelledAt).toBeNull();
+      } finally {
+        transactionSpy.mockRestore();
+      }
     });
   });
 

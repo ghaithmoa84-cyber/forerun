@@ -1283,7 +1283,7 @@ it('13. MAX_CUSTOM_FEE = 500 guard allows customFee within cap and pricing row i
       );
     });
 
-    it('throws ConflictException when updateMany returns count 0 (concurrent cancellation)', async () => {
+    it('throws ConflictException when updateMany returns count 0 (concurrent state change)', async () => {
       const mockOrder = {
         id: orderId,
         orderNumber: 'ORD-2026-400',
@@ -1302,7 +1302,7 @@ it('13. MAX_CUSTOM_FEE = 500 guard allows customFee within cap and pricing row i
       txClient.order.updateMany.mockResolvedValue({ count: 0 });
 
       await expect(service.cancelOrderAdmin(orderId, adminId)).rejects.toThrow(
-        'ORDER_ALREADY_CANCELLED',
+        'ORDER_STATUS_CHANGED_CONCURRENTLY',
       );
     });
 
