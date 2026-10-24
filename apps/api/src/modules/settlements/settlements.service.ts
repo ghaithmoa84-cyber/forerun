@@ -10,6 +10,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { LedgerService } from '../ledger/ledger.service.js';
 import {
   type SettlementAdminQuery,
   SettlementListResponse,
@@ -59,6 +60,7 @@ export class SettlementsService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
+    private readonly ledgerService: LedgerService,
   ) {}
 
   async resolveRunner(userId: string) {
@@ -356,14 +358,17 @@ export class SettlementsService {
         );
       }
 
-      await tx.ledgerEntry.create({
-        data: {
-          runnerId: settlement.runnerId,
-          type: 'SETTLEMENT_PAID',
-          amount: settlement.totalFees,
-          description: `Settlement ${id} settled for ${settlement.operationalDate}`,
-        },
-      });
+      if (settlement.totalFees > 0) {
+        await this.ledgerService.createEntry(
+          {
+            runnerId: settlement.runnerId,
+            type: 'SETTLEMENT_PAID',
+            amount: settlement.totalFees,
+            description: `Settlement ${id} settled for ${settlement.operationalDate}`,
+          },
+          tx,
+        );
+      }
 
       await this.auditService.log(
         {

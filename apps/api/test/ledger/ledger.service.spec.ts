@@ -5,7 +5,7 @@ import {
 } from '@forerun/shared-types';
 import { LedgerService } from '../../src/modules/ledger/ledger.service.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 const LEDGER_TYPES = [
   'ORDER_FEE_TOTAL',
@@ -46,17 +46,17 @@ describe('LedgerService', () => {
 
   // ── createEntry ──────────────────────────────────────────
   describe('createEntry', () => {
-    it('creates a ledger entry with correct data', async () => {
+    it('creates a ledger entry with correct data when amount is positive', async () => {
       const input: CreateLedgerEntryRequest = {
         type: 'RUNNER_SHARE' as LedgerEntryType,
-        amount: 4500,
+        amount: 6000,
         description: 'Runner share for order FW-000001',
         orderId: 'order-1',
         runnerId: 'runner-1',
       };
 
       prisma.ledgerEntry.create.mockResolvedValue(
-        mockEntry({ id: 'le-1', type: 'RUNNER_SHARE', amount: 4500 }),
+        mockEntry({ id: 'le-1', type: 'RUNNER_SHARE', amount: 6000 }),
       );
 
       const result = await service.createEntry(input);
@@ -66,14 +66,51 @@ describe('LedgerService', () => {
           orderId: 'order-1',
           runnerId: 'runner-1',
           type: 'RUNNER_SHARE',
-          amount: 4500,
+          amount: 6000,
           description: 'Runner share for order FW-000001',
           meta: expect.anything(),
         },
       });
       expect(result.id).toBe('le-1');
       expect(result.type).toBe('RUNNER_SHARE');
-      expect(result.amount).toBe(4500);
+      expect(result.amount).toBe(6000);
+    });
+
+    it('rejects amount = 0 throwing BadRequestException', async () => {
+      const input: CreateLedgerEntryRequest = {
+        type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+        amount: 0,
+        description: 'Zero amount entry',
+      };
+
+      await expect(service.createEntry(input)).rejects.toThrow(BadRequestException);
+      expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects negative amount throwing BadRequestException', async () => {
+      const input: CreateLedgerEntryRequest = {
+        type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+        amount: -100,
+        description: 'Negative amount entry',
+      };
+
+      await expect(service.createEntry(input)).rejects.toThrow(BadRequestException);
+      expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects NaN, null, and non-integer floats', async () => {
+      const invalidInputs: unknown[] = [NaN, null, 10.5, '6000', undefined];
+
+      for (const amount of invalidInputs) {
+        const input = {
+          type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+          amount: amount as number,
+          description: 'Invalid amount entry',
+        };
+
+        await expect(service.createEntry(input)).rejects.toThrow(BadRequestException);
+        expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+      }
     });
 
     it('creates a ledger entry without orderId or runnerId', async () => {
@@ -124,7 +161,7 @@ describe('LedgerService', () => {
 
   // ── createMany ──────────────────────────────────────────
   describe('createMany', () => {
-    it('creates multiple entries in a transaction', async () => {
+    it('creates multiple entries in a transaction when all amounts are positive', async () => {
       const entries: CreateLedgerEntryRequest[] = [
         {
           type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
@@ -159,7 +196,71 @@ describe('LedgerService', () => {
       expect(prisma.$transaction).toHaveBeenCalled();
     });
 
-    it('returns empty array when given empty entries', async () => {
+    it('rejects amount = 0 in createMany throwing BadRequestException', async () => {
+      const entries: CreateLedgerEntryRequest[] = [
+        {
+          type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+          amount: 0,
+          description: 'Zero amount',
+        },
+      ];
+
+      await expect(service.createMany(entries)).rejects.toThrow(BadRequestException);
+      expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects negative amount in createMany throwing BadRequestException', async () => {
+      const entries: CreateLedgerEntryRequest[] = [
+        {
+          type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+          amount: -100,
+          description: 'Negative amount',
+        },
+      ];
+
+      await expect(service.createMany(entries)).rejects.toThrow(BadRequestException);
+      expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects NaN, null, and non-integer floats in createMany', async () => {
+      const invalidAmounts = [NaN, null, 15.75, '500', undefined];
+
+      for (const amount of invalidAmounts) {
+        const entries = [
+          {
+            type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+            amount: amount as number,
+            description: 'Invalid amount',
+          },
+        ];
+
+        await expect(service.createMany(entries)).rejects.toThrow(BadRequestException);
+        expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+      }
+    });
+
+    it('enforces atomicity: if one entry has amount = 0, no entries are written', async () => {
+      const entries: CreateLedgerEntryRequest[] = [
+        {
+          type: 'ORDER_FEE_TOTAL' as LedgerEntryType,
+          amount: 6000,
+          description: 'Valid fee',
+        },
+        {
+          type: 'RUNNER_SHARE' as LedgerEntryType,
+          amount: 0,
+          description: 'Zero fee',
+        },
+      ];
+
+      await expect(service.createMany(entries)).rejects.toThrow(BadRequestException);
+      expect(prisma.ledgerEntry.create).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('returns empty array when given empty entries without invoking transaction or create', async () => {
       const result = await service.createMany([]);
       expect(result).toEqual([]);
       expect(prisma.$transaction).not.toHaveBeenCalled();
