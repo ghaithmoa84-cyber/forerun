@@ -73,6 +73,15 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 - **Silent Leak Invariant:** Functional tests, state machine audits, and financial ledger checks DO NOT catch DTO over-exposure (an endpoint can operate functionally 100% while leaking private third-party data). Any endpoint exposing third-party info requires a dedicated privacy & lifecycle test suite.
 - **Reference:** Documented real-world incident and remediation in [PROJECT_STATUS.md §12 D35](PROJECT_STATUS.md#d35--فرض-قيد-دورة-الحياة-على-بيانات-تواصل-المندوب-الشخصية-2026-10-13).
 
+### 8. Zero-Trust Test Remediation & Anti-False-Comfort Rule
+- **ممنوع اختلاق "إصلاحات وقائية" أو ترقيعات تخمينية لأعراض غير قابلة لإعادة الإنتاج (Flaky / Ghost Failures):**
+  - لا يُسمح بإجراء تعديلات كود إنتاجي أو بنيوي بناءً على فشل عابر لم يتم إثبات تكراره بدقة في بيئة نظيفة ومفرغة (`clean fresh DB` عبر الهجرات الرسمية من الصفر).
+  - التمييز الإلزامي والصارم بين ثلاثة أصناف عند فحص ومعالجة الاختبارات:
+    1. **الإصلاح الحقيقي (Definite Fix):** تم إثبات فشله مسبقاً، وتحديد سببه الجذري بدقة (مثل كسر عقود الأعمدة المحذوفة)، وتعديله مع الحفاظ على القصد السلوكي للاختبار، وتأكيد نجاحه بعد التعديل.
+    2. **تصحيح النظافة البنيوي (Structural Hygiene):** معالجة سقطات النظافة المؤكدة منطقياً في بنية الاختبارات (مثل حذف الجداول الفرعية التابعة كـ `DeviceToken` في `cleanDatabase` وفق التبعيات المفتاحية)، وتوثيقها كإجراء نظافة مستقل بذاته، **ويُحظر تماماً ترويجها كـ "إصلاح وقائي" أو تفسير لأعراض غير مفسرة**.
+    3. **الأعراض غير القابلة لإعادة الإنتاج (Non-reproducible / Flaky):** إذا تعذر تكرار الفشل عبر 3-5 تشغيلات متتالية من بيئة نظيفة مفرغة، يُمنع إغلاق البند بإصلاح وهمي، ويُمنع أيضاً الجزم القاطع بانتفاء المشكلة؛ بل يُوثّق ذلك بصدق وشفافية كـ "غير قابل لإعادة الإنتاج حالياً لغياب الدليل"، مع تسجيل فرضيات التحقيق المستقبلية عند ظهور أي عَرَض لاحقاً.
+- **Reference:** Documented in [PROJECT_STATUS.md §12 D52](PROJECT_STATUS.md#d52--معيار-معالجة-الاختبارات-وفق-عدم-الثقة-ومنع-الطمأنة-الزائفة-anti-false-comfort-وإغلاق-ديون-اختبارات-التكامل-2026-10-24).
+
 ## Workflow
 
 ### Sprint Flow
