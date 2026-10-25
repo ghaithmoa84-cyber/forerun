@@ -11,6 +11,7 @@ import type {
   DeliverOrderRequest,
 } from '@forerun/shared-types';
 import axios from 'axios';
+import { toUserMessage } from '../lib/errorMessage';
 
 const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   DRAFT: 'مسودة',
@@ -117,7 +118,7 @@ export function ActiveOrderPage() {
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل بدء تنفيذ الطلب');
       }
@@ -144,7 +145,7 @@ export function ActiveOrderPage() {
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل إضافة المتجر');
       }
@@ -166,7 +167,7 @@ export function ActiveOrderPage() {
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل الانتقال للتوصيل. تأكد من شراء أو تخطي جميع المتاجر.');
       }
@@ -202,7 +203,7 @@ export function ActiveOrderPage() {
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل تسجيل تسليم الطلب');
       }
