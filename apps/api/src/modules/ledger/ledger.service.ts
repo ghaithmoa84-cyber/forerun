@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { LedgerEntry as PrismaLedgerEntry } from '@prisma/client';
 import {
@@ -26,10 +26,20 @@ function mapPrismaToLedgerEntry(entry: PrismaLedgerEntry): LedgerEntry {
 export class LedgerService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private validateAmount(amount: unknown): void {
+    if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
+      throw new BadRequestException(
+        `Ledger entry amount must be a positive integer, received: ${amount}`,
+      );
+    }
+  }
+
   async createEntry(
     data: CreateLedgerEntryRequest,
     tx?: Prisma.TransactionClient,
   ): Promise<LedgerEntry> {
+    this.validateAmount(data.amount);
+
     const client = tx ?? this.prisma;
     const entry = await client.ledgerEntry.create({
       data: {
@@ -51,6 +61,10 @@ export class LedgerService {
   ): Promise<LedgerEntry[]> {
     if (entries.length === 0) {
       return [];
+    }
+
+    for (const entry of entries) {
+      this.validateAmount(entry.amount);
     }
 
     if (tx) {

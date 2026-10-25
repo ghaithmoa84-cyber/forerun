@@ -6,6 +6,7 @@ import {
 import type { PrismaService } from '../../src/database/prisma.service.js';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import type { LedgerService } from '../../src/modules/ledger/ledger.service.js';
 
 describe('SettlementsService cron helpers', () => {
   let prisma: any;
@@ -22,6 +23,7 @@ describe('SettlementsService cron helpers', () => {
       prisma as unknown as PrismaService,
       {} as unknown as AuditService,
       notificationsService as unknown as NotificationsService,
+      {} as unknown as LedgerService,
     );
   });
 

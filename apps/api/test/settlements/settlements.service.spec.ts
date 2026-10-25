@@ -8,6 +8,7 @@ import { SettlementsService } from '../../src/modules/settlements/settlements.se
 import type { PrismaService } from '../../src/database/prisma.service.js';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service.js';
+import type { LedgerService } from '../../src/modules/ledger/ledger.service.js';
 import {
   RunnerCurrentSettlementSchema,
   RUNNER_CURRENT_SETTLEMENT_STATUS_VALUES,
@@ -50,6 +51,9 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
   let notificationsService: {
     emitToAdmin: ReturnType<typeof vi.fn>;
   };
+  let ledgerService: {
+    createEntry: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     txClient = {
@@ -91,10 +95,15 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       emitToAdmin: vi.fn().mockResolvedValue(undefined),
     };
 
+    ledgerService = {
+      createEntry: vi.fn().mockResolvedValue({ id: 'led-1' }),
+    };
+
     service = new SettlementsService(
       prisma as unknown as PrismaService,
       auditService as unknown as AuditService,
       notificationsService as unknown as NotificationsService,
+      ledgerService as unknown as LedgerService,
     );
   });
 
@@ -375,7 +384,7 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       );
     });
 
-    it('successfully settles a pending settlement, creates LedgerEntry and logs audit', async () => {
+    it('successfully settles a pending settlement, creates LedgerEntry via LedgerService and logs audit', async () => {
       const mockSettlement = {
         id: settlementId,
         runnerId: 'run-1',
@@ -387,7 +396,6 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
 
       txClient.settlement.findUnique.mockResolvedValue(mockSettlement);
       txClient.settlement.updateMany.mockResolvedValue({ count: 1 });
-      txClient.ledgerEntry.create.mockResolvedValue({ id: 'led-1' });
 
       const result = await service.markSettled(settlementId, userId, adminId);
 
@@ -400,14 +408,70 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
         },
       });
 
-      expect(txClient.ledgerEntry.create).toHaveBeenCalledWith({
-        data: {
+      expect(ledgerService.createEntry).toHaveBeenCalledWith(
+        {
           runnerId: 'run-1',
           type: 'SETTLEMENT_PAID',
           amount: 300,
           description: `Settlement ${settlementId} settled for 2026-10-04`,
         },
+        txClient,
+      );
+      expect(txClient.ledgerEntry.create).not.toHaveBeenCalled();
+
+      expect(auditService.log).toHaveBeenCalledWith(
+        {
+          actorId: userId,
+          actorRole: 'ADMIN',
+          event: 'SETTLEMENT_MARKED_SETTLED',
+          fromStatus: 'PENDING',
+          toStatus: 'SETTLED',
+          meta: {
+            settlementId,
+            runnerId: 'run-1',
+          },
+        },
+        txClient,
+      );
+
+      expect(result.settlement).toEqual(
+        expect.objectContaining({
+          id: settlementId,
+          runnerId: 'run-1',
+          status: 'SETTLED',
+          closedByAdminId: adminId,
+          closedAt: expect.any(Date),
+        }),
+      );
+    });
+
+    it('successfully settles a pending settlement when totalFees = 0 without creating LedgerEntry', async () => {
+      const mockSettlement = {
+        id: settlementId,
+        runnerId: 'run-1',
+        status: 'PENDING',
+        totalFees: 0,
+        totalOrders: 0,
+        operationalDate: '2026-10-04',
+      };
+
+      txClient.settlement.findUnique.mockResolvedValue(mockSettlement);
+      txClient.settlement.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.markSettled(settlementId, userId, adminId);
+
+      expect(txClient.settlement.updateMany).toHaveBeenCalledWith({
+        where: { id: settlementId, status: 'PENDING' },
+        data: {
+          status: 'SETTLED',
+          closedAt: expect.any(Date),
+          closedByAdminId: adminId,
+        },
       });
+
+      // Crucial: No ledger entry should be created for 0 fees
+      expect(ledgerService.createEntry).not.toHaveBeenCalled();
+      expect(txClient.ledgerEntry.create).not.toHaveBeenCalled();
 
       expect(auditService.log).toHaveBeenCalledWith(
         {
