@@ -9,6 +9,7 @@ import type {
 import { ItemsList } from './ItemsList';
 import { ReceiptUploader } from './ReceiptUploader';
 import axios from 'axios';
+import { toUserMessage } from '../lib/errorMessage';
 
 const ORDER_STORE_STATUS_LABEL: Record<OrderStoreStatus, string> = {
   PENDING: 'معلّق',
@@ -58,7 +59,7 @@ export function StoreCard({
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل تأكيد شراء المتجر');
       }
@@ -80,7 +81,7 @@ export function StoreCard({
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل تخطي المتجر');
       }
@@ -112,7 +113,7 @@ export function StoreCard({
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل إضافة المادة للمتجر');
       }
@@ -134,7 +135,7 @@ export function StoreCard({
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setActionError(err.message);
+        setActionError(toUserMessage(err));
       } else {
         setActionError('فشل حذف الإيصال');
       }

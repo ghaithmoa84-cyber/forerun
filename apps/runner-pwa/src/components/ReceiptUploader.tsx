@@ -5,6 +5,7 @@ import type {
   PresignedUrlResponse,
 } from '@forerun/shared-types';
 import axios from 'axios';
+import { toUserMessage } from '../lib/errorMessage';
 
 interface ReceiptUploaderProps {
   orderId: string;
@@ -100,7 +101,7 @@ export function ReceiptUploader({
         const msg = err.response.data.message;
         setError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(toUserMessage(err));
       } else {
         setError('حدث خطأ أثناء رفع الإيصال. يرجى المحاولة مرة أخرى.');
       }

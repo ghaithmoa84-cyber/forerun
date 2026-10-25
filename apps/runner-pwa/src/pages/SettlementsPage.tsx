@@ -8,6 +8,7 @@ import type {
   RunnerSettlementListResponse,
 } from '@forerun/shared-types';
 import axios from 'axios';
+import { toUserMessage } from '../lib/errorMessage';
 
 const SETTLEMENT_STATUS_LABEL: Record<SettlementStatus, string> = {
   PENDING: 'معلقة (بانتظار التسوية)',
@@ -46,7 +47,7 @@ export function SettlementsPage() {
         const msg = err.response.data.message;
         setError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(toUserMessage(err));
       } else {
         setError('فشل في تحميل بيانات التسويات المالية');
       }

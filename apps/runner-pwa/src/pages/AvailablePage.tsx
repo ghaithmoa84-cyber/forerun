@@ -10,6 +10,7 @@ import type {
   RunnerStatusUpdate,
 } from '@forerun/shared-types';
 import axios from 'axios';
+import { toUserMessage } from '../lib/errorMessage';
 
 const RUNNER_STATUS_LABEL: Record<RunnerStatus, string> = {
   AVAILABLE: 'متاح لاستقبال الطلبات',
@@ -111,7 +112,7 @@ export function AvailablePage() {
         const msg = err.response.data.message;
         setError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(toUserMessage(err));
       } else {
         setError('فشل في تحميل الملف الشخصي');
       }
@@ -190,7 +191,7 @@ export function AvailablePage() {
         const msg = err.response.data.message;
         setError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(toUserMessage(err));
       } else {
         setError('فشل في تحديث حالة التوافر');
       }

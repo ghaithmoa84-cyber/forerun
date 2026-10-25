@@ -134,7 +134,8 @@ export function MapView({ lat, lng, description }: MapViewProps) {
       })
       .catch((err) => {
         if (!isMounted) return;
-        setLoadError(err instanceof Error ? err.message : 'تعذر تحميل خرائط غوغل');
+        console.error('[MapView Error]', err);
+        setLoadError('تعذر تحميل خرائط غوغل');
       });
 
     return () => {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import axios from 'axios';
+import { toUserMessage } from '../lib/errorMessage';
 import { ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
 import { SyrianPhoneSchema } from '@forerun/shared-types';
 
@@ -51,7 +52,7 @@ export function LoginPage() {
         }
         setError(Array.isArray(msg) ? msg.join(' - ') : msg);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(toUserMessage(err));
       } else {
         setError('فشل تسجيل الدخول. يرجى التحقق من صحة البيانات.');
       }
