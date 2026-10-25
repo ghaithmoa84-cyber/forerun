@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import api from '@/lib/api';
+import { toAdminErrorMessage, containsArabic } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 
@@ -90,7 +91,8 @@ export default function UsersPage() {
       setConfirmModal({ isOpen: false, action: null, user: null });
       fetchUsers(meta.page);
     } catch (err: unknown) {
-      let errorMsg = `فشل في تنفيذ العملية على حساب "${name}"`;
+      const fallback = `فشل في تنفيذ العملية على حساب "${name}"`;
+      let errorMsg = fallback;
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
         const resData = err.response?.data as { message?: string | string[] } | undefined;
@@ -104,16 +106,18 @@ export default function UsersPage() {
             msg?.includes('Cannot unsuspend account that was rejected')
           ) {
             errorMsg = `لا يمكن فك تعليق حساب العميل "${name}"؛ لأن الحساب كان مرفوضاً (REJECTED) قبل التعليق حفاظاً على أمان النظام.`;
-          } else if (msg) {
+          } else if (msg && containsArabic(msg)) {
             errorMsg = `تعذر فك تعليق الحساب: ${msg}`;
           } else {
             errorMsg = `تعذر فك تعليق الحساب: حالة الحساب الحالية لا تسمح بهذا الإجراء.`;
           }
         } else if (status === 409) {
           errorMsg = `تعارض في العملية: قد تكون حالة الحساب قد تغيرت بالتزامن بواسطة مسؤول آخر.`;
-        } else if (msg) {
-          errorMsg = `خطأ: ${msg}`;
+        } else {
+          errorMsg = toAdminErrorMessage(err, fallback);
         }
+      } else {
+        errorMsg = toAdminErrorMessage(err, fallback);
       }
       showToast(errorMsg, 'error');
     } finally {

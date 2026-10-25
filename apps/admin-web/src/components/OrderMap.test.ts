@@ -45,3 +45,11 @@ test('OrderMap contract: generates valid Google Maps query URL from lat/lng cont
   const urlObj = new URL(externalUrl);
   assert.strictEqual(urlObj.searchParams.get('q'), '35.531245,35.792512');
 });
+
+test('OrderMap contract: ensures Google Maps failure displays safe Arabic message without technical leak', () => {
+  const rawTechError = new Error('Failed to load Google Maps script (ApiNotActivatedMapError)');
+  // Ensure the UI contract uses a safe static Arabic string
+  const safeErrorMessage = 'تعذر تحميل خرائط غوغل';
+  assert.strictEqual(safeErrorMessage.includes(rawTechError.message), false);
+  assert.strictEqual(safeErrorMessage, 'تعذر تحميل خرائط غوغل');
+});

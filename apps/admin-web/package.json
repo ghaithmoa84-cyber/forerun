@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types src/components/OrderMap.test.ts"
+    "test": "node --experimental-strip-types src/components/OrderMap.test.ts && node --experimental-strip-types src/lib/errorMessage.test.ts"
   },
   "dependencies": {
     "@forerun/shared-constants": "workspace:*",

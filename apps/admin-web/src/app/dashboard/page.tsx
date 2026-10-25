@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import { useAdminWebSocket } from '@/hooks/useAdminWebSocket';
 import {
@@ -231,8 +232,7 @@ export default function DashboardPage() {
         activeOrdersCount,
       }));
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      setError(axiosError.response?.data?.message || 'فشل في تحديث بيانات الإحصائيات');
+      setError(toAdminErrorMessage(err, 'فشل في تحديث بيانات الإحصائيات'));
     } finally {
       setLoading(false);
     }

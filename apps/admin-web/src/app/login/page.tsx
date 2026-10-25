@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { SyrianPhoneSchema, type LoginResponse } from '@forerun/shared-types';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -82,18 +83,9 @@ if (typeof document !== 'undefined') {
 // Redirect to dashboard
       router.push('/dashboard');
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const msg = err.response?.data?.message;
-        if (Array.isArray(msg)) {
-          setError(msg.join(', '));
-        } else if (typeof msg === 'string') {
-          setError(msg);
-        } else {
-          setError('بيانات الاعتماد غير صحيحة، يرجى المحاولة ثانية.');
-        }
-      } else {
-        setError('تعذر الاتصال بالخادم، يرجى التحقق من الشبكة.');
-      }
+      setError(
+        toAdminErrorMessage(err, 'بيانات الاعتماد غير صحيحة، يرجى المحاولة ثانية.'),
+      );
     } finally {
       setLoading(false);
     }

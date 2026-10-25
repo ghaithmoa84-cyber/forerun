@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import api from '@/lib/api';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import { OrderMap } from '@/components/OrderMap';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
@@ -167,12 +168,7 @@ export default function OrderDetailPage() {
         );
         setPreviewResult(res.data);
       } catch (err: unknown) {
-        const axiosError = err as {
-          response?: { data?: { message?: string } };
-        };
-        setPreviewError(
-          axiosError?.response?.data?.message || 'تعذر حساب معاينة الرسوم',
-        );
+        setPreviewError(toAdminErrorMessage(err, 'تعذر حساب معاينة الرسوم'));
       } finally {
         setPreviewLoading(false);
       }
@@ -216,13 +212,7 @@ export default function OrderDetailPage() {
       showToast('تم اعتماد الطلب وتحويله للبحث عن مندوب', 'success');
       fetchOrderData();
     } catch (err: unknown) {
-      const axiosError = err as {
-        response?: { data?: { message?: string } };
-      };
-      showToast(
-        axiosError?.response?.data?.message || 'فشل في اعتماد الطلب',
-        'error',
-      );
+      showToast(toAdminErrorMessage(err, 'فشل في اعتماد الطلب'), 'error');
     } finally {
       setActionLoading(false);
     }

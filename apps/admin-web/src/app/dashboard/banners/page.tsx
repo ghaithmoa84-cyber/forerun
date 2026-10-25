@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '@/lib/api';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import {
   BANNER_ACTION_TYPES,
@@ -295,12 +296,10 @@ export default function BannersManagementPage() {
       setModalOpen(false);
       await fetchBanners();
     } catch (err: unknown) {
-      const axiosError = err as {
-        response?: { data?: { message?: string } };
-      };
-      const msg =
-        axiosError?.response?.data?.message || 'حدث خطأ أثناء حفظ الشريحة الإعلانية';
-      showToast(msg, 'error');
+      showToast(
+        toAdminErrorMessage(err, 'حدث خطأ أثناء حفظ الشريحة الإعلانية'),
+        'error',
+      );
     } finally {
       setActionLoading(false);
     }
@@ -329,12 +328,10 @@ export default function BannersManagementPage() {
       );
       await fetchBanners();
     } catch (err: unknown) {
-      const axiosError = err as {
-        response?: { data?: { message?: string } };
-      };
-      const msg =
-        axiosError?.response?.data?.message || 'تعذر تغيير حالة تفعيل الشريحة';
-      showToast(msg, 'error');
+      showToast(
+        toAdminErrorMessage(err, 'تعذر تغيير حالة تفعيل الشريحة'),
+        'error',
+      );
     } finally {
       setActionLoading(false);
     }
@@ -375,12 +372,10 @@ export default function BannersManagementPage() {
       setHasOrderChanges(false);
       await fetchBanners();
     } catch (err: unknown) {
-      const axiosError = err as {
-        response?: { data?: { message?: string } };
-      };
-      const msg =
-        axiosError?.response?.data?.message || 'فشل في حفظ الترتيب الجديد للشرائح';
-      showToast(msg, 'error');
+      showToast(
+        toAdminErrorMessage(err, 'فشل في حفظ الترتيب الجديد للشرائح'),
+        'error',
+      );
     } finally {
       setSavingOrder(false);
     }
@@ -397,12 +392,10 @@ export default function BannersManagementPage() {
       setDeleteConfirmBanner(null);
       await fetchBanners();
     } catch (err: unknown) {
-      const axiosError = err as {
-        response?: { data?: { message?: string } };
-      };
-      const msg =
-        axiosError?.response?.data?.message || 'فشل في حذف الشريحة الإعلانية';
-      showToast(msg, 'error');
+      showToast(
+        toAdminErrorMessage(err, 'فشل في حذف الشريحة الإعلانية'),
+        'error',
+      );
     } finally {
       setActionLoading(false);
     }

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import type { PlatformPricingResponse } from '@forerun/shared-types';
 
@@ -77,13 +78,13 @@ export default function PricingSettingsPage() {
 
       showToast('تم حفظ وتحديث أسعار المنصة بنجاح', 'success');
     } catch (err: unknown) {
-      const axiosError = err as { response?: { status?: number; data?: { message?: string } } };
+      const axiosError = err as { response?: { status?: number } };
       if (axiosError?.response?.status === 409) {
+        console.error('[Admin API Error]', err);
         setConflictOccurred(true);
         showToast('تعارض: تم تعديل الأسعار من جلسة أخرى، يرجى إعادة التحميل', 'error');
       } else {
-        const msg = axiosError?.response?.data?.message || 'فشل في حفظ الأسعار الجديدة';
-        showToast(msg, 'error');
+        showToast(toAdminErrorMessage(err, 'فشل في حفظ الأسعار الجديدة'), 'error');
       }
     } finally {
       setSaving(false);
