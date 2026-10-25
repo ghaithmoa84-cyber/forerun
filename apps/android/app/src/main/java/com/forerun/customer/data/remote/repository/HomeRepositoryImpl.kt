@@ -1,5 +1,6 @@
 package com.forerun.customer.data.remote.repository
 
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.CustomerApi
 import com.forerun.customer.data.remote.api.OrderApi
@@ -34,7 +35,11 @@ class HomeRepositoryImpl @Inject constructor(
                 )
             }
             is ApiResponse.Error -> {
-                return Result.failure(Exception(profileResponse.message))
+                return Result.failure(
+                    Exception(
+                        ErrorSanitizer.getGenericErrorMessage(rawMessage = profileResponse.message, tag = "HomeRepo")
+                    )
+                )
             }
         }
 

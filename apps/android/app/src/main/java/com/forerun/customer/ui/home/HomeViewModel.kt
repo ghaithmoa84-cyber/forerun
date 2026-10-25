@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.gateway.OrderEventsGateway
 import com.forerun.customer.domain.model.ActiveOrder
 import com.forerun.customer.domain.model.CustomerProfile
@@ -99,8 +100,12 @@ class HomeViewModel @Inject constructor(
                 }
                 .onFailure { throwable ->
                     _uiState.value = HomeUiState.Error(
-                        message = throwable.message
-                            ?: getApplication<Application>().getString(R.string.error_home_data_load_failed)
+                        message = ErrorSanitizer.getGenericErrorMessage(
+                            throwable,
+                            context = getApplication(),
+                            fallbackResId = R.string.error_home_data_load_failed,
+                            tag = "HomeViewModel"
+                        )
                     )
                 }
         }
@@ -125,8 +130,12 @@ class HomeViewModel @Inject constructor(
                         _uiState.value = currentState.copy(isRefreshing = false)
                     } else {
                         _uiState.value = HomeUiState.Error(
-                            message = throwable.message
-                                ?: getApplication<Application>().getString(R.string.error_home_data_load_failed)
+                            message = ErrorSanitizer.getGenericErrorMessage(
+                                throwable,
+                                context = getApplication(),
+                                fallbackResId = R.string.error_home_data_load_failed,
+                                tag = "HomeViewModel"
+                            )
                         )
                     }
                 }

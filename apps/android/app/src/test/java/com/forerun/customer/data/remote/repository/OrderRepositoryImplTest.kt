@@ -1,5 +1,9 @@
 package com.forerun.customer.data.remote.repository
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.OrderApi
 import com.forerun.customer.data.remote.dto.order.AvailableRunnerDto
@@ -17,7 +21,9 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class OrderRepositoryImplTest {
 
     private class FakeOrderApi : OrderApi {
@@ -126,7 +132,28 @@ class OrderRepositoryImplTest {
         val result = repository.getAvailableRunners()
 
         assertTrue(result.isFailure)
-        assertEquals("Server error", result.exceptionOrNull()?.message)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.error_generic), result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun createOrder_apiError_returnsGenericArabicFailure() = runTest {
+        val fakeApi = FakeOrderApi().apply {
+            createOrderResult = ApiResponse.Error(statusCode = 500, error = "Internal Server Error", message = "SQL connection crashed at db:5432")
+        }
+        val repository = OrderRepositoryImpl(fakeApi)
+
+        val result = repository.createOrder(
+            items = listOf(OrderItem("حليب", "1", "بقالية", false)),
+            notes = "ملاحظة",
+            preferredRunnerId = null,
+            waitForPreferred = false,
+            deliveryAddress = CustomerAddress(33.5, 36.2, "دمشق")
+        )
+
+        assertTrue(result.isFailure)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.error_generic), result.exceptionOrNull()?.message)
     }
 
     @Test

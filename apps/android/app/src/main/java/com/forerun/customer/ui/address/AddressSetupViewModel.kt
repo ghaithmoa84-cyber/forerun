@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.repository.AddressResult
 import com.forerun.customer.domain.usecase.GetCustomerAddressUseCase
@@ -160,7 +161,12 @@ class AddressSetupViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = result.message
+                            errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                rawMessage = result.message,
+                                context = getApplication(),
+                                fallbackResId = R.string.error_address_save_failed_generic,
+                                tag = "AddressSetupViewModel"
+                            )
                         )
                     }
                 }
@@ -208,8 +214,12 @@ class AddressSetupViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isSaving = false,
-                                errorMessage = error.localizedMessage
-                                    ?: getApplication<Application>().getString(R.string.error_address_save_failed_generic)
+                                errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                    error,
+                                    context = getApplication(),
+                                    fallbackResId = R.string.error_address_save_failed_generic,
+                                    tag = "AddressSetupViewModel"
+                                )
                             )
                         }
                     }

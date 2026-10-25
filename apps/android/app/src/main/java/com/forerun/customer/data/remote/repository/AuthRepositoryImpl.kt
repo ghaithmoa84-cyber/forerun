@@ -81,7 +81,10 @@ class AuthRepositoryImpl @Inject constructor(
                 ApiResponse.Error(
                     statusCode = response.statusCode,
                     error = response.error,
-                    message = response.message
+                    message = com.forerun.customer.core.error.ErrorSanitizer.getGenericErrorMessage(
+                        rawMessage = response.message,
+                        tag = "AuthRepo"
+                    )
                 )
             }
         }
@@ -115,7 +118,10 @@ class AuthRepositoryImpl @Inject constructor(
                 ApiResponse.Error(
                     statusCode = response.statusCode,
                     error = response.error,
-                    message = response.message
+                    message = com.forerun.customer.core.error.ErrorSanitizer.getGenericErrorMessage(
+                        rawMessage = response.message,
+                        tag = "AuthRepo"
+                    )
                 )
             }
         }

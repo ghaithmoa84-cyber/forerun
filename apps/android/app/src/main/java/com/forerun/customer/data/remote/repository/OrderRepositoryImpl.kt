@@ -1,5 +1,6 @@
 package com.forerun.customer.data.remote.repository
 
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.OrderApi
 import com.forerun.customer.data.remote.dto.order.CreateOrderItemDto
@@ -81,7 +82,7 @@ class OrderRepositoryImpl @Inject constructor(
                 )
             }
             is ApiResponse.Error -> {
-                Result.failure(Exception(response.message))
+                Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "OrderRepo")))
             }
         }
     }
@@ -101,7 +102,7 @@ class OrderRepositoryImpl @Inject constructor(
                 Result.success(runners)
             }
             is ApiResponse.Error -> {
-                Result.failure(Exception(response.message))
+                Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "OrderRepo")))
             }
         }
     }
@@ -137,7 +138,7 @@ class OrderRepositoryImpl @Inject constructor(
                 Result.success(ordersPage)
             }
             is ApiResponse.Error -> {
-                Result.failure(Exception(response.message))
+                Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "OrderRepo")))
             }
         }
     }
@@ -145,7 +146,7 @@ class OrderRepositoryImpl @Inject constructor(
     override suspend fun getOrderDetail(orderId: String): Result<CustomerOrderDetail> {
         return when (val response = orderApi.getOrderDetail(orderId)) {
             is ApiResponse.Success -> Result.success(response.data.toDomain())
-            is ApiResponse.Error -> Result.failure(Exception(response.message))
+            is ApiResponse.Error -> Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "OrderRepo")))
         }
     }
 
@@ -189,7 +190,7 @@ class OrderRepositoryImpl @Inject constructor(
                 )
             }
             is ApiResponse.Error -> {
-                Result.failure(Exception(response.message))
+                Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "OrderRepo")))
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.forerun.customer.ui.address
 
+import com.forerun.customer.R
 import com.forerun.customer.data.FakeAddressRepository
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.repository.AddressResult
@@ -323,5 +324,22 @@ class AddressSetupViewModelTest {
         assertEquals(targetLat, capturedLat!!, 0.0001)
         assertEquals(targetLng, capturedLng!!, 0.0001)
         assertEquals("القنجرة - شارع البلدية", capturedDesc)
+    }
+
+    @Test
+    fun saveAddress_technicalEnglishServerError_sanitizesToGenericArabic() = runTest(testDispatcher) {
+        fakeAddressRepository.getAddressResult = AddressResult.NotFound
+        fakeAddressRepository.updateAddressResult = Result.failure(Exception("HTTP 500: Database transaction deadlocked"))
+        val viewModel = AddressSetupViewModel(getCustomerAddressUseCase, updateCustomerAddressUseCase, reverseGeocodeUseCase, ApplicationProvider.getApplicationContext())
+        advanceUntilIdle()
+
+        viewModel.onIntent(AddressSetupIntent.UpdateDescription("العنوان التجريبي"))
+        viewModel.onIntent(AddressSetupIntent.SaveAddress)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSaving)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.error_address_save_failed_generic), state.errorMessage)
     }
 }

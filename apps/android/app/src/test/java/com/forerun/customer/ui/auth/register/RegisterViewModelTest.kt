@@ -78,4 +78,24 @@ class RegisterViewModelTest {
         assertEquals("رقم الواتساب هذا مسجل مسبقًا", viewModel.uiState.value.generalError)
         assertFalse(viewModel.uiState.value.isLoading)
     }
+
+    @Test
+    fun register_failure_withTechnicalEnglishServerError_sanitizesToGenericArabic() = runTest {
+        fakeAuthRepository.registerResult = ApiResponse.Error(
+            statusCode = 500,
+            error = "INTERNAL_SERVER_ERROR",
+            message = "PrismaClientKnownRequestError: Unique constraint failed on the fields: (`whatsapp`)"
+        )
+
+        viewModel.onNameChanged("أحمد محمد")
+        viewModel.onWhatsappChanged("0912345678")
+        viewModel.onPasswordChanged("password123")
+        viewModel.onAddressDescriptionChanged("القنجرة - جانب البلدية")
+
+        viewModel.register()
+
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.error_register_generic), viewModel.uiState.value.generalError)
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
 }

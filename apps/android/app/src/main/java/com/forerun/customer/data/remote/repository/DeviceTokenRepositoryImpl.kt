@@ -16,20 +16,44 @@ class DeviceTokenRepositoryImpl @Inject constructor(
 
     override suspend fun registerDeviceToken(token: String): ApiResponse<Unit> {
         val response = deviceTokenApi.registerDeviceToken(DeviceTokenRequest(token = token, platform = "android"))
-        if (response is ApiResponse.Success) {
-            tokenStorage.setDeviceToken(token)
+        return when (response) {
+            is ApiResponse.Success -> {
+                tokenStorage.setDeviceToken(token)
+                response
+            }
+            is ApiResponse.Error -> {
+                ApiResponse.Error(
+                    statusCode = response.statusCode,
+                    error = response.error,
+                    message = com.forerun.customer.core.error.ErrorSanitizer.getGenericErrorMessage(
+                        rawMessage = response.message,
+                        tag = "DeviceTokenRepo"
+                    )
+                )
+            }
         }
-        return response
     }
 
     override suspend fun unregisterDeviceToken(token: String): ApiResponse<Unit> {
         val response = deviceTokenApi.unregisterDeviceToken(DeviceTokenRequest(token = token, platform = "android"))
-        if (response is ApiResponse.Success) {
-            if (tokenStorage.getDeviceToken() == token) {
-                tokenStorage.setDeviceToken(null)
+        return when (response) {
+            is ApiResponse.Success -> {
+                if (tokenStorage.getDeviceToken() == token) {
+                    tokenStorage.setDeviceToken(null)
+                }
+                response
+            }
+            is ApiResponse.Error -> {
+                ApiResponse.Error(
+                    statusCode = response.statusCode,
+                    error = response.error,
+                    message = com.forerun.customer.core.error.ErrorSanitizer.getGenericErrorMessage(
+                        rawMessage = response.message,
+                        tag = "DeviceTokenRepo"
+                    )
+                )
             }
         }
-        return response
     }
 
     override suspend fun registerCurrentToken(): ApiResponse<Unit> {

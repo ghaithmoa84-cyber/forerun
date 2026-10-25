@@ -7,9 +7,14 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import org.junit.Test
-import java.io.IOException
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class BannerRepositoryImplTest {
 
     private class FakeBannerApi : BannerApi {
@@ -87,17 +92,21 @@ class BannerRepositoryImplTest {
         val result = repository.getActiveBanners()
 
         assertTrue(result.isFailure)
-        assertEquals("Server encountered an error", result.exceptionOrNull()?.message)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expected = context.getString(R.string.error_generic)
+        assertEquals(expected, result.exceptionOrNull()?.message)
     }
 
     @Test
     fun getActiveBanners_networkException_returnsFailureSafely() = runTest {
-        fakeBannerApi.shouldThrow = IOException("Connection reset by peer")
+        fakeBannerApi.shouldThrow = java.io.IOException("Connection reset by peer")
 
         val result = repository.getActiveBanners()
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IOException)
-        assertEquals("Connection reset by peer", result.exceptionOrNull()?.message)
+        assertTrue(result.exceptionOrNull() is java.io.IOException)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expectedNetwork = context.getString(R.string.error_network)
+        assertEquals(expectedNetwork, result.exceptionOrNull()?.message)
     }
 }

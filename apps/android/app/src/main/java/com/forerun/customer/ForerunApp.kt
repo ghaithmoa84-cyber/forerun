@@ -17,6 +17,7 @@ class ForerunApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.forerun.customer.core.error.ErrorSanitizer.init(this)
         try {
             MapsInitializer.initialize(applicationContext, MapsInitializer.Renderer.LATEST) { renderer ->
                 Log.d("ForerunApp", "Google Maps initialized with renderer: $renderer")

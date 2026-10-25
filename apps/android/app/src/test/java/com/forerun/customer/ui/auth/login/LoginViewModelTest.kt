@@ -128,4 +128,21 @@ class LoginViewModelTest {
 
         assertTrue(connectCalled)
     }
+
+    @Test
+    fun login_failure_withTechnicalEnglishServerError_sanitizesToGenericArabic() = runTest {
+        fakeAuthRepository.loginResult = ApiResponse.Error(
+            statusCode = 500,
+            error = "INTERNAL_SERVER_ERROR",
+            message = "PostgreSQL deadlock at auth_controller.ts:89"
+        )
+
+        viewModel.onWhatsappChanged("0912345678")
+        viewModel.onPasswordChanged("password123")
+        viewModel.login()
+
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.error_login_generic), viewModel.uiState.value.generalError)
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
 }

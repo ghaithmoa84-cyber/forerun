@@ -1,6 +1,7 @@
 package com.forerun.customer.ui.rating
 
 import androidx.lifecycle.SavedStateHandle
+import com.forerun.customer.R
 import com.forerun.customer.data.FakeOrderRepository
 import com.forerun.customer.domain.model.CustomerOrderDetail
 import com.forerun.customer.domain.model.OrderRatingInfo
@@ -243,5 +244,22 @@ class RatingViewModelTest {
         assertEquals(1, fakeRepository.submitRatingCallCount)
         assertFalse(viewModel.uiState.value.isSubmitting)
         assertTrue(viewModel.uiState.value.isSuccess)
+    }
+
+    @Test
+    fun submitRating_technicalEnglishServerError_sanitizesToGenericArabic() = runTest(testDispatcher) {
+        fakeRepository.submitRatingResult = Result.failure(Exception("HTTP 500: Database transaction rolled back"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(RatingIntent.SetStars(5))
+        viewModel.onIntent(RatingIntent.Submit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSuccess)
+        assertFalse(state.isSubmitting)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.rating_error_submit), state.errorMessage)
     }
 }

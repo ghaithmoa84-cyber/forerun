@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.model.CustomerOrder
 import com.forerun.customer.domain.usecase.GetCustomerOrdersUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -122,8 +123,12 @@ class OrdersListViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    val message = error.message
-                        ?: getApplication<Application>().getString(R.string.error_orders_load_failed)
+                    val message = ErrorSanitizer.getGenericErrorMessage(
+                        error,
+                        context = getApplication(),
+                        fallbackResId = R.string.error_orders_load_failed,
+                        tag = "OrdersListViewModel"
+                    )
                     if (page == 1) {
                         _uiState.update {
                             it.copy(

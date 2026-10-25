@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.model.CustomerProfile
 import com.forerun.customer.domain.repository.AddressResult
@@ -70,7 +71,14 @@ class AccountViewModel @Inject constructor(
 
             profileResult.fold(
                 onSuccess = { profile = it },
-                onFailure = { error = it.message ?: getApplication<Application>().getString(R.string.error_account_load_failed) }
+                onFailure = {
+                    error = ErrorSanitizer.getGenericErrorMessage(
+                        it,
+                        context = getApplication(),
+                        fallbackResId = R.string.error_account_load_failed,
+                        tag = "AccountViewModel"
+                    )
+                }
             )
 
             var address: CustomerAddress? = null
@@ -78,7 +86,14 @@ class AccountViewModel @Inject constructor(
                 is AddressResult.Success -> address = addressResult.address
                 is AddressResult.NotFound -> { /* No address set yet */ }
                 is AddressResult.Error -> {
-                    if (error == null) error = addressResult.message
+                    if (error == null) {
+                        error = ErrorSanitizer.getGenericErrorMessage(
+                            rawMessage = addressResult.message,
+                            context = getApplication(),
+                            fallbackResId = R.string.error_account_load_failed,
+                            tag = "AccountViewModel"
+                        )
+                    }
                 }
             }
 
@@ -123,7 +138,12 @@ class AccountViewModel @Inject constructor(
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isSavingProfile = false,
-                        errorMessage = e.message ?: getApplication<Application>().getString(R.string.error_account_save_failed)
+                        errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                            e,
+                            context = getApplication(),
+                            fallbackResId = R.string.error_account_save_failed,
+                            tag = "AccountViewModel"
+                        )
                     )
                 }
             )
@@ -161,7 +181,12 @@ class AccountViewModel @Inject constructor(
                 onFailure = { e ->
                     _uiState.value = _uiState.value.copy(
                         isChangingPassword = false,
-                        errorMessage = e.message ?: getApplication<Application>().getString(R.string.error_password_change_failed)
+                        errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                            e,
+                            context = getApplication(),
+                            fallbackResId = R.string.error_password_change_failed,
+                            tag = "AccountViewModel"
+                        )
                     )
                 }
             )

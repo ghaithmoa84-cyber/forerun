@@ -1,5 +1,6 @@
 package com.forerun.customer.ui.order.create
 
+import com.forerun.customer.R
 import com.forerun.customer.data.FakeAddressRepository
 import com.forerun.customer.data.FakeOrderRepository
 import com.forerun.customer.domain.model.CustomerAddress
@@ -548,5 +549,28 @@ class CreateOrderViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoadingAddress)
         assertEquals("تعذر جلب العنوان", state.errorMessage)
+    }
+
+    @Test
+    fun submitOrder_technicalEnglishServerError_sanitizesToGenericArabic() = runTest(testDispatcher) {
+        fakeAddressRepository.getAddressResult = AddressResult.Success(
+            CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
+        )
+        fakeOrderRepository.createOrderResult = Result.failure(Exception("HTTP 500: Internal Server Error occurred"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
+        viewModel.onIntent(CreateOrderIntent.UpdateQuickText("حليب\nخبز"))
+        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSubmitting)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.error_create_order_failed), state.errorMessage)
     }
 }

@@ -1,5 +1,9 @@
 package com.forerun.customer.data.remote.repository
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.core.storage.TokenStorage
 import com.forerun.customer.data.remote.api.DeviceTokenApi
@@ -10,7 +14,9 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class DeviceTokenRepositoryTest {
 
     private class FakeDeviceTokenApi : DeviceTokenApi {
@@ -87,6 +93,8 @@ class DeviceTokenRepositoryTest {
         val response = repository.registerDeviceToken(token)
 
         assertTrue(response is ApiResponse.Error)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.error_generic), (response as ApiResponse.Error).message)
         assertNull(fakeStorage.getDeviceToken())
     }
 
@@ -111,6 +119,8 @@ class DeviceTokenRepositoryTest {
         val response = repository.unregisterDeviceToken(token)
 
         assertTrue(response is ApiResponse.Error)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.error_generic), (response as ApiResponse.Error).message)
         assertEquals(token, fakeStorage.getDeviceToken())
     }
 

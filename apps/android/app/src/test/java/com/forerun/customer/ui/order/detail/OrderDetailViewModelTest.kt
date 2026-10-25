@@ -29,8 +29,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -659,7 +661,8 @@ class OrderDetailViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isSubmittingRating)
         assertFalse(state.ratingSuccess)
-        assertEquals("HTTP 400 BAD_REQUEST", state.errorMessage)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.rating_error_submit), state.errorMessage)
     }
 
     @Test
