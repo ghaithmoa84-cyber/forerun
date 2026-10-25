@@ -6,11 +6,17 @@ import com.forerun.customer.data.remote.dto.address.CustomerAddressDto
 import com.forerun.customer.data.remote.dto.address.UpdateCustomerAddressRequest
 import com.forerun.customer.data.remote.dto.customer.CustomerProfileDto
 import com.forerun.customer.domain.repository.AddressResult
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class AddressRepositoryImplTest {
 
     private class FakeCustomerApi : CustomerApi {
@@ -75,7 +81,9 @@ class AddressRepositoryImplTest {
         val result = repo.getAddress()
 
         assertTrue(result is AddressResult.Error)
-        assertEquals("Database connection error", (result as AddressResult.Error).message)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expected = context.getString(R.string.error_generic)
+        assertEquals(expected, (result as AddressResult.Error).message)
     }
 
     @Test
@@ -106,6 +114,8 @@ class AddressRepositoryImplTest {
         val result = repo.updateAddress(35.55, 35.82, "")
 
         assertTrue(result.isFailure)
-        assertEquals("description cannot be empty", result.exceptionOrNull()?.message)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expected = context.getString(R.string.error_generic)
+        assertEquals(expected, result.exceptionOrNull()?.message)
     }
 }

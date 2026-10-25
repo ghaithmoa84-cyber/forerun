@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.model.WebSocketEvent
 import com.forerun.customer.domain.model.CancelOrderError
 import com.forerun.customer.domain.model.CustomerOrderDetail
@@ -162,7 +163,12 @@ class OrderDetailViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSubmittingRating = false,
-                            errorMessage = err.message ?: getApplication<Application>().getString(R.string.rating_error_submit)
+                            errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                err,
+                                context = getApplication(),
+                                fallbackResId = R.string.rating_error_submit,
+                                tag = "OrderDetailViewModel"
+                            )
                         )
                     }
                 }
@@ -195,7 +201,12 @@ class OrderDetailViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMessage = err.message
+                        errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                            err,
+                            context = getApplication(),
+                            fallbackResId = R.string.order_detail_error_loading,
+                            tag = "OrderDetailViewModel"
+                        )
                     )
                 }
             }

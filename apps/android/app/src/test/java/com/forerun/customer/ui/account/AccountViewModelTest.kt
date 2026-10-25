@@ -1,6 +1,7 @@
 package com.forerun.customer.ui.account
 
 import app.cash.turbine.test
+import com.forerun.customer.R
 import com.forerun.customer.data.FakeAccountRepository
 import com.forerun.customer.data.FakeAddressRepository
 import com.forerun.customer.data.FakeAuthRepository
@@ -260,5 +261,16 @@ class AccountViewModelTest {
         assertNotNull(state.profile)
         assertNull(state.address)
         assertNull(state.loadErrorMessage)
+    }
+
+    @Test
+    fun updateProfile_technicalEnglishServerError_sanitizesToGenericArabic() {
+        fakeAccountRepository.updateProfileError = "Internal Server Error: Row lock deadlock detected"
+        viewModel.updateProfile(name = "أحمد خالد", altPhone = "0987654321")
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSavingProfile)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.error_account_save_failed), state.errorMessage)
     }
 }

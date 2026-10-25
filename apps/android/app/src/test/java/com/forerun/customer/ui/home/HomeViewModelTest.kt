@@ -1,5 +1,6 @@
 package com.forerun.customer.ui.home
 
+import com.forerun.customer.R
 import com.forerun.customer.data.FakeAuthRepository
 import com.forerun.customer.data.FakeHomeRepository
 import com.forerun.customer.data.FakeOrderEventsGateway
@@ -491,5 +492,25 @@ class HomeViewModelTest {
         val success = viewModel.uiState.value as HomeUiState.Success
         assertEquals(2, success.profile.completedOrders)
         assertEquals("isRefreshing must remain false during silent refresh", false, success.isRefreshing)
+    }
+
+    @Test
+    fun loadHomeData_technicalEnglishServerError_setsSanitizedGenericArabicError() = runTest {
+        fakeHomeRepository.homeDataResult = Result.failure(
+            Exception("FATAL: Memory allocation failed in pg_engine")
+        )
+
+        viewModel = HomeViewModel(
+            getHomeDataUseCase,
+            logoutUseCase,
+            observeOrderEventsUseCase,
+            ApplicationProvider.getApplicationContext()
+        )
+
+        val state = viewModel.uiState.value
+        assertTrue("State should be Error", state is HomeUiState.Error)
+        val error = state as HomeUiState.Error
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        assertEquals(context.getString(R.string.error_home_data_load_failed), error.message)
     }
 }

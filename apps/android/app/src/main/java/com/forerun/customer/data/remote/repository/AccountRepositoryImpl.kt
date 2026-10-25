@@ -1,5 +1,6 @@
 package com.forerun.customer.data.remote.repository
 
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.CustomerApi
 import com.forerun.customer.data.remote.dto.customer.ChangePasswordRequest
@@ -18,7 +19,7 @@ class AccountRepositoryImpl @Inject constructor(
     override suspend fun getProfile(): Result<CustomerProfile> {
         return when (val response = customerApi.me()) {
             is ApiResponse.Success -> Result.success(response.data.toDomain())
-            is ApiResponse.Error -> Result.failure(Exception(response.message))
+            is ApiResponse.Error -> Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "AccountRepo")))
         }
     }
 
@@ -26,7 +27,7 @@ class AccountRepositoryImpl @Inject constructor(
         val request = UpdateProfileRequest(name = name, altPhone = altPhone)
         return when (val response = customerApi.updateProfile(request)) {
             is ApiResponse.Success -> Result.success(response.data.toDomain())
-            is ApiResponse.Error -> Result.failure(Exception(response.message))
+            is ApiResponse.Error -> Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "AccountRepo")))
         }
     }
 
@@ -34,7 +35,7 @@ class AccountRepositoryImpl @Inject constructor(
         val request = ChangePasswordRequest(password = password)
         return when (val response = customerApi.changePassword(request)) {
             is ApiResponse.Success -> Result.success(Unit)
-            is ApiResponse.Error -> Result.failure(Exception(response.message))
+            is ApiResponse.Error -> Result.failure(Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "AccountRepo")))
         }
     }
 }

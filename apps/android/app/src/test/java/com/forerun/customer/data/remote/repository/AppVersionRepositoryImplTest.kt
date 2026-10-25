@@ -3,14 +3,19 @@ package com.forerun.customer.data.remote.repository
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.AppVersionApi
 import com.forerun.customer.data.remote.dto.version.AppVersionDto
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.IOException
+import org.junit.runner.RunWith
 
+@RunWith(AndroidJUnit4::class)
 class AppVersionRepositoryImplTest {
 
     private class FakeAppVersionApi : AppVersionApi {
@@ -77,16 +82,21 @@ class AppVersionRepositoryImplTest {
         val result = repository.getAppVersion("android")
 
         assertTrue(result.isFailure)
-        assertEquals("Server failure", result.exceptionOrNull()?.message)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expected = context.getString(R.string.error_generic)
+        assertEquals(expected, result.exceptionOrNull()?.message)
     }
 
     @Test
     fun getAppVersion_networkException_returnsFailure() = runTest {
-        fakeApi.shouldThrow = IOException("Timeout")
+        fakeApi.shouldThrow = java.io.IOException("Timeout")
 
         val result = repository.getAppVersion("android")
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IOException)
+        assertTrue(result.exceptionOrNull() is java.io.IOException)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expectedNetwork = context.getString(R.string.error_network)
+        assertEquals(expectedNetwork, result.exceptionOrNull()?.message)
     }
 }

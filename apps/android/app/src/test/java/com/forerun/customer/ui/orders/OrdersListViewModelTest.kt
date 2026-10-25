@@ -18,8 +18,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -217,7 +219,8 @@ class OrdersListViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isLoading)
         assertNotNull(state.errorMessage)
-        assertEquals("Network Timeout", state.errorMessage)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.error_network), state.errorMessage)
         assertEquals(0, state.allOrders.size)
     }
 
@@ -300,7 +303,8 @@ class OrdersListViewModelTest {
         advanceUntilIdle()
 
         val state = vm.uiState.value
-        assertEquals("Network Timeout", state.loadMoreError)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals(context.getString(R.string.error_network), state.loadMoreError)
         assertNull(state.errorMessage)
         assertEquals(1, state.allOrders.size)
         assertTrue(state.hasMore)

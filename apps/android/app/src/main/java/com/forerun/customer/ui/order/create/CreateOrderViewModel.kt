@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.model.CreatedOrder
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.model.OrderItem
@@ -130,7 +131,17 @@ class CreateOrderViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoadingAddress = false, deliveryAddress = null) }
                 }
                 is AddressResult.Error -> {
-                    _uiState.update { it.copy(isLoadingAddress = false, errorMessage = addressResult.message) }
+                    _uiState.update {
+                        it.copy(
+                            isLoadingAddress = false,
+                            errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                rawMessage = addressResult.message,
+                                context = getApplication(),
+                                fallbackResId = R.string.error_generic,
+                                tag = "CreateOrderViewModel"
+                            )
+                        )
+                    }
                 }
             }
 
@@ -157,7 +168,17 @@ class CreateOrderViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoadingAddress = false, deliveryAddress = null) }
                 }
                 is AddressResult.Error -> {
-                    _uiState.update { it.copy(isLoadingAddress = false, errorMessage = addressResult.message) }
+                    _uiState.update {
+                        it.copy(
+                            isLoadingAddress = false,
+                            errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                rawMessage = addressResult.message,
+                                context = getApplication(),
+                                fallbackResId = R.string.error_generic,
+                                tag = "CreateOrderViewModel"
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -360,8 +381,12 @@ class CreateOrderViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
-                                errorMessage = error.localizedMessage
-                                    ?: getApplication<Application>().getString(R.string.error_create_order_failed)
+                                errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                    error,
+                                    context = getApplication(),
+                                    fallbackResId = R.string.error_create_order_failed,
+                                    tag = "CreateOrderViewModel"
+                                )
                             )
                         }
                     }

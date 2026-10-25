@@ -17,6 +17,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
 class AccountRepositoryImplTest {
 
     private class FakeCustomerApi : CustomerApi {
@@ -89,6 +95,25 @@ class AccountRepositoryImplTest {
 
         assertTrue(result.isFailure)
         assertEquals("تعذر جلب البيانات", result.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun getProfile_sanitizesTechnicalEnglishServerError_returnsGenericArabic() = runTest {
+        val fakeApi = FakeCustomerApi().apply {
+            meResult = ApiResponse.Error(
+                statusCode = 500,
+                error = "INTERNAL_SERVER_ERROR",
+                message = "Internal Server Error: DB connection failed"
+            )
+        }
+        val repo = AccountRepositoryImpl(fakeApi)
+
+        val result = repo.getProfile()
+
+        assertTrue(result.isFailure)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expected = context.getString(R.string.error_generic)
+        assertEquals(expected, result.exceptionOrNull()?.message)
     }
 
     @Test

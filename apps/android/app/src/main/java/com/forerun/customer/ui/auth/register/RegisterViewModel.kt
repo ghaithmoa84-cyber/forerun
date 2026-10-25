@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.domain.model.SessionState
 import com.forerun.customer.domain.model.User
@@ -161,7 +162,12 @@ class RegisterViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            generalError = response.message.ifBlank { getApplication<Application>().getString(R.string.error_register_generic) }
+                            generalError = ErrorSanitizer.getGenericErrorMessage(
+                                rawMessage = response.message,
+                                context = getApplication(),
+                                fallbackResId = R.string.error_register_generic,
+                                tag = "RegisterViewModel"
+                            )
                         )
                     }
                 }

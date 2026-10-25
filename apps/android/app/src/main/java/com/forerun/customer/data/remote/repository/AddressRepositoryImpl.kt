@@ -1,5 +1,6 @@
 package com.forerun.customer.data.remote.repository
 
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.CustomerApi
 import com.forerun.customer.data.remote.dto.address.UpdateCustomerAddressRequest
@@ -29,7 +30,9 @@ class AddressRepositoryImpl @Inject constructor(
                 if (response.statusCode == 404) {
                     AddressResult.NotFound
                 } else {
-                    AddressResult.Error(response.message)
+                    AddressResult.Error(
+                        ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "AddressRepo")
+                    )
                 }
             }
         }
@@ -52,7 +55,11 @@ class AddressRepositoryImpl @Inject constructor(
                 )
             }
             is ApiResponse.Error -> {
-                Result.failure(Exception(response.message))
+                Result.failure(
+                    Exception(
+                        ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "AddressRepo")
+                    )
+                )
             }
         }
     }

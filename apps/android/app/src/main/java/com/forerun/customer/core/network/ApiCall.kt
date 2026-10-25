@@ -2,6 +2,7 @@ package com.forerun.customer.core.network
 
 import android.content.Context
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.squareup.moshi.Moshi
 import okhttp3.Request
 import okio.Timeout
@@ -53,18 +54,12 @@ internal class ApiCall<T>(
                     is IOException -> ApiResponse.Error(
                         statusCode = -1,
                         error = "NETWORK_ERROR",
-                        message = context?.getString(R.string.error_network) ?: run {
-                            // dev-only, not user-facing
-                            "Network connection failed. Please check your internet connection."
-                        }
+                        message = ErrorSanitizer.getGenericErrorMessage(t, context = context, tag = "ApiCall")
                     )
                     else -> ApiResponse.Error(
                         statusCode = -1,
                         error = "UNKNOWN",
-                        message = t.localizedMessage ?: context?.getString(R.string.error_generic) ?: run {
-                            // dev-only, not user-facing
-                            "Unexpected error occurred"
-                        }
+                        message = ErrorSanitizer.getGenericErrorMessage(t, context = context, tag = "ApiCall")
                     )
                 }
                 callback.onResponse(this@ApiCall, Response.success(apiResponse))
@@ -101,18 +96,12 @@ internal class ApiCall<T>(
                 is IOException -> ApiResponse.Error(
                     statusCode = -1,
                     error = "NETWORK_ERROR",
-                    message = context?.getString(R.string.error_network) ?: run {
-                        // dev-only, not user-facing
-                        "Network connection failed. Please check your internet connection."
-                    }
+                    message = ErrorSanitizer.getGenericErrorMessage(t, context = context, tag = "ApiCall")
                 )
                 else -> ApiResponse.Error(
                     statusCode = -1,
                     error = "UNKNOWN",
-                    message = t.localizedMessage ?: context?.getString(R.string.error_generic) ?: run {
-                        // dev-only, not user-facing
-                        "Unexpected error occurred"
-                    }
+                    message = ErrorSanitizer.getGenericErrorMessage(t, context = context, tag = "ApiCall")
                 )
             }
             Response.success(apiResponse)

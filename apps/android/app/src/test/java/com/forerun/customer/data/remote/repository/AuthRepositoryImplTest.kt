@@ -20,9 +20,15 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.forerun.customer.R
 import org.junit.Test
+import org.junit.runner.RunWith
 import javax.inject.Provider
 
+@RunWith(AndroidJUnit4::class)
 class AuthRepositoryImplTest {
 
     private class FakeAuthApi : AuthApi {
@@ -370,5 +376,34 @@ class AuthRepositoryImplTest {
         assertEquals(UserStatus.VERIFIED, user.status)
         assertEquals("new_access", fakeStorage.getAccessToken())
         assertEquals(2, meCallCount)
+    }
+
+    @Test
+    fun login_apiErrorWithTechnicalEnglish_returnsSanitizedGenericArabicError() = runTest {
+        val fakeApi = FakeAuthApi().apply {
+            loginResult = ApiResponse.Error(
+                statusCode = 401,
+                error = "UNAUTHORIZED",
+                message = "Invalid password or technical signature error"
+            )
+        }
+        val fakeStorage = FakeTokenStorage()
+        val fakePrefs = FakeOnboardingPrefs(seen = true)
+        val refreshManager = TokenRefreshManager(fakeStorage, Provider { fakeApi })
+
+        val repository = AuthRepositoryImpl(
+            authApi = fakeApi,
+            customerApi = FakeCustomerApi(),
+            tokenStorage = fakeStorage,
+            onboardingPrefs = fakePrefs,
+            tokenRefreshManager = refreshManager
+        )
+
+        val response = repository.login("0912345678", "password123")
+        assertTrue(response is ApiResponse.Error)
+        val error = response as ApiResponse.Error
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val expected = context.getString(R.string.error_generic)
+        assertEquals(expected, error.message)
     }
 }

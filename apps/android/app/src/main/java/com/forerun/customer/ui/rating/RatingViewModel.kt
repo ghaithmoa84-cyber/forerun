@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.domain.usecase.order.GetOrderDetailUseCase
 import com.forerun.customer.domain.usecase.order.SubmitRatingUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -110,7 +111,12 @@ class RatingViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = err.message
+                        errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                            err,
+                            context = getApplication(),
+                            fallbackResId = R.string.order_detail_error_loading,
+                            tag = "RatingViewModel"
+                        )
                     )
                 }
             }
@@ -157,7 +163,15 @@ class RatingViewModel @Inject constructor(
                     }
                 }.onFailure { err ->
                     _uiState.update {
-                        it.copy(isSubmitting = false, errorMessage = err.message)
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                                err,
+                                context = getApplication(),
+                                fallbackResId = R.string.rating_error_submit,
+                                tag = "RatingViewModel"
+                            )
+                        )
                     }
                 }
             } finally {

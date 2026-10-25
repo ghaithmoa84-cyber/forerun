@@ -1,5 +1,6 @@
 package com.forerun.customer.data.remote.repository
 
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.data.remote.api.AppVersionApi
 import com.forerun.customer.data.remote.mapper.toDomain
@@ -17,10 +18,14 @@ class AppVersionRepositoryImpl @Inject constructor(
         return try {
             when (val response = appVersionApi.getAppVersion(platform)) {
                 is ApiResponse.Success -> Result.success(response.data?.toDomain())
-                is ApiResponse.Error -> Result.failure(Exception(response.message))
+                is ApiResponse.Error -> Result.failure(
+                    Exception(ErrorSanitizer.getGenericErrorMessage(rawMessage = response.message, tag = "AppVersionRepo"))
+                )
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val sanitizedMsg = ErrorSanitizer.getGenericErrorMessage(e, tag = "AppVersionRepo")
+            val sanitizedException = if (e is java.io.IOException) java.io.IOException(sanitizedMsg, e) else Exception(sanitizedMsg, e)
+            Result.failure(sanitizedException)
         }
     }
 }

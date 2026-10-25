@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forerun.customer.R
+import com.forerun.customer.core.error.ErrorSanitizer
 import com.forerun.customer.core.network.ApiResponse
 import com.forerun.customer.domain.model.User
 import com.forerun.customer.domain.model.UserStatus
@@ -103,7 +104,12 @@ class LoginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            generalError = response.message.ifBlank { getApplication<Application>().getString(R.string.error_login_generic) }
+                            generalError = ErrorSanitizer.getGenericErrorMessage(
+                                rawMessage = response.message,
+                                context = getApplication(),
+                                fallbackResId = R.string.error_login_generic,
+                                tag = "LoginViewModel"
+                            )
                         )
                     }
                 }
