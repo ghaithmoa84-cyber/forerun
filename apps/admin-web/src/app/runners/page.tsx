@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 
@@ -90,8 +91,7 @@ if (!trimmedPhone || !/^09\d{8}$/.test(trimmedPhone)) {
       setCreateForm({ name: '', whatsapp: '', password: '' });
       fetchRunners(meta.page);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في إضافة المندوب', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في إضافة المندوب'), 'error');
     } finally {
       setCreateLoading(false);
     }
@@ -126,8 +126,7 @@ if (!trimmedPhone || !/^09\d{8}$/.test(trimmedPhone)) {
       setEditRunner(null);
       fetchRunners(meta.page);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في تعديل بيانات المندوب', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في تعديل بيانات المندوب'), 'error');
     } finally {
       setEditLoading(false);
     }

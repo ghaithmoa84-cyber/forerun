@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/Toast';
 import api from '@/lib/api';
+import { toAdminErrorMessage } from '@/lib/errorMessage';
 import {
   ADMIN_EVENTS,
   type SettlementReminderPayload,
@@ -150,8 +151,7 @@ export default function SettlementsPage() {
       setSettlements(res.data.data);
       setMeta(res.data.meta);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في تحميل التسويات', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في تحميل التسويات'), 'error');
     } finally {
       setLoading(false);
     }
@@ -163,8 +163,7 @@ export default function SettlementsPage() {
       const res = await api.get<PendingSettlementsResponse>('/admin/settlements/pending');
       setPendingSettlements(res.data.data);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في تحميل التسويات المعلقة', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في تحميل التسويات المعلقة'), 'error');
     } finally {
       setPendingLoading(false);
     }
@@ -179,8 +178,7 @@ export default function SettlementsPage() {
       setLedgerEntries(res.data.data);
       setLedgerMeta(res.data.meta);
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في تحميل السجل المالي', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في تحميل السجل المالي'), 'error');
     } finally {
       setLedgerLoading(false);
     }
@@ -226,8 +224,7 @@ export default function SettlementsPage() {
       fetchSettlements();
       fetchPendingSettlements();
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في إغلاق اليوم', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في إغلاق اليوم'), 'error');
     } finally {
       setCloseDayLoading(false);
     }
@@ -241,8 +238,7 @@ export default function SettlementsPage() {
       fetchPendingSettlements();
       fetchSettlements();
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      showToast(axiosError.response?.data?.message || 'فشل في تأكيد التسوية', 'error');
+      showToast(toAdminErrorMessage(err, 'فشل في تأكيد التسوية'), 'error');
     } finally {
       setMarkSettledLoading(null);
     }

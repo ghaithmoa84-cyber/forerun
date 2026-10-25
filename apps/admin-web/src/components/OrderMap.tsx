@@ -136,7 +136,8 @@ export function OrderMap({ lat, lng, description }: OrderMapProps) {
       })
       .catch((err) => {
         if (!isMounted) return;
-        setLoadError(err instanceof Error ? err.message : 'تعذر تحميل خرائط غوغل');
+        console.error('[OrderMap] Load error:', err);
+        setLoadError('تعذر تحميل خرائط غوغل');
       });
 
     return () => {
