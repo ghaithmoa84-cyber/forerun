@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types src/components/MapView.test.ts && node --experimental-strip-types src/lib/errorMessage.test.ts",
+    "test": "node --experimental-strip-types src/components/MapView.test.ts && node --experimental-strip-types src/lib/errorMessage.test.ts && node --experimental-strip-types src/lib/deliveryLock.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

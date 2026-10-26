@@ -12,6 +12,7 @@ import type {
 } from '@forerun/shared-types';
 import axios from 'axios';
 import { toUserMessage } from '../lib/errorMessage';
+import { isDeliveryRequestSuccessful } from '../lib/deliveryLock';
 
 const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   DRAFT: 'مسودة',
@@ -181,6 +182,7 @@ export function ActiveOrderPage() {
     if (!order) return;
     setActionLoading(true);
     setActionError(null);
+    let deliveryRequestSucceeded = false;
     try {
       if (
         deliveryIdempotencyKeyRef.current &&
@@ -197,8 +199,21 @@ export function ActiveOrderPage() {
       deliveryIdempotencyKeyRef.current = idempotencyKey;
       const body: DeliverOrderRequest = { idempotencyKey };
       await api.put(`/runner/orders/${order.id}/deliver`, body);
+      deliveryRequestSucceeded = true;
       await fetchActiveOrder();
     } catch (err) {
+      const requestSucceededOnServer = isDeliveryRequestSuccessful(
+        deliveryRequestSucceeded,
+        err,
+      );
+
+      if (!requestSucceededOnServer) {
+        // فشل طلب التسليم نفسه (انقطاع شبكة أو رفض الخادم للطلب): نحرر القفل للسماح بإعادة المحاولة فوراً
+        deliveryIdempotencyKeyRef.current = null;
+      }
+      // إذا نجح الطلب في الخادم ولكن فشلت قراءة الرد أو استدعاء fetchActiveOrder اللاحق،
+      // نُبقي القفل مفعّلاً لمنع إرسال طلب تسليم مكرر.
+
       if (axios.isAxiosError(err) && err.response?.data?.message) {
         const msg = err.response.data.message;
         setActionError(Array.isArray(msg) ? msg.join(' - ') : msg);
