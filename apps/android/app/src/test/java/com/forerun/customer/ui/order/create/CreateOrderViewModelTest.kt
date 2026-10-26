@@ -573,4 +573,79 @@ class CreateOrderViewModelTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         assertEquals(context.getString(R.string.error_create_order_failed), state.errorMessage)
     }
+
+    @Test
+    fun submitOrder_reusesSameIdempotencyKeyAcrossRetriesAndClearsOnSuccess() = runTest(testDispatcher) {
+        fakeAddressRepository.getAddressResult = AddressResult.Success(
+            CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
+        )
+        // First attempt fails with network error
+        fakeOrderRepository.createOrderResult = Result.failure(Exception("Network timeout"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
+        viewModel.onIntent(CreateOrderIntent.UpdateQuickText("حليب\nخبز"))
+        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
+        // Verify first attempt failed and captured a valid key
+        assertEquals(1, fakeOrderRepository.idempotencyKeysSent.size)
+        val firstKey = fakeOrderRepository.idempotencyKeysSent[0]
+        assertNotNull(firstKey)
+        assertEquals(firstKey, viewModel.activeIdempotencyKey)
+        assertFalse(viewModel.uiState.value.isSubmitting)
+        assertNotNull(viewModel.uiState.value.errorMessage)
+
+        // Second attempt (retry) succeeds
+        fakeOrderRepository.createOrderResult = Result.success(
+            com.forerun.customer.domain.model.CreatedOrder(
+                id = "order_123",
+                orderNumber = "FW-000001",
+                status = "PENDING_REVIEW",
+                totalFee = 60,
+                feeNote = "تقديري"
+            )
+        )
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
+        // Verify second attempt used the EXACT SAME idempotencyKey
+        assertEquals(2, fakeOrderRepository.idempotencyKeysSent.size)
+        val secondKey = fakeOrderRepository.idempotencyKeysSent[1]
+        assertNotNull(secondKey)
+        assertEquals("The same idempotencyKey MUST be used across retries for the same order session", firstKey, secondKey)
+
+        // Verify key is cleared after confirmed success
+        assertNull("idempotencyKey MUST be cleared after successful order creation", viewModel.activeIdempotencyKey)
+        assertNotNull(viewModel.uiState.value.createdOrder)
+    }
+
+    @Test
+    fun submitOrder_abandonOrder_clearsIdempotencyKey() = runTest(testDispatcher) {
+        fakeAddressRepository.getAddressResult = AddressResult.Success(
+            CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
+        )
+        fakeOrderRepository.createOrderResult = Result.failure(Exception("Connection lost"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
+        viewModel.onIntent(CreateOrderIntent.UpdateQuickText("تفاح"))
+        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
+        val initialKey = viewModel.activeIdempotencyKey
+        assertNotNull(initialKey)
+
+        // User explicitly abandons order (back button / dismiss screen)
+        viewModel.onIntent(CreateOrderIntent.AbandonOrder)
+        assertNull(viewModel.activeIdempotencyKey)
+    }
 }

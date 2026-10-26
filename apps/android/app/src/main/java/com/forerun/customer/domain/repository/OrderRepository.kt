@@ -10,12 +10,12 @@ interface OrderRepository {
     suspend fun getPricingDisclosure(): Result<PricingDisclosure>
 
     suspend fun createOrder(
-
         items: List<OrderItem>,
         notes: String?,
         preferredRunnerId: String?,
         waitForPreferred: Boolean,
-        deliveryAddress: CustomerAddress
+        deliveryAddress: CustomerAddress,
+        idempotencyKey: String? = null
     ): Result<CreatedOrder>
 
     suspend fun getAvailableRunners(): Result<List<RunnerInfo>>

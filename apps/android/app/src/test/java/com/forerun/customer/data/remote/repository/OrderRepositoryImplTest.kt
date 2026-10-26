@@ -74,8 +74,12 @@ class OrderRepositoryImplTest {
             throw NotImplementedError()
 
 
-        override suspend fun createOrder(request: CreateOrderRequestDto): ApiResponse<CreateOrderResponseDto> =
-            createOrderResult
+        var lastCreateOrderRequest: CreateOrderRequestDto? = null
+
+        override suspend fun createOrder(request: CreateOrderRequestDto): ApiResponse<CreateOrderResponseDto> {
+            lastCreateOrderRequest = request
+            return createOrderResult
+        }
 
         override suspend fun getOrderDetail(id: String): ApiResponse<OrderDetailResponseDto> =
             orderDetailResult
@@ -174,6 +178,25 @@ class OrderRepositoryImplTest {
         assertEquals("order_123", order.id)
         assertEquals("ORD-001", order.orderNumber)
         assertEquals(5000, order.totalFee)
+    }
+
+    @Test
+    fun createOrder_forwardsIdempotencyKeyToApi() = runTest {
+        val fakeApi = FakeOrderApi()
+        val repository = OrderRepositoryImpl(fakeApi)
+        val testKey = "test-uuid-12345"
+
+        val result = repository.createOrder(
+            items = listOf(OrderItem("حليب", "1", "بقالية", false)),
+            notes = "ملاحظة",
+            preferredRunnerId = null,
+            waitForPreferred = false,
+            deliveryAddress = CustomerAddress(33.5, 36.2, "دمشق"),
+            idempotencyKey = testKey
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(testKey, fakeApi.lastCreateOrderRequest?.idempotencyKey)
     }
 
     @Test

@@ -14,14 +14,16 @@ class CreateOrderUseCase @Inject constructor(
         notes: String?,
         preferredRunnerId: String?,
         waitForPreferred: Boolean,
-        deliveryAddress: CustomerAddress
+        deliveryAddress: CustomerAddress,
+        idempotencyKey: String? = null
     ): Result<CreatedOrder> {
         return repository.createOrder(
             items = items,
             notes = notes,
             preferredRunnerId = preferredRunnerId,
             waitForPreferred = waitForPreferred,
-            deliveryAddress = deliveryAddress
+            deliveryAddress = deliveryAddress,
+            idempotencyKey = idempotencyKey
         )
     }
 }
