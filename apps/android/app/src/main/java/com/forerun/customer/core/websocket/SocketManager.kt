@@ -1,7 +1,12 @@
 package com.forerun.customer.core.websocket
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.forerun.customer.core.storage.TokenStorage
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +37,8 @@ enum class SocketConnectionState {
 
 @Singleton
 open class SocketManager @Inject constructor(
-    private val tokenStorage: TokenStorage
+    private val tokenStorage: TokenStorage,
+    @ApplicationContext private val context: Context? = null
 ) {
     companion object {
         private const val TAG = "SocketManager"
@@ -43,6 +49,77 @@ open class SocketManager @Inject constructor(
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    internal var currentNetwork: Network? = null
+    private var isNetworkCallbackRegistered = false
+
+    internal val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            val previous = currentNetwork
+            val isNetworkSwitch = previous != network
+            currentNetwork = network
+            Log.d(TAG, "Network onAvailable: previous=$previous, current=$network, isSwitch=$isNetworkSwitch")
+            if (isNetworkSwitch) {
+                onNetworkChanged()
+            }
+        }
+
+        override fun onCapabilitiesChanged(
+            network: Network,
+            networkCapabilities: NetworkCapabilities
+        ) {
+            val previous = currentNetwork
+            val isNetworkSwitch = previous != network
+            currentNetwork = network
+            Log.d(TAG, "Network onCapabilitiesChanged: previous=$previous, current=$network, isSwitch=$isNetworkSwitch")
+            if (isNetworkSwitch) {
+                onNetworkChanged()
+            }
+        }
+
+        override fun onLost(network: Network) {
+            Log.d(TAG, "Network onLost: $network")
+            if (currentNetwork == network) {
+                currentNetwork = null
+            }
+        }
+    }
+
+    init {
+        registerNetworkCallback()
+    }
+
+    fun registerNetworkCallback() {
+        if (isNetworkCallbackRegistered) return
+        val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        try {
+            currentNetwork = cm.activeNetwork
+            cm.registerDefaultNetworkCallback(networkCallback)
+            isNetworkCallbackRegistered = true
+            Log.d(TAG, "Registered ConnectivityManager default network callback")
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to register network callback", e)
+        }
+    }
+
+    fun unregisterNetworkCallback() {
+        if (!isNetworkCallbackRegistered) return
+        val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        try {
+            cm.unregisterNetworkCallback(networkCallback)
+            isNetworkCallbackRegistered = false
+            Log.d(TAG, "Unregistered ConnectivityManager default network callback")
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to unregister network callback", e)
+        }
+    }
+
+    open fun onNetworkChanged() {
+        if (isForeground) {
+            Log.d(TAG, "Network change detected while foregrounded -> forcing immediate reconnect")
+            reconnect()
+        }
+    }
 
     private var socket: Socket? = null
     var isForeground: Boolean = false
@@ -114,7 +191,7 @@ open class SocketManager @Inject constructor(
     }
 
     @Synchronized
-    fun reconnect() {
+    open fun reconnect() {
         Log.d(TAG, "Reconnecting socket (forcing disconnect then connect)")
         disconnect()
         connect()

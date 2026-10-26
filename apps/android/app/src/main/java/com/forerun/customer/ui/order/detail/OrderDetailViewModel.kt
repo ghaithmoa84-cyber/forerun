@@ -18,6 +18,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -238,16 +240,36 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
+    private var wasDisconnected = false
+
     private fun observeWebSocketEvents() {
         viewModelScope.launch {
-            observeOrderEventsUseCase(orderId).collect { event ->
+            merge(
+                observeOrderEventsUseCase(orderId),
+                observeOrderEventsUseCase().filter { it is WebSocketEvent.ConnectionStateChanged }
+            ).collect { event ->
                 handleWebSocketEvent(event)
             }
         }
     }
 
+    fun onWebSocketReconnected() {
+        val isTerminal = _uiState.value.order?.status in setOf("DELIVERED", "CANCELLED")
+        if (orderId.isNotBlank() && !isTerminal) {
+            loadDetail(showLoading = false, isRefresh = true)
+        }
+    }
+
     fun handleWebSocketEvent(event: WebSocketEvent) {
         when (event) {
+            is WebSocketEvent.ConnectionStateChanged -> {
+                if (!event.isConnected) {
+                    wasDisconnected = true
+                } else if (wasDisconnected) {
+                    wasDisconnected = false
+                    onWebSocketReconnected()
+                }
+            }
             is WebSocketEvent.OrderStatusChanged -> {
                 _uiState.update { current ->
                     current.copy(
