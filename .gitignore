@@ -36,4 +36,4 @@ test-output.txt
 .gradle/
 google-services.json
 .kilo/worktrees/
-
+.fixtures.json
