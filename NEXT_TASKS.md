@@ -19,12 +19,12 @@
 ---
 
 #### النافذة 1 — نشر migrations وإصلاحات الأمان (أولاً)
-يشمل: D19 (حذف fee defaults)، C-2 (حذف أعمدة الحصص الإرثية)، C-8 (مدموج فعلياً مسبقاً، لا يحتاج نشراً منفصلاً إذ هو Android فقط)، D49 (SEC-AUDIT-01)، D50 (proxy-addr).
+يشمل: D19 (حذف fee defaults)، C-2 (حذف أعمدة الحصص الإرثية)، C-8 (مدموج فعلياً مسبقاً، لا يحتاج نشراً منفصلاً إذ هو Android فقط)، D49 (SEC-AUDIT-01)، D50 (proxy-addr)، وهجرة D58 (`20261026120000_add_create_idempotency_key_to_order` لمنع تكرار الطلبات).
 
 خطوات التنفيذ الكاملة والمتسلسلة:
 1. نسخة احتياطية حقيقية: `pg_dump $DATABASE_URL > backup_pre_phase2_$(date +%Y%m%d_%H%M%S).sql`
 2. `git push origin master` — تحقق من نجاح البناء على Railway قبل المتابعة
-3. من Railway Console: `pnpm exec prisma migrate status` — **توقف وتأكد أن الـ pending هي فقط `remove_order_fee_defaults` و`remove_legacy_share_columns`، لا شيء آخر**
+3. من Railway Console: `pnpm exec prisma migrate status` — **توقف وتأكد أن الـ pending هي الثلاث migrations فقط: `remove_order_fee_defaults` و`remove_legacy_share_columns` و`add_create_idempotency_key_to_order`، لا شيء آخر**
 4. `pnpm exec prisma migrate deploy`
 5. تحقق فوري: `pnpm exec prisma migrate status` + `node scripts/diff-schema.js $DATABASE_URL`
 6. فحص صحي: `curl https://fawrun-api-production.up.railway.app/api/v1` + تحقق شاشة تسوية حقيقية تعرض `totalFees` بشكل صحيح

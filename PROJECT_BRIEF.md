@@ -11,7 +11,7 @@ MVP scope: buying items from one or more stores + delivery. No catalog, no onlin
 - Style: Modular Monolith inside a Monorepo (not microservices - easier now, can split later).
 - Backend and Frontend are fully separated.
 - Communication: REST API (/api/v1) + real-time WebSocket (Socket.IO).
-  Note: The Android app is complete and merged (8 sprints, 223 @Test) - see docs/android/PROGRESS.md
+  Note: The Android app is complete, signed, and merged (Sprints 8A-8F, 223+ @Test) - see docs/android/ROADMAP.md and PROJECT_STATUS.md §1.
 - Server is always the source of truth - never compute fees or change states on the frontend.
 
 ### Monorepo layout
@@ -196,7 +196,9 @@ Customer is notified via WebSocket on every fee change.
 Pagination (on list endpoints): page (default 1), limit (default 20, max 100).
 Response always includes data + meta (total, page, limit, totalPages).
 
-### Completed endpoints (Sprint 1)
+### Completed Endpoints (All MVP Sprints & Active Production API)
+
+Auth & Users:
 - POST /auth/register - register customer (201, PENDING_VERIFICATION)
 - POST /auth/login - login (JWT RS256 access, 64-byte refresh)
 - POST /auth/refresh - refresh access token
@@ -206,18 +208,18 @@ Response always includes data + meta (total, page, limit, totalPages).
 - PUT /admin/users/:id/verify - verify account
 - PUT /admin/users/:id/reject - reject account
 - PUT /admin/users/:id/suspend - suspend account (revokes tokens)
+- PUT /admin/users/:id/unsuspend - unsuspend account
 - GET /admin/runners - list runners (paginated)
 - POST /admin/runners - create runner
 - PUT /admin/runners/:id - update runner
 - PUT /admin/runners/:id/visibility - toggle runner visibility
 
-### Planned endpoints (Sprint 2+)
 Customer:
 - GET /customer/me, PUT /customer/me
 - GET/PUT /customer/me/address
 - GET /customer/runners
 - GET /customer/orders, GET /customer/orders/:id
-- POST /customer/orders, DELETE /customer/orders/:id
+- POST /customer/orders, DELETE /customer/orders/:id (cancel if draft/pending review)
 - POST /customer/orders/:id/ratings, PUT /customer/orders/:id/ratings
 
 Runner:
@@ -229,14 +231,14 @@ Runner:
 - DELETE /runner/orders/:id/stores/:storeId
 - PUT /runner/orders/:id/stores/:storeId/purchase
 - PUT /runner/orders/:id/stores/:storeId/skip
-- POST /runner/orders/:id/stores/:storeId/receipts
+- POST /runner/orders/:id/stores/:storeId/receipts (postponed until R2 operational)
 - DELETE /runner/orders/:id/stores/:storeId/receipts/:receiptId
 - POST /runner/orders/:id/items
 - PUT /runner/orders/:id/proceed-to-delivery
 - PUT /runner/orders/:id/deliver
 - GET /runner/settlements, GET /runner/settlements/current
 
-Admin:
+Admin & Operations:
 - GET /admin/dashboard
 - GET /admin/orders, GET /admin/orders/:id
 - GET /admin/orders/:id/audit
@@ -424,12 +426,12 @@ Sprint 5 - Frontends (3 weeks) - COMPLETED
 - Customer Web (React + Vite) - 1 week
 - الواجهات الثلاث (Admin, Runner, Customer) منشورة على Vercel
 
-Sprint 6 - QA + Launch (1 week)
+Sprint 6 - QA + Launch (1 week) - COMPLETED
 - Integration tests for State Machine and Pricing
-- Security review
-- Performance baseline
-- Final deployment on Railway + Vercel
-- Field testing with 1-2 real customers
+- Security review & Privacy/Lifecycle masking
+- Performance baseline & Load test suites
+- Production deployment on Railway + Vercel
+- Pre-launch staging & verification
 
 ### Android track - separate numbering (does NOT use `Sprint N`)
 
@@ -438,10 +440,11 @@ Android sprints are numbered **8A..10** independently of the backend `Sprint 1..
 
 | Android Sprint | Status | Scope |
 |---|---|---|
-| 8A - 8C | ✅ COMPLETED (merged to `master` at `e5bfbc1`) | Full customer app: 15 screens, MVVM + Hilt, Retrofit + JWT refresh, WebSocket + reconnection, MapLibre/OSM (always-online v1 - Room/offline-sync was **voided by decision**, see `docs/android/PROGRESS.md`). 223 @Test. |
-| 8D - 10 | 📋 PLANNED | Architecture hardening, QA, signing + release. See `docs/android/ROADMAP.md`. |
+| 8A - 8C | ✅ COMPLETED (merged to `master` at `e5bfbc1`) | Full customer app: 15 screens, MVVM + Hilt, Retrofit + JWT refresh, WebSocket + reconnection, MapLibre/OSM. 223 @Test. |
+| 8D - 8F | ✅ COMPLETED (merged to `master`) | App hardening, offline banner/lifecycle resilience, signed APK release build (3 ABI). Ready for distribution / Firebase link. |
+| 10 | 📋 PLANNED | Production pilot rollout & operational field telemetry. |
 
-Android QA and release items are delegated to `docs/android/ROADMAP.md` Sprint 10 - they are not duplicated in the backend Sprint 6 DoD.
+Android QA and release items are delegated to `docs/android/ROADMAP.md`.
 
 ## 15. Coding Rules (Spec Section 17)
 
