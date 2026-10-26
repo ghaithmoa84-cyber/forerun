@@ -141,7 +141,8 @@ model Order {
   startedAt         DateTime?
   deliveredAt       DateTime?
   cancelledAt       DateTime?
-  idempotencyKey    String?         @unique
+  idempotencyKey       String?         @unique
+  createIdempotencyKey String?         @unique
   customFee         Int             @default(0)
   customFeeReason   String?
   auditLogs         AuditLog[]

@@ -30,6 +30,7 @@ export const CreateOrderSchema = z.object({
   preferredRunnerId: z.string().nullable(),
   waitForPreferred: z.boolean(),
   deliveryAddress: DeliveryAddressSchema,
+  idempotencyKey: z.string().uuid().nullish(),
 });
 
 export type CreateOrderRequest = z.infer<typeof CreateOrderSchema>;
@@ -50,6 +51,7 @@ export const CreateOrderResponseSchema = z.object({
   id: z.string(),
   orderNumber: z.string(),
   status: z.string(),
+  idempotent: z.boolean().optional(),
   estimatedFee: EstimatedFeeSchema,
 });
 
