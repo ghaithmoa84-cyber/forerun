@@ -42,12 +42,12 @@ class OrderRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createOrder(
-
         items: List<OrderItem>,
         notes: String?,
         preferredRunnerId: String?,
         waitForPreferred: Boolean,
-        deliveryAddress: CustomerAddress
+        deliveryAddress: CustomerAddress,
+        idempotencyKey: String?
     ): Result<CreatedOrder> {
         val requestDto = CreateOrderRequestDto(
             items = items.map { item ->
@@ -65,7 +65,8 @@ class OrderRepositoryImpl @Inject constructor(
                 lat = deliveryAddress.lat,
                 lng = deliveryAddress.lng,
                 description = deliveryAddress.description.trim()
-            )
+            ),
+            idempotencyKey = idempotencyKey
         )
 
         return when (val response = orderApi.createOrder(requestDto)) {

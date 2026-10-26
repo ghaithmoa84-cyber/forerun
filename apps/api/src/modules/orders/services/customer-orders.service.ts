@@ -190,6 +190,7 @@ export class CustomerOrdersService {
         peripheralFee: fee.peripheralFee,
         extraStoresFee: fee.extraStoresFee,
         totalFee: fee.totalFee,
+        createIdempotencyKey: dto.idempotencyKey ?? null,
       },
     });
 
@@ -257,7 +258,10 @@ export class CustomerOrdersService {
         event: 'ORDER_CREATED',
         fromStatus: 'DRAFT',
         toStatus: 'PENDING_REVIEW',
-        meta: { orderNumber: updatedOrder.orderNumber },
+        meta: {
+          orderNumber: updatedOrder.orderNumber,
+          ...(dto.idempotencyKey ? { idempotencyKey: dto.idempotencyKey } : {}),
+        },
       },
       tx,
     );
@@ -350,41 +354,122 @@ export class CustomerOrdersService {
   ): Promise<CreateOrderResponse> {
     const customer = await this.validateOrderPreconditions(userId, dto.items);
 
+    if (dto.idempotencyKey) {
+      const existing = await this.prisma.order.findUnique({
+        where: { createIdempotencyKey: dto.idempotencyKey },
+      });
+
+      if (existing) {
+        if (existing.customerId !== customer.id) {
+          throw new ConflictException(
+            'Idempotency key belongs to another customer',
+          );
+        }
+
+        const maxAgeMs = 24 * 60 * 60 * 1000;
+        if (Date.now() - existing.createdAt.getTime() > maxAgeMs) {
+          throw new ConflictException('Idempotency key has expired');
+        }
+
+        return {
+          id: existing.id,
+          orderNumber: existing.orderNumber!,
+          status: existing.status,
+          idempotent: true,
+          estimatedFee: {
+            baseFee: existing.baseFee,
+            peripheralFee: existing.peripheralFee,
+            extraStoresFee: existing.extraStoresFee,
+            customFee: existing.customFee,
+            customFeeReason: existing.customFeeReason,
+            totalFee: existing.totalFee,
+            note: 'الرسم النهائي يُحدد بعد المراجعة',
+          },
+        };
+      }
+    }
+
     const orderStoresData = this.buildOrderStoresData(dto.items);
 
-    // D22: الحساب يتم داخل الـ transaction لتطابق اللقطة مع صف الإعدادات لحظة الإيداع
-    const { order, fee } = await this.prisma.$transaction(
-      async (tx) => {
-        const fee = await this.calculateOrderFee(tx, orderStoresData.length);
-        const order = await this.createOrderRecord(tx, {
-          customerId: customer.id,
-          userId,
-          dto,
-          fee,
-          orderStoresData,
+    let orderRecord: Awaited<ReturnType<typeof this.createOrderRecord>>;
+    let calculatedFee: FeeResult;
+
+    try {
+      // D22: الحساب يتم داخل الـ transaction لتطابق اللقطة مع صف الإعدادات لحظة الإيداع
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          const fee = await this.calculateOrderFee(tx, orderStoresData.length);
+          const order = await this.createOrderRecord(tx, {
+            customerId: customer.id,
+            userId,
+            dto,
+            fee,
+            orderStoresData,
+          });
+          return { order, fee };
+        },
+        { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
+      );
+      orderRecord = result.order;
+      calculatedFee = result.fee;
+    } catch (error: unknown) {
+      const err = error as { code?: string; meta?: { target?: string[] } };
+      if (
+        dto.idempotencyKey &&
+        err?.code === 'P2002' &&
+        (Array.isArray(err?.meta?.target)
+          ? err.meta.target.includes('createIdempotencyKey')
+          : true)
+      ) {
+        const concurrentExisting = await this.prisma.order.findUnique({
+          where: { createIdempotencyKey: dto.idempotencyKey },
         });
-        return { order, fee };
-      },
-      { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
-    );
+
+        if (concurrentExisting) {
+          if (concurrentExisting.customerId !== customer.id) {
+            throw new ConflictException(
+              'Idempotency key belongs to another customer',
+            );
+          }
+
+          return {
+            id: concurrentExisting.id,
+            orderNumber: concurrentExisting.orderNumber!,
+            status: concurrentExisting.status,
+            idempotent: true,
+            estimatedFee: {
+              baseFee: concurrentExisting.baseFee,
+              peripheralFee: concurrentExisting.peripheralFee,
+              extraStoresFee: concurrentExisting.extraStoresFee,
+              customFee: concurrentExisting.customFee,
+              customFeeReason: concurrentExisting.customFeeReason,
+              totalFee: concurrentExisting.totalFee,
+              note: 'الرسم النهائي يُحدد بعد المراجعة',
+            },
+          };
+        }
+      }
+      throw error;
+    }
 
     await this.sendOrderCreationNotifications({
-      order,
+      order: orderRecord,
       customerName: customer.user?.name ?? '',
       itemCount: dto.items.length,
     });
 
     return {
-      id: order.id,
-      orderNumber: order.orderNumber!,
-      status: order.status,
+      id: orderRecord.id,
+      orderNumber: orderRecord.orderNumber!,
+      status: orderRecord.status,
+      idempotent: false,
       estimatedFee: {
-        baseFee: fee.baseFee,
-        peripheralFee: fee.peripheralFee,
-        extraStoresFee: fee.extraStoresFee,
-        customFee: fee.customFee ?? 0,
-        customFeeReason: fee.customFeeReason ?? null,
-        totalFee: fee.totalFee,
+        baseFee: calculatedFee.baseFee,
+        peripheralFee: calculatedFee.peripheralFee,
+        extraStoresFee: calculatedFee.extraStoresFee,
+        customFee: calculatedFee.customFee ?? 0,
+        customFeeReason: calculatedFee.customFeeReason ?? null,
+        totalFee: calculatedFee.totalFee,
         note: 'الرسم النهائي يُحدد بعد المراجعة',
       },
     };

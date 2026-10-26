@@ -24,6 +24,8 @@ class FakeOrderRepository : OrderRepository {
     )
 
     var lastCreatedItems: List<OrderItem>? = null
+    var lastIdempotencyKey: String? = null
+    val idempotencyKeysSent = mutableListOf<String?>()
     var createOrderCallCount: Int = 0
     var createOrderDelayMs: Long = 0
 
@@ -32,9 +34,12 @@ class FakeOrderRepository : OrderRepository {
         notes: String?,
         preferredRunnerId: String?,
         waitForPreferred: Boolean,
-        deliveryAddress: CustomerAddress
+        deliveryAddress: CustomerAddress,
+        idempotencyKey: String?
     ): Result<CreatedOrder> {
         createOrderCallCount++
+        lastIdempotencyKey = idempotencyKey
+        idempotencyKeysSent.add(idempotencyKey)
         if (createOrderDelayMs > 0) {
             kotlinx.coroutines.delay(createOrderDelayMs)
         }

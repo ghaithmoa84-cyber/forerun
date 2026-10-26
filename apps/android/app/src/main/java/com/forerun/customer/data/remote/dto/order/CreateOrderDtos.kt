@@ -24,7 +24,8 @@ data class CreateOrderRequestDto(
     @Json(name = "notes") val notes: String? = null,
     @Json(name = "preferredRunnerId") val preferredRunnerId: String? = null,
     @Json(name = "waitForPreferred") val waitForPreferred: Boolean = false,
-    @Json(name = "deliveryAddress") val deliveryAddress: DeliveryAddressDto
+    @Json(name = "deliveryAddress") val deliveryAddress: DeliveryAddressDto,
+    @Json(name = "idempotencyKey") val idempotencyKey: String? = null
 )
 
 @JsonClass(generateAdapter = true)

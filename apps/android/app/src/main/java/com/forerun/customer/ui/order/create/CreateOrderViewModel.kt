@@ -69,6 +69,7 @@ sealed interface CreateOrderIntent {
     data object ClearError : CreateOrderIntent
     data object DismissFeeDisclosure : CreateOrderIntent
     data object ConfirmOrderSubmit : CreateOrderIntent
+    data object AbandonOrder : CreateOrderIntent
 }
 
 sealed interface CreateOrderEvent {
@@ -110,10 +111,16 @@ class CreateOrderViewModel @Inject constructor(
             is CreateOrderIntent.SelectRunner -> _uiState.update { it.copy(selectedRunnerId = intent.runnerId) }
             is CreateOrderIntent.ToggleWaitForPreferred -> _uiState.update { it.copy(waitForPreferred = intent.wait) }
             is CreateOrderIntent.SubmitOrder -> submitOrder()
-            is CreateOrderIntent.DismissSuccess -> _uiState.update { it.copy(createdOrder = null) }
+            is CreateOrderIntent.DismissSuccess -> {
+                currentIdempotencyKey = null
+                _uiState.update { it.copy(createdOrder = null) }
+            }
             is CreateOrderIntent.ClearError -> _uiState.update { it.copy(errorMessage = null, validationError = null) }
             is CreateOrderIntent.DismissFeeDisclosure -> _uiState.update { it.copy(showFeeDisclosure = false) }
             is CreateOrderIntent.ConfirmOrderSubmit -> confirmOrderSubmit()
+            is CreateOrderIntent.AbandonOrder -> {
+                currentIdempotencyKey = null
+            }
         }
     }
 
@@ -243,6 +250,11 @@ class CreateOrderViewModel @Inject constructor(
         }
     }
 
+    private var currentIdempotencyKey: String? = null
+
+    val activeIdempotencyKey: String?
+        get() = currentIdempotencyKey
+
     private val isSubmittingGuard = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun validateOrderInput(): List<OrderItem>? {
@@ -355,6 +367,11 @@ class CreateOrderViewModel @Inject constructor(
             return
         }
 
+        if (currentIdempotencyKey == null) {
+            currentIdempotencyKey = java.util.UUID.randomUUID().toString()
+        }
+        val idempotencyKey = currentIdempotencyKey
+
         val state = _uiState.value
 
         viewModelScope.launch {
@@ -365,10 +382,12 @@ class CreateOrderViewModel @Inject constructor(
                     notes = state.notes,
                     preferredRunnerId = state.selectedRunnerId,
                     waitForPreferred = state.waitForPreferred,
-                    deliveryAddress = state.deliveryAddress!!
+                    deliveryAddress = state.deliveryAddress!!,
+                    idempotencyKey = idempotencyKey
                 )
                 result.fold(
                     onSuccess = { createdOrder ->
+                        currentIdempotencyKey = null
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
@@ -395,5 +414,10 @@ class CreateOrderViewModel @Inject constructor(
                 isSubmittingGuard.set(false)
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        currentIdempotencyKey = null
     }
 }
