@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -48,6 +48,13 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
 
 export function CreateOrderScreen() {
   const navigate = useNavigate();
+  const orderIdempotencyKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      orderIdempotencyKeyRef.current = null;
+    };
+  }, []);
 
   // Item Entry Mode State: Default is 'quick'
   const [entryMode, setEntryMode] = useState<'quick' | 'structured'>('quick');
@@ -238,6 +245,11 @@ export function CreateOrderScreen() {
       finalNotes = notes.trim() || null;
     }
 
+    if (!orderIdempotencyKeyRef.current) {
+      orderIdempotencyKeyRef.current = crypto.randomUUID();
+    }
+    const idempotencyKey = orderIdempotencyKeyRef.current;
+
     const payload: CreateOrderRequest = {
       items: orderItems,
       notes: finalNotes,
@@ -248,6 +260,7 @@ export function CreateOrderScreen() {
         lng,
         description: addressDesc.trim(),
       },
+      idempotencyKey,
     };
 
     // Client-side Zod validation
@@ -263,6 +276,7 @@ export function CreateOrderScreen() {
     setSubmitting(true);
     try {
       const response = await api.post<CreateOrderResponse>('/customer/orders', payload);
+      orderIdempotencyKeyRef.current = null;
       const newOrderId = response.data.id;
       navigate(`/orders/${newOrderId}`);
     } catch (err: unknown) {

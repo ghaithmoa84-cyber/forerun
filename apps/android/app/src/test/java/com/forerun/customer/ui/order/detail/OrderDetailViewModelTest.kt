@@ -2,6 +2,7 @@ package com.forerun.customer.ui.order.detail
 
 import androidx.lifecycle.SavedStateHandle
 import com.forerun.customer.core.storage.FakeTokenStorage
+import com.forerun.customer.core.websocket.SocketConnectionState
 import com.forerun.customer.core.websocket.SocketManager
 import com.forerun.customer.data.gateway.SocketOrderEventsGateway
 import com.forerun.customer.domain.model.WebSocketEvent
@@ -693,5 +694,74 @@ class OrderDetailViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, fakeRepository.submitRatingCallCount)
+    }
+
+    @Test
+    fun handleWebSocketEvent_reconnect_triggers_refresh_for_active_order() = runTest(testDispatcher) {
+        val viewModel = createViewModel("order_123")
+        advanceUntilIdle()
+        val initialCalls = fakeRepository.getOrderDetailCallCount
+        assertEquals(1, initialCalls)
+
+        // Disconnect then reconnect
+        viewModel.handleWebSocketEvent(WebSocketEvent.ConnectionStateChanged(isConnected = false))
+        viewModel.handleWebSocketEvent(WebSocketEvent.ConnectionStateChanged(isConnected = true))
+        advanceUntilIdle()
+
+        // Verifies that getOrderDetail was called again automatically via refresh path
+        assertEquals(2, fakeRepository.getOrderDetailCallCount)
+        assertFalse(viewModel.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun websocket_reconnect_via_socket_manager_flow_triggers_refresh() = runTest(testDispatcher) {
+        val viewModel = createViewModel("order_123")
+        advanceUntilIdle()
+        assertEquals(1, fakeRepository.getOrderDetailCallCount)
+
+        // Simulate gateway / socketManager connection state change
+        socketManager.setConnectionStateForTesting(SocketConnectionState.DISCONNECTED)
+        advanceUntilIdle()
+        socketManager.setConnectionStateForTesting(SocketConnectionState.CONNECTED)
+        advanceUntilIdle()
+
+        // Verifies automatic refresh triggered through observeEvents flow
+        assertEquals(2, fakeRepository.getOrderDetailCallCount)
+    }
+
+    @Test
+    fun handleWebSocketEvent_reconnect_does_not_refresh_for_delivered_order() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "DELIVERED")
+        )
+        val viewModel = createViewModel("order_123")
+        advanceUntilIdle()
+        assertEquals(1, fakeRepository.getOrderDetailCallCount)
+
+        // Disconnect then reconnect
+        viewModel.handleWebSocketEvent(WebSocketEvent.ConnectionStateChanged(isConnected = false))
+        viewModel.handleWebSocketEvent(WebSocketEvent.ConnectionStateChanged(isConnected = true))
+        advanceUntilIdle()
+
+        // Should NOT refresh for terminal DELIVERED order
+        assertEquals(1, fakeRepository.getOrderDetailCallCount)
+    }
+
+    @Test
+    fun handleWebSocketEvent_reconnect_does_not_refresh_for_cancelled_order() = runTest(testDispatcher) {
+        fakeRepository.getOrderDetailResult = Result.success(
+            sampleOrder.copy(status = "CANCELLED")
+        )
+        val viewModel = createViewModel("order_123")
+        advanceUntilIdle()
+        assertEquals(1, fakeRepository.getOrderDetailCallCount)
+
+        // Disconnect then reconnect
+        viewModel.handleWebSocketEvent(WebSocketEvent.ConnectionStateChanged(isConnected = false))
+        viewModel.handleWebSocketEvent(WebSocketEvent.ConnectionStateChanged(isConnected = true))
+        advanceUntilIdle()
+
+        // Should NOT refresh for terminal CANCELLED order
+        assertEquals(1, fakeRepository.getOrderDetailCallCount)
     }
 }

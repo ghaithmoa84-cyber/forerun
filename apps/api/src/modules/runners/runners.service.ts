@@ -12,6 +12,12 @@ import { AuditService } from '../audit/audit.service.js';
 import { RunnerStateMachine } from '../../state-machine/runner-state-machine.js';
 import { CONFIG } from '@forerun/shared-constants';
 
+export const ACTIVE_CUSTOMER_CONTACT_STATUSES: ReadonlySet<string> = new Set([
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'OUT_FOR_DELIVERY',
+]);
+
 @Injectable()
 export class RunnersService {
   constructor(
@@ -202,7 +208,9 @@ export class RunnersService {
       orderNumber: activeOrder.orderNumber!,
       status: activeOrder.status,
       customerName: activeOrder.customer.user.name,
-      customerWhatsapp: activeOrder.customer.user.whatsapp,
+      customerWhatsapp: ACTIVE_CUSTOMER_CONTACT_STATUSES.has(activeOrder.status)
+        ? activeOrder.customer.user.whatsapp
+        : null,
       deliveryAddress: {
         lat: activeOrder.deliveryLat,
         lng: activeOrder.deliveryLng,

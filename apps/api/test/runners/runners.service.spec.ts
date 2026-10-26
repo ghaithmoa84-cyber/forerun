@@ -21,6 +21,10 @@ describe('RunnersService — Least Privilege Profile & Admin Notes', () => {
       user: {
         update: vi.fn(),
       },
+      order: {
+        findFirst: vi.fn(),
+        count: vi.fn(),
+      },
       $transaction: vi.fn(async (cb: any) => cb(prisma)),
     };
 
@@ -178,6 +182,98 @@ describe('RunnersService — Least Privilege Profile & Admin Notes', () => {
           meta: { runnerId: 'runner-cuid-1' },
         }),
         prisma,
+      );
+    });
+  });
+
+  describe('getActiveOrder (GET /runner/orders/active) — Defensive Lifecycle Masking', () => {
+    const mockRunner = {
+      id: 'runner-cuid-1',
+      userId: 'user-cuid-1',
+    };
+
+    const createMockOrder = (status: string) => ({
+      id: 'order-cuid-1',
+      orderNumber: 'FW-000100',
+      status,
+      deliveryLat: 35.5,
+      deliveryLng: 35.8,
+      deliveryDesc: 'Latakia center',
+      baseFee: 60,
+      peripheralFee: 0,
+      extraStoresFee: 0,
+      customFee: 0,
+      customFeeReason: null,
+      totalFee: 60,
+      isPeripheral: false,
+      createdAt: new Date('2026-10-26T10:00:00Z'),
+      assignedAt: new Date('2026-10-26T10:05:00Z'),
+      customer: {
+        user: {
+          name: 'Sara Customer',
+          whatsapp: '0999888777',
+        },
+      },
+      items: [
+        {
+          id: 'item-1',
+          itemName: 'Milk',
+          quantity: '1L',
+          customStoreName: null,
+          anyStore: true,
+        },
+      ],
+      orderStores: [],
+    });
+
+    it.each(['ASSIGNED', 'IN_PROGRESS', 'OUT_FOR_DELIVERY'])(
+      'exposes customerWhatsapp when order is in active state (%s)',
+      async (status) => {
+        prisma.runner.findUnique.mockResolvedValue(mockRunner);
+        prisma.order.findFirst.mockResolvedValue(createMockOrder(status));
+        prisma.order.count.mockResolvedValue(1);
+
+        const result = await service.getActiveOrder('user-cuid-1');
+
+        expect(result).not.toBeNull();
+        expect(result!.customerWhatsapp).toBe('0999888777');
+        expect(result!.customerName).toBe('Sara Customer');
+        expect(result!.status).toBe(status);
+      },
+    );
+
+    it.each(['DELIVERED', 'CANCELLED', 'PENDING_REVIEW', 'AWAITING_RUNNER'])(
+      'defensively masks customerWhatsapp to null if a non-active order (%s) reaches response serialization',
+      async (status) => {
+        prisma.runner.findUnique.mockResolvedValue(mockRunner);
+        // Simulating non-active order returned (e.g. hypothetical query regression or race)
+        prisma.order.findFirst.mockResolvedValue(createMockOrder(status));
+        prisma.order.count.mockResolvedValue(0);
+
+        const result = await service.getActiveOrder('user-cuid-1');
+
+        expect(result).not.toBeNull();
+        // Defensive masking ensures customerWhatsapp is NULL, not exposed
+        expect(result!.customerWhatsapp).toBeNull();
+        expect(result!.customerName).toBe('Sara Customer');
+        expect(result!.status).toBe(status);
+      },
+    );
+
+    it('returns null when no active order exists in DB', async () => {
+      prisma.runner.findUnique.mockResolvedValue(mockRunner);
+      prisma.order.findFirst.mockResolvedValue(null);
+
+      const result = await service.getActiveOrder('user-cuid-1');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws NotFoundException when runner does not exist', async () => {
+      prisma.runner.findUnique.mockResolvedValue(null);
+
+      await expect(service.getActiveOrder('non-existent')).rejects.toThrow(
+        NotFoundException,
       );
     });
   });
