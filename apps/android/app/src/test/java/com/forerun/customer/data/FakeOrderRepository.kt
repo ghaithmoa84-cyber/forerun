@@ -28,8 +28,6 @@ class FakeOrderRepository : OrderRepository {
     val idempotencyKeysSent = mutableListOf<String?>()
     var createOrderCallCount: Int = 0
     var createOrderDelayMs: Long = 0
-    var lastIdempotencyKey: String? = null
-    val idempotencyKeysSent = mutableListOf<String?>()
 
     override suspend fun createOrder(
         items: List<OrderItem>,

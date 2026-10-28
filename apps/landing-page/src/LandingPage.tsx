@@ -5,10 +5,9 @@ import './LandingPage.css';
 const ADMIN_WHATSAPP_NUMBER = '963981571936';
 const ADMIN_WHATSAPP_DISPLAY = '+963 981 571 936';
 const VERIFY_MSG = encodeURIComponent('مرحباً، أود تفعيل حسابي في تطبيق فَوْراً');
-const APK_DOWNLOAD_MSG = encodeURIComponent('مرحباً، أود تحميل تطبيق فَوْراً APK');
+const APK_DOWNLOAD_URL = '/forerun.apk';
 
 const WHATSAPP_VERIFY_URL = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${VERIFY_MSG}`;
-const WHATSAPP_DOWNLOAD_URL = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${APK_DOWNLOAD_MSG}`;
 
 export const LandingPage: React.FC = () => {
   const handleScrollTo = (id: string) => (e: React.MouseEvent) => {
@@ -442,7 +441,8 @@ export const LandingPage: React.FC = () => {
             </p>
 
             <a
-              href={WHATSAPP_DOWNLOAD_URL}
+              href={APK_DOWNLOAD_URL}
+              download="forerun.apk"
               className="final-btn-apk"
             >
               <svg className="btn-icon-svg" viewBox="0 0 24 24">
