@@ -8,42 +8,13 @@
 
 ## عمل معلّق بانتظار عامل خارجي (External Blocker)
 
-### نافذة الصيانة الموحَّدة عند عودة Railway (نافذتان منفصلتان إلزامياً)
+### ✅ إنجاز نافذتي الصيانة على Railway بنجاح (2026-10-28)
 
-**السبب:** عطل منصة Railway العالمي بتاريخ 2026-10-21 (Console/API/CLI معطّلة، Builds متوقفة بكل المناطق)، يحتاج يومين تقريباً للعودة.
-
-**الحالة:** كل الكود مدموج ومختبر محلياً على `master` (475/475 API، 322/322 Android)، جاهز للنشر فور عودة الخدمة. لا دمج إضافي بانتظار — فقط النشر نفسه.
-
-**القاعدة الإلزامية: فصل تام بين النافذتين، لا تنفيذهما معاً.** الهدف عزل أسباب أي عطل محتمل.
+**الحالة:** مُكتملة بالكامل بنسبة 100%:
+- **النافذة 1 (قاعدة البيانات والأمان):** تم أخذ نسخة احتياطية حقيقية (387KB)، وتطبيق الـ 4 migrations بنجاح (Zero Drift)، وتأكيد حماية Throttler بـ 429 على الإنتاج (SEC-AUDIT-01).
+- **النافذة 2 (CORS والدومينات):** تم تحديث `CORS_ORIGINS` في Railway لتشمل الدومينات الجديدة الثلاثة (`admin.faow.run`، `runner.faow.run`، `faow.run`)، وتأكيد استجابة OPTIONS بـ 204 و Allow-Origin بنجاح.
 
 ---
-
-#### النافذة 1 — نشر migrations وإصلاحات الأمان (أولاً)
-يشمل: D19 (حذف fee defaults)، C-2 (حذف أعمدة الحصص الإرثية)، C-8 (مدموج فعلياً مسبقاً، لا يحتاج نشراً منفصلاً إذ هو Android فقط)، D49 (SEC-AUDIT-01)، D50 (proxy-addr)، وهجرة D58 (`20261026120000_add_create_idempotency_key_to_order` لمنع تكرار الطلبات).
-
-خطوات التنفيذ الكاملة والمتسلسلة:
-1. نسخة احتياطية حقيقية: `pg_dump $DATABASE_URL > backup_pre_phase2_$(date +%Y%m%d_%H%M%S).sql`
-2. `git push origin master` — تحقق من نجاح البناء على Railway قبل المتابعة
-3. من Railway Console: `pnpm exec prisma migrate status` — **توقف وتأكد أن الـ pending هي الثلاث migrations فقط: `remove_order_fee_defaults` و`remove_legacy_share_columns` و`add_create_idempotency_key_to_order`، لا شيء آخر**
-4. `pnpm exec prisma migrate deploy`
-5. تحقق فوري: `pnpm exec prisma migrate status` + `node scripts/diff-schema.js $DATABASE_URL`
-6. فحص صحي: `curl https://fawrun-api-production.up.railway.app/api/v1` + تحقق شاشة تسوية حقيقية تعرض `totalFees` بشكل صحيح
-7. اختبار حي لإصلاح SEC-AUDIT-01: عدة محاولات `/auth/login` خاطئة بترويسة Authorization مزوَّرة مختلفة، تأكيد 429 بعد المحاولة العاشرة فعلياً على الإنتاج
-8. **مراقبة Sentry/Telegram 15 دقيقة كحد أدنى دون أي تنبيه قبل اعتبار النافذة منتهية**
-9. عند أي خطأ: تفعيل [`docs/ROLLBACK_PLAN_phase2_schema_debts.md`](docs/ROLLBACK_PLAN_phase2_schema_debts.md) فوراً
-
----
-
-#### النافذة 2 — تفعيل CORS (بعد تأكيد استقرار النافذة 1 فقط، لا قبل)
-1. Railway Console → مشروع FORERUN → خدمة `api` → `Variables` → عدّل `CORS_ORIGINS`:
-   ```text
-   https://admin.faow.run,https://runner.faow.run,https://faow.run,https://www.faow.run,https://fawrun-admin.vercel.app,https://fawrun-runner-pwa-steel.vercel.app,https://fawrun-customer-web-three.vercel.app
-   ```
-2. تحقق: `curl -I -X OPTIONS .../auth/login -H "Origin: https://admin.faow.run" -H "Access-Control-Request-Method: POST"` → توقَّع 204
-3. اختبار فعلي في المتصفح على الدومينات الجديدة الثلاثة
-4. مراقبة 10 دقائق إضافية قبل اعتبار الدومينات الجديدة جاهزة للتوزيع الفعلي
-
-⚠️ **تحذير قائم:** الروابط الرسمية الجديدة منشورة لكن غير وظيفية حتى تُنفَّذ هذه الخطوة — لا تُوزَّع لمستخدمين حقيقيين قبلها.
 
 ### تشغيل حزمة اختبارات الحمل والتزامن (scripts/load-testing/) على Railway
 
@@ -247,8 +218,8 @@
 | 6A-3.1b | **ربط `getPricingConfig` بالمسارات الإنتاجية** (إنشاء الطلب / الاعتماد / recalculate) | ✅ **مُنجَز في `0b9a88b`** | @feature-dev | آخر خطوة في 6A: `previewFee` و`recalculateFee` و`approveOrder` و`createOrder` تقرأ صف `PlatformPricing` فعليًا (القرارات D21/D22/D23)، مع بقاء `baseFee` لقطةً للطلب عند الاعتماد. +9 اختبارات وحدة و+6 اختبارات تكامل (S2) ⇒ **355 وحدة + 44 تكامل**. جاهز لبوابة الدمج `git merge --no-ff` (والمالك فقط). |
 
 > **ديون فنية مؤجلة بقرارات معتمدة:**
-> 1. **حذف `@default(60)` من `baseFee` و`totalFee` (القرار D19):** ✅ مُنجَز ومدمج محلياً في master وهجرة `20261022131218_remove_order_fee_defaults` جاهزة للنشر في Railway (القرار D49).
-> 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500` (القرار D12):** ✅ أُغلق بالحذف النهائي (لا الترقية) — تم حذف كود الحصص الميت (`splitShares`، `RUNNER_SHARE`، `PLATFORM_SHARE`) كلياً في الفرع الأول من دفعة الديون (القرار D48).
+> 1. **حذف `@default(60)` من `baseFee` و`totalFee` (القرار D19):** ✅ مُنجَز ومُطبَّق إنتاجياً على Railway بهجرة `20261022131218_remove_order_fee_defaults` بنجاح (2026-10-28).
+> 2. **الانتقال من `RUNNER_SHARE` الفلوتي إلى `RUNNER_SHARE_BP = 7500` (القرار D12):** ✅ أُغلق بالحذف النهائي — تم حذف كود الحصص وتطبيق هجرة إزالة أعمدة الحصص الإرثية `20261022132205_remove_legacy_share_columns` إنتاجياً على Railway بنجاح (2026-10-28).
 
 ### سبرنت 6B (أسطح الز_Unbound والمندوب وAndroid) — ✅ مُكتمل
 | # | المهمة | الأولوية | الحالة | المسؤول | ملاحظات |

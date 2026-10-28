@@ -23,24 +23,24 @@
 - **API**: `https://fawrun-api-production.up.railway.app/api/v1` (رابط ثابت عامل · تأجل ربط `api.faow.run` بسبب عطل منصة Railway في 2026-10-21)
 - **Admin**:
   - `https://fawrun-admin.vercel.app` (الرابط القديم — عامل بنسبة 100%)
-  - `https://admin.faow.run` (الدومين الرسمي الجديد — **منشور، بانتظار تفعيل CORS** في Railway)
+  - `https://admin.faow.run` (الدومين الرسمي الجديد — ✅ **نشط ومفعل مع CORS**)
 - **Runner**:
   - `https://fawrun-runner-pwa-steel.vercel.app` (الرابط القديم — عامل بنسبة 100%)
-  - `https://runner.faow.run` (الدومين الرسمي الجديد — **منشور، بانتظار تفعيل CORS** في Railway)
+  - `https://runner.faow.run` (الدومين الرسمي الجديد — ✅ **نشط ومفعل مع CORS**)
 - **Customer**:
   - `https://fawrun-customer-web-three.vercel.app` (الرابط القديم — عامل بنسبة 100%)
-  - `https://faow.run` / `https://www.faow.run` (الدومين الرسمي الجديد — **منشور، بانتظار تفعيل CORS** في Railway)
+  - `https://faow.run` / `https://www.faow.run` (الدومين الرسمي الجديد — ✅ **نشط ومفعل مع CORS**)
 - **Android**: **APK موقَّع** (3 ABI) — **جاهز للنشر بعد ربط Firebase** (Sprint 8F). لا يوجد رابط إنتاج. مفتاح التوقيع: `CN=FORERUN` · SHA-256 `725b4683…09879` — انظر [§12 · D6](#12-سجل-القرارات).
 - **GitHub**: `github.com/ghaithmoa84-cyber/forerun` (master)
 
-### 1.1 حالة الإنتاج وقاعدة البيانات — 2026-10-23
+### 1.1 حالة الإنتاج وقاعدة البيانات — 2026-10-28
 
 | الحقيقة | الحالة |
 |---|---|
 | منصة الإنتاج وقاعدة البيانات | **Railway** — وليس Supabase |
-| Schema Drift | **0**، آخر فحص: **2026-10-13** |
-| سجل `_prisma_migrations` (في الكود) | **11 migrations** في دورة الإنتاج النشطة (أضيف إليها هجرتا Phase 2: `remove_order_fee_defaults` و `remove_legacy_share_columns` وهجرة `add_create_idempotency_key_to_order` بانتظار نافذة النشر) |
-| Migration الحالية في إنتاج Railway | **8 migrations** مُطبَّقة حالياً (آخرها `20261012230000_add_user_previous_status`) — **تنبيه:** سيرتفع العدد تلقائياً من 8 إلى 11 فور تشغيل `prisma migrate deploy` في نافذة الصيانة القادمة (انظر [NEXT_TASKS.md](NEXT_TASKS.md)) |
+| Schema Drift | **0**، آخر فحص: **2026-10-28** (تأكيد خلو الانحراف عبر `Database schema is up to date!`) |
+| سجل `_prisma_migrations` (في الكود) | **12 migrations** في دورة الإنتاج النشطة (17 migration إجمالاً في prisma/migrations) |
+| Migration الحالية في إنتاج Railway | **12 migrations** مُطبَّقة بنجاح 100% (17 إجمالاً، آخرها `20261026120000_add_create_idempotency_key_to_order`) |
 | آلية نشر الـ migrations | `prisma migrate deploy` يُنفَّذ يدويًا من Railway Console؛ لا يوجد auto-migrate في Dockerfile |
 
 ### 1.2 إصدارات وإصلاحات مكتملة — 2026-09-23
@@ -76,7 +76,7 @@ JWT_PRIVATE_KEY       = <RSA private key>
 JWT_PUBLIC_KEY        = <RSA public key>
 NODE_ENV              = production
 PORT                  = 3000
-CORS_ORIGINS          = https://fawrun-admin.vercel.app,https://fawrun-runner-pwa-steel.vercel.app,https://fawrun-customer-web-three.vercel.app
+CORS_ORIGINS          = https://admin.faow.run,https://runner.faow.run,https://faow.run,https://www.faow.run,https://fawrun-admin.vercel.app,https://fawrun-runner-pwa-steel.vercel.app,https://fawrun-customer-web-three.vercel.app
 R2_ACCOUNT_ID         = <dummy-for-now>
 R2_ACCESS_KEY_ID      = <dummy-for-now>
 R2_SECRET_ACCESS_KEY  = <dummy-for-now>
