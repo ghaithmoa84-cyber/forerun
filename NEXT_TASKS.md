@@ -1,6 +1,6 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-26
+> **آخر تحديث:** 2026-10-28
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
@@ -76,10 +76,12 @@
 ## حالة فروع العمل وشجرة الكود (Branch Status)
 
 - ⏳ **عمل معلّق بانتظار إذن الدمج إلى `master`:**
-  - فرع `fix/minor-field-findings-batch-1`: (القرار D57 — معالجة 3 بنود ميدانية ودفاعية: 1. تسجيل `ConnectivityManager.NetworkCallback` في Android لإعادة الاتصال الفوري عند تبديل الشبكة، 2. إعادة مزامنة تفاصيل الطلب تلقائياً بعد استئناف WebSocket في `OrderDetailViewModel` عبر مسار Refresh، 3. حماية دورة الحياة الدفاعية لبيانات تواصل العميل `customerWhatsapp` في `getActiveOrder` بالباكند).
-  - فرع `fix/create-order-idempotency`: (إضافة مفتاح `idempotencyKey` لمسار إنشاء الطلب `POST /customer/orders` لمنع التكرار الشبكي).
+  - *(لا يوجد عمل معلّق حالياً — شجرة الكود نظيفة وكافة الفروع مدموجة بنجاح إلى `master` عبر `git merge --no-ff`)*.
 
 - ✅ **الفروع المدموجة سابقاً:**
+  - دفعة فروع معالجة التكرار والإصلاحات الميدانية والدفاعية المدمجة (2026-10-26):
+    - فرع `fix/create-order-idempotency`: (القرار D58 — إضافة حقل `createIdempotencyKey` لمسار إنشاء الطلب `POST /customer/orders` وهجرة schema لمنع تكرار الطلبات وتغطية حالات التسابق، مع اعتماد قاعدة استثناء سلامة البيانات والأمان وحماية التنافس من تجميد `customer-web` بموجب D30).
+    - فرع `fix/minor-field-findings-batch-1`: (القرار D57 — معالجة 3 بنود ميدانية ودفاعية: 1. تسجيل `ConnectivityManager.NetworkCallback` في Android لإعادة الاتصال الفوري عند تبديل الشبكة، 2. إعادة مزامنة تفاصيل الطلب تلقائياً بعد استئناف WebSocket في `OrderDetailViewModel` عبر مسار Refresh، 3. حماية دورة الحياة الدفاعية لبيانات تواصل العميل `customerWhatsapp` في `getActiveOrder` بالباكند).
   - دفعة فروع تحسين الواجهات واختبارات الحمل وإصلاح قفل التسليم المدمجة (2026-10-26):
     - فرع `fix/delivery-idempotency-key-stuck-on-network-failure`: (القرار D56 — تحرير قفل idempotency عند فشل شبكة طلب التسليم وإبقاؤه عند نجاح الخادم مع وحدة `deliveryLock.ts` واختباراتها بنجاح 9/9).
     - فرع `test/load-testing-scripts`: (حزمة سكربتات اختبار الحمل والتزامن `scripts/load-testing/`).
