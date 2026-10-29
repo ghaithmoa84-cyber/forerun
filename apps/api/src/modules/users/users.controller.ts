@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { UsersService } from './users.service.js';
 import { VerifiedUserGuard } from '../../common/guards/verified-user.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
@@ -9,6 +10,11 @@ import {
   type CuidParamRequest,
   AdminUsersQuerySchema,
   type AdminUsersQueryRequest,
+  AdminResetPasswordSchema,
+  type AdminResetPasswordRequest,
+  AdminSoftDeleteUserSchema,
+  type AdminSoftDeleteUserRequest,
+  type AdminUserActionResponse,
 } from '@forerun/shared-types';
 
 @Controller('admin/users')
@@ -61,5 +67,25 @@ export class UsersController {
     @CurrentUser() user: { userId: string; role: string; status: string },
   ) {
     return this.usersService.unsuspend(params.id, user.userId);
+  }
+
+  @Put(':id/reset-password')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async resetPassword(
+    @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
+    @Body(new ZodValidationPipe(AdminResetPasswordSchema)) body: AdminResetPasswordRequest,
+    @CurrentUser() user: { userId: string; role: string; status: string },
+  ): Promise<AdminUserActionResponse> {
+    return this.usersService.resetPassword(params.id, body.password, user.userId);
+  }
+
+  @Delete(':id')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async softDelete(
+    @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
+    @Body(new ZodValidationPipe(AdminSoftDeleteUserSchema)) body: AdminSoftDeleteUserRequest,
+    @CurrentUser() user: { userId: string; role: string; status: string },
+  ): Promise<AdminUserActionResponse> {
+    return this.usersService.softDelete(params.id, user.userId, body?.reason);
   }
 }

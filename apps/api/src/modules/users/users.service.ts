@@ -1,11 +1,15 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { type Prisma, UserStatus } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { CONFIG } from '@forerun/shared-constants';
+import type { AdminUserActionResponse } from '@forerun/shared-types';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -343,6 +347,187 @@ export class UsersService {
     return {
       statusCode: 200,
       message: 'Account unsuspended successfully',
+    };
+  }
+
+  async resetPassword(
+    id: string,
+    newPassword: string,
+    actorId: string,
+  ): Promise<AdminUserActionResponse> {
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id },
+        select: { id: true, role: true, isDeleted: true },
+      });
+
+      if (!user || user.isDeleted) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.role === 'ADMIN') {
+        throw new ForbiddenException('Cannot reset password for admin accounts via this endpoint');
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, CONFIG.BCRYPT_ROUNDS);
+
+      await tx.user.update({
+        where: { id },
+        data: { passwordHash },
+      });
+
+      await tx.refreshToken.updateMany({
+        where: { userId: id, isRevoked: false },
+        data: { isRevoked: true, revokedAt: new Date() },
+      });
+
+      await tx.deviceToken.deleteMany({
+        where: { userId: id },
+      });
+
+      await this.auditService.log(
+        {
+          actorId,
+          actorRole: 'ADMIN',
+          event: 'USER_PASSWORD_RESET_BY_ADMIN',
+          meta: {
+            targetUserId: id,
+            targetRole: user.role,
+          },
+        },
+        tx,
+      );
+    });
+
+    return {
+      statusCode: 200,
+      message: 'Password reset successfully',
+    };
+  }
+
+  async softDelete(
+    id: string,
+    actorId: string,
+    reason?: string,
+  ): Promise<AdminUserActionResponse> {
+    await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id },
+        include: {
+          customer: true,
+          runner: true,
+        },
+      });
+
+      if (!user || user.isDeleted) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (user.role === 'ADMIN') {
+        throw new ForbiddenException('Cannot archive or delete admin accounts via this endpoint');
+      }
+
+      if (user.role === 'CUSTOMER' && user.customer) {
+        const activeOrderCount = await tx.order.count({
+          where: {
+            customerId: user.customer.id,
+            status: {
+              notIn: ['DELIVERED', 'CANCELLED'],
+            },
+          },
+        });
+
+        if (activeOrderCount > 0) {
+          throw new ConflictException('Cannot delete customer with active or in-progress orders');
+        }
+      } else if (user.role === 'RUNNER' && user.runner) {
+        // 1. Check active assigned orders
+        const activeRunnerOrders = await tx.order.count({
+          where: {
+            runnerId: user.runner.id,
+            status: {
+              in: ['ASSIGNED', 'IN_PROGRESS', 'OUT_FOR_DELIVERY'],
+            },
+          },
+        });
+
+        if (activeRunnerOrders > 0) {
+          throw new ConflictException('Cannot delete runner with active delivery assignments');
+        }
+
+        // 2. Check delivered orders with pending settlement (settlementItem is null)
+        const unsettledDeliveredOrders = await tx.order.count({
+          where: {
+            runnerId: user.runner.id,
+            status: 'DELIVERED',
+            settlementItem: { is: null },
+          },
+        });
+
+        if (unsettledDeliveredOrders > 0) {
+          throw new ConflictException(
+            'Cannot delete runner with delivered orders awaiting daily settlement closure',
+          );
+        }
+
+        // 3. Check pending settlements
+        const pendingSettlements = await tx.settlement.count({
+          where: {
+            runnerId: user.runner.id,
+            status: 'PENDING',
+          },
+        });
+
+        if (pendingSettlements > 0) {
+          throw new ConflictException(
+            'Cannot delete runner with unsettled operational day settlements',
+          );
+        }
+
+        // Deactivate runner operational visibility and status
+        await tx.runner.update({
+          where: { id: user.runner.id },
+          data: {
+            status: 'UNAVAILABLE',
+            isVisible: false,
+          },
+        });
+      }
+
+      // Mark user as deleted
+      await tx.user.update({
+        where: { id },
+        data: { isDeleted: true },
+      });
+
+      // Revoke all active refresh tokens and remove device tokens
+      await tx.refreshToken.updateMany({
+        where: { userId: id, isRevoked: false },
+        data: { isRevoked: true, revokedAt: new Date() },
+      });
+
+      await tx.deviceToken.deleteMany({
+        where: { userId: id },
+      });
+
+      await this.auditService.log(
+        {
+          actorId,
+          actorRole: 'ADMIN',
+          event: 'USER_SOFT_DELETED',
+          meta: {
+            targetUserId: id,
+            targetRole: user.role,
+            reason: reason ?? null,
+          },
+        },
+        tx,
+      );
+    });
+
+    return {
+      statusCode: 200,
+      message: 'User archived successfully',
     };
   }
 }

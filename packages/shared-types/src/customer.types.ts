@@ -30,6 +30,27 @@ export const USER_STATUS_VALUES = [
 ] as const;
 export type UserStatus = (typeof USER_STATUS_VALUES)[number];
 
+export const AdminResetPasswordSchema = z.object({
+  password: passwordSchema,
+});
+
+export type AdminResetPasswordRequest = z.infer<typeof AdminResetPasswordSchema>;
+
+export const AdminSoftDeleteUserSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .max(500, 'سبب الأرشفة يجب ألا يتجاوز 500 حرف')
+    .optional(),
+});
+
+export type AdminSoftDeleteUserRequest = z.infer<typeof AdminSoftDeleteUserSchema>;
+
+export type AdminUserActionResponse = {
+  statusCode: number;
+  message: string;
+};
+
 export type AdminUserListItem = {
   id: string;
   name: string;

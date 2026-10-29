@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 
 vi.mock('@prisma/client', () => ({
@@ -30,9 +35,23 @@ interface MockPrisma {
     findUnique: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     updateMany: ReturnType<typeof vi.fn>;
+    count: ReturnType<typeof vi.fn>;
+    findMany: ReturnType<typeof vi.fn>;
   };
   refreshToken: {
     updateMany: ReturnType<typeof vi.fn>;
+  };
+  deviceToken: {
+    deleteMany: ReturnType<typeof vi.fn>;
+  };
+  order: {
+    count: ReturnType<typeof vi.fn>;
+  };
+  settlement: {
+    count: ReturnType<typeof vi.fn>;
+  };
+  runner: {
+    update: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -52,9 +71,23 @@ describe('UsersService - unsuspend', () => {
         findUnique: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
+        count: vi.fn(),
+        findMany: vi.fn(),
       },
       refreshToken: {
         updateMany: vi.fn(),
+      },
+      deviceToken: {
+        deleteMany: vi.fn(),
+      },
+      order: {
+        count: vi.fn(),
+      },
+      settlement: {
+        count: vi.fn(),
+      },
+      runner: {
+        update: vi.fn(),
       },
     };
 
@@ -100,80 +133,99 @@ describe('UsersService - unsuspend', () => {
 
     expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
       where: { userId: 'usr_1', isRevoked: false },
-      data: expect.objectContaining({ isRevoked: true }),
+      data: { isRevoked: true, revokedAt: expect.any(Date) },
     });
 
     expect(mockAudit.log).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         actorId: 'admin_1',
         actorRole: 'ADMIN',
         event: 'USER_UNSUSPENDED',
         fromStatus: UserStatus.SUSPENDED,
         toStatus: UserStatus.VERIFIED,
         meta: { userId: 'usr_1', restoredStatus: UserStatus.VERIFIED },
-      }),
-      mockPrisma,
+      },
+      expect.anything(),
+    );
+
+    expect(mockNotifications.emitToCustomer).toHaveBeenCalledWith(
+      'usr_1',
+      'account:verified',
+      { message: 'تم إعادة تفعيل حسابك بنجاح' },
     );
   });
 
-  it('rejects unsuspending a REJECTED user (prevents unlawful privilege escalation)', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({
-      id: 'usr_2',
-      status: UserStatus.REJECTED,
-      isDeleted: false,
-    });
-
-    await expect(usersService.unsuspend('usr_2', 'admin_1')).rejects.toThrow(
-      UnprocessableEntityException,
-    );
-    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
-  });
-
-  it('throws NotFoundException if user not found', async () => {
+  it('throws NotFoundException when user does not exist', async () => {
     mockPrisma.user.findUnique.mockResolvedValue(null);
 
-    await expect(usersService.unsuspend('usr_x', 'admin_1')).rejects.toThrow(
+    await expect(usersService.unsuspend('non_existent', 'admin_1')).rejects.toThrow(
       NotFoundException,
     );
   });
 
-  it('throws UnprocessableEntityException if user is already VERIFIED', async () => {
+  it('throws UnprocessableEntityException when user is not in SUSPENDED status', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
-      id: 'usr_3',
+      id: 'usr_1',
       status: UserStatus.VERIFIED,
+      previousStatus: null,
       isDeleted: false,
     });
 
-    await expect(usersService.unsuspend('usr_3', 'admin_1')).rejects.toThrow(
+    await expect(usersService.unsuspend('usr_1', 'admin_1')).rejects.toThrow(
       UnprocessableEntityException,
     );
   });
 
-  it('throws UnprocessableEntityException if user is PENDING_VERIFICATION', async () => {
+  it('throws UnprocessableEntityException when previousStatus is REJECTED', async () => {
     mockPrisma.user.findUnique.mockResolvedValue({
-      id: 'usr_4',
-      status: UserStatus.PENDING_VERIFICATION,
+      id: 'usr_1',
+      status: UserStatus.SUSPENDED,
+      previousStatus: UserStatus.REJECTED,
       isDeleted: false,
     });
 
-    await expect(usersService.unsuspend('usr_4', 'admin_1')).rejects.toThrow(
+    await expect(usersService.unsuspend('usr_1', 'admin_1')).rejects.toThrow(
       UnprocessableEntityException,
     );
+  });
+
+  it('falls back to PENDING_VERIFICATION when previousStatus is null', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'usr_1',
+      status: UserStatus.SUSPENDED,
+      previousStatus: null,
+      isDeleted: false,
+    });
+    mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await usersService.unsuspend('usr_1', 'admin_1');
+
+    expect(result).toEqual({
+      statusCode: 200,
+      message: 'Account unsuspended successfully',
+    });
+
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'usr_1', status: UserStatus.SUSPENDED, isDeleted: false },
+      data: { status: UserStatus.PENDING_VERIFICATION, previousStatus: null },
+    });
+
+    expect(mockNotifications.emitToCustomer).not.toHaveBeenCalled();
   });
 });
 
-describe('UsersService - findAll with search', () => {
+describe('UsersService - findAll (search filter)', () => {
   let usersService: UsersService;
   let mockPrisma: any;
 
   beforeEach(() => {
     mockPrisma = {
       user: {
-        count: vi.fn().mockResolvedValue(0),
-        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn(),
+        findMany: vi.fn(),
       },
     };
-
     usersService = new UsersService(
       mockPrisma as any,
       {} as any,
@@ -215,6 +267,8 @@ describe('UsersService - findAll with search', () => {
   });
 
   it('queries without search OR clause when search is omitted', async () => {
+    mockPrisma.user.count.mockResolvedValue(0);
+    mockPrisma.user.findMany.mockResolvedValue([]);
     await usersService.findAll(1, 20);
 
     expect(mockPrisma.user.count).toHaveBeenCalledWith({
@@ -226,3 +280,321 @@ describe('UsersService - findAll with search', () => {
   });
 });
 
+describe('UsersService - resetPassword (AS-2)', () => {
+  let usersService: UsersService;
+  let mockPrisma: MockPrisma;
+  let mockAudit: { log: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (cb) => cb(mockPrisma)),
+      user: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        count: vi.fn(),
+        findMany: vi.fn(),
+      },
+      refreshToken: {
+        updateMany: vi.fn(),
+      },
+      deviceToken: {
+        deleteMany: vi.fn(),
+      },
+      order: {
+        count: vi.fn(),
+      },
+      settlement: {
+        count: vi.fn(),
+      },
+      runner: {
+        update: vi.fn(),
+      },
+    };
+
+    mockAudit = {
+      log: vi.fn().mockResolvedValue(undefined),
+    };
+
+    usersService = new UsersService(
+      mockPrisma as unknown as PrismaService,
+      mockAudit as unknown as AuditService,
+      {} as any,
+      {} as any,
+    );
+  });
+
+  it('throws NotFoundException if user is not found or isDeleted', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      usersService.resetPassword('missing_id', 'newPassword123', 'admin_1'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws ForbiddenException if target user is an ADMIN', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'admin_target',
+      role: 'ADMIN',
+      isDeleted: false,
+    });
+
+    await expect(
+      usersService.resetPassword('admin_target', 'newPassword123', 'admin_1'),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('successfully resets password, revokes tokens, deletes device tokens, and audits', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'cust_1',
+      role: 'CUSTOMER',
+      isDeleted: false,
+    });
+    mockPrisma.user.update.mockResolvedValue({ id: 'cust_1' });
+    mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 2 });
+    mockPrisma.deviceToken.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await usersService.resetPassword('cust_1', 'SecretPass123', 'admin_1');
+
+    expect(result).toEqual({
+      statusCode: 200,
+      message: 'Password reset successfully',
+    });
+
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'cust_1' },
+      data: { passwordHash: expect.any(String) },
+    });
+
+    expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'cust_1', isRevoked: false },
+      data: { isRevoked: true, revokedAt: expect.any(Date) },
+    });
+
+    expect(mockPrisma.deviceToken.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'cust_1' },
+    });
+
+    expect(mockAudit.log).toHaveBeenCalledWith(
+      {
+        actorId: 'admin_1',
+        actorRole: 'ADMIN',
+        event: 'USER_PASSWORD_RESET_BY_ADMIN',
+        meta: {
+          targetUserId: 'cust_1',
+          targetRole: 'CUSTOMER',
+        },
+      },
+      expect.anything(),
+    );
+  });
+});
+
+describe('UsersService - softDelete (AS-3)', () => {
+  let usersService: UsersService;
+  let mockPrisma: MockPrisma;
+  let mockAudit: { log: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (cb) => cb(mockPrisma)),
+      user: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        count: vi.fn(),
+        findMany: vi.fn(),
+      },
+      refreshToken: {
+        updateMany: vi.fn(),
+      },
+      deviceToken: {
+        deleteMany: vi.fn(),
+      },
+      order: {
+        count: vi.fn(),
+      },
+      settlement: {
+        count: vi.fn(),
+      },
+      runner: {
+        update: vi.fn(),
+      },
+    };
+
+    mockAudit = {
+      log: vi.fn().mockResolvedValue(undefined),
+    };
+
+    usersService = new UsersService(
+      mockPrisma as unknown as PrismaService,
+      mockAudit as unknown as AuditService,
+      {} as any,
+      {} as any,
+    );
+  });
+
+  it('throws NotFoundException if user is not found or isDeleted', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(usersService.softDelete('missing', 'admin_1')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws ForbiddenException if target user is an ADMIN', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'admin_target',
+      role: 'ADMIN',
+      isDeleted: false,
+    });
+
+    await expect(usersService.softDelete('admin_target', 'admin_1')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('throws ConflictException if customer has active orders', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'cust_1',
+      role: 'CUSTOMER',
+      isDeleted: false,
+      customer: { id: 'cust_model_1' },
+    });
+    mockPrisma.order.count.mockResolvedValue(1);
+
+    await expect(usersService.softDelete('cust_1', 'admin_1')).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('throws ConflictException if runner has active assigned orders', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'runner_usr',
+      role: 'RUNNER',
+      isDeleted: false,
+      runner: { id: 'runner_model_1' },
+    });
+    // First count: active runner orders
+    mockPrisma.order.count.mockResolvedValueOnce(1);
+
+    await expect(usersService.softDelete('runner_usr', 'admin_1')).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('throws ConflictException if runner has delivered orders awaiting daily settlement closure', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'runner_usr',
+      role: 'RUNNER',
+      isDeleted: false,
+      runner: { id: 'runner_model_1' },
+    });
+    // First count: active assigned = 0
+    mockPrisma.order.count.mockResolvedValueOnce(0);
+    // Second count: unsettled delivered orders = 2
+    mockPrisma.order.count.mockResolvedValueOnce(2);
+
+    await expect(usersService.softDelete('runner_usr', 'admin_1')).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('throws ConflictException if runner has pending settlements', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'runner_usr',
+      role: 'RUNNER',
+      isDeleted: false,
+      runner: { id: 'runner_model_1' },
+    });
+    // First count: active assigned = 0
+    mockPrisma.order.count.mockResolvedValueOnce(0);
+    // Second count: unsettled delivered = 0
+    mockPrisma.order.count.mockResolvedValueOnce(0);
+    // Third count: pending settlements = 1
+    mockPrisma.settlement.count.mockResolvedValueOnce(1);
+
+    await expect(usersService.softDelete('runner_usr', 'admin_1')).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('successfully soft deletes customer when no active orders exist', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'cust_1',
+      role: 'CUSTOMER',
+      isDeleted: false,
+      customer: { id: 'cust_model_1' },
+    });
+    mockPrisma.order.count.mockResolvedValue(0);
+    mockPrisma.user.update.mockResolvedValue({ id: 'cust_1', isDeleted: true });
+    mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.deviceToken.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await usersService.softDelete('cust_1', 'admin_1', 'Customer requested closure');
+
+    expect(result).toEqual({
+      statusCode: 200,
+      message: 'User archived successfully',
+    });
+
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'cust_1' },
+      data: { isDeleted: true },
+    });
+
+    expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'cust_1', isRevoked: false },
+      data: { isRevoked: true, revokedAt: expect.any(Date) },
+    });
+
+    expect(mockAudit.log).toHaveBeenCalledWith(
+      {
+        actorId: 'admin_1',
+        actorRole: 'ADMIN',
+        event: 'USER_SOFT_DELETED',
+        meta: {
+          targetUserId: 'cust_1',
+          targetRole: 'CUSTOMER',
+          reason: 'Customer requested closure',
+        },
+      },
+      expect.anything(),
+    );
+  });
+
+  it('successfully soft deletes runner when no blockers exist, deactivating runner state', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'runner_usr',
+      role: 'RUNNER',
+      isDeleted: false,
+      runner: { id: 'runner_model_1' },
+    });
+    mockPrisma.order.count.mockResolvedValue(0);
+    mockPrisma.settlement.count.mockResolvedValue(0);
+    mockPrisma.runner.update.mockResolvedValue({ id: 'runner_model_1' });
+    mockPrisma.user.update.mockResolvedValue({ id: 'runner_usr', isDeleted: true });
+    mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.deviceToken.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await usersService.softDelete('runner_usr', 'admin_1');
+
+    expect(result).toEqual({
+      statusCode: 200,
+      message: 'User archived successfully',
+    });
+
+    expect(mockPrisma.runner.update).toHaveBeenCalledWith({
+      where: { id: 'runner_model_1' },
+      data: {
+        status: 'UNAVAILABLE',
+        isVisible: false,
+      },
+    });
+
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'runner_usr' },
+      data: { isDeleted: true },
+    });
+  });
+});
