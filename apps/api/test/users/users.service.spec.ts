@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -955,5 +956,141 @@ describe('UsersService - findOne (CD-2)', () => {
       orderBy: { createdAt: 'desc' },
       take: 5,
     });
+  });
+});
+
+
+describe('UsersService - updateCustomerProfile (CD-1)', () => {
+  let usersService: UsersService;
+  let mockPrisma: MockPrisma;
+  let mockAudit: { log: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (cb) => cb(mockPrisma)),
+      user: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        count: vi.fn(),
+        findMany: vi.fn(),
+      },
+      refreshToken: {
+        updateMany: vi.fn(),
+      },
+      deviceToken: {
+        deleteMany: vi.fn(),
+      },
+      order: {
+        count: vi.fn(),
+        findMany: vi.fn(),
+      },
+      settlement: {
+        count: vi.fn(),
+      },
+      runner: {
+        update: vi.fn(),
+      },
+      auditLog: {
+        findMany: vi.fn(),
+      },
+    };
+
+    mockAudit = {
+      log: vi.fn().mockResolvedValue(undefined),
+    };
+
+    usersService = new UsersService(
+      mockPrisma as unknown as PrismaService,
+      mockAudit as unknown as AuditService,
+      {} as any,
+      {} as any,
+    );
+  });
+
+  it('throws NotFoundException if user is not found', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      usersService.updateCustomerProfile('nonexistent', { name: 'New Name' }, 'admin_1'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('throws ForbiddenException if target user is an ADMIN', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'admin_usr',
+      role: 'ADMIN',
+    });
+
+    await expect(
+      usersService.updateCustomerProfile('admin_usr', { name: 'Hacked Name' }, 'admin_1'),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('throws BadRequestException if target user is not a CUSTOMER', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'runner_usr',
+      role: 'RUNNER',
+    });
+
+    await expect(
+      usersService.updateCustomerProfile('runner_usr', { name: 'Runner Name' }, 'admin_1'),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('successfully updates customer name and altPhone, writing AuditLog', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'cust_1',
+      name: 'Old Name',
+      whatsapp: '+963911223344',
+      altPhone: '+963922334455',
+      role: 'CUSTOMER',
+    });
+
+    mockPrisma.user.update.mockResolvedValue({
+      id: 'cust_1',
+      name: 'Corrected Name',
+      altPhone: '+963933445566',
+    });
+
+    const result = await usersService.updateCustomerProfile(
+      'cust_1',
+      { name: 'Corrected Name', altPhone: '+963933445566' },
+      'admin_1',
+    );
+
+    expect(result).toEqual({
+      statusCode: 200,
+      message: 'Customer profile updated successfully',
+      user: {
+        id: 'cust_1',
+        name: 'Corrected Name',
+        altPhone: '+963933445566',
+      },
+    });
+
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'cust_1' },
+      data: {
+        name: 'Corrected Name',
+        altPhone: '+963933445566',
+      },
+    });
+
+    expect(mockAudit.log).toHaveBeenCalledWith(
+      {
+        actorId: 'admin_1',
+        actorRole: 'ADMIN',
+        event: 'USER_PROFILE_UPDATED_BY_ADMIN',
+        meta: {
+          targetUserId: 'cust_1',
+          previousName: 'Old Name',
+          newName: 'Corrected Name',
+          previousAltPhone: '+963922334455',
+          newAltPhone: '+963933445566',
+        },
+      },
+      expect.anything(),
+    );
   });
 });

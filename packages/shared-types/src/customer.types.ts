@@ -30,6 +30,35 @@ export const USER_STATUS_VALUES = [
 ] as const;
 export type UserStatus = (typeof USER_STATUS_VALUES)[number];
 
+export const AdminUpdateCustomerProfileSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'الاسم يجب ألا يقل عن حرفين')
+      .max(50, 'الاسم يجب ألا يتجاوز 50 حرفاً')
+      .optional(),
+    altPhone: SyrianPhoneSchema.nullable().optional(),
+  })
+  .refine(
+    (data) => data.name !== undefined || data.altPhone !== undefined,
+    {
+      message: 'يجب تقديم الاسم أو رقم الهاتف البديل على الأقل للتحديث',
+    },
+  );
+
+export type AdminUpdateCustomerProfileRequest = z.infer<typeof AdminUpdateCustomerProfileSchema>;
+
+export type AdminUpdateCustomerProfileResponse = {
+  statusCode: number;
+  message: string;
+  user: {
+    id: string;
+    name: string;
+    altPhone: string | null;
+  };
+};
+
 export const AdminResetPasswordSchema = z.object({
   password: passwordSchema,
 });

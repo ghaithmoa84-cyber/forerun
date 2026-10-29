@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -9,7 +10,13 @@ import {
 import { type Prisma, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CONFIG } from '@forerun/shared-constants';
-import type { AdminUserActionResponse, UserAuditLogEntry, AdminCustomerDetailsResponse } from '@forerun/shared-types';
+import type {
+  AdminUserActionResponse,
+  UserAuditLogEntry,
+  AdminCustomerDetailsResponse,
+  AdminUpdateCustomerProfileRequest,
+  AdminUpdateCustomerProfileResponse,
+} from '@forerun/shared-types';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -621,5 +628,65 @@ export class UsersService {
       meta: log.meta,
       createdAt: log.createdAt,
     }));
+  }
+
+  async updateCustomerProfile(
+    id: string,
+    data: AdminUpdateCustomerProfileRequest,
+    actorId: string,
+  ): Promise<AdminUpdateCustomerProfileResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id, isDeleted: false },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === 'ADMIN') {
+      throw new ForbiddenException('Cannot update profile of an administrator account');
+    }
+
+    if (user.role !== 'CUSTOMER') {
+      throw new BadRequestException('Target user is not a customer');
+    }
+
+    const updatedUser = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined ? { name: data.name } : {}),
+          ...(data.altPhone !== undefined ? { altPhone: data.altPhone } : {}),
+        },
+      });
+
+      await this.auditService.log(
+        {
+          actorId,
+          actorRole: 'ADMIN',
+          event: 'USER_PROFILE_UPDATED_BY_ADMIN',
+          meta: {
+            targetUserId: id,
+            previousName: user.name,
+            newName: data.name ?? user.name,
+            previousAltPhone: user.altPhone,
+            newAltPhone: data.altPhone !== undefined ? data.altPhone : user.altPhone,
+          },
+        },
+        tx,
+      );
+
+      return updated;
+    });
+
+    return {
+      statusCode: 200,
+      message: 'Customer profile updated successfully',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        altPhone: updatedUser.altPhone,
+      },
+    };
   }
 }

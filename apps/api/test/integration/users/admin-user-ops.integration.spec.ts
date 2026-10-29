@@ -392,4 +392,76 @@ describe('Admin User Operations Integration Tests (feature/admin-support-ops)', 
       expect(res.status).toBe(404);
     });
   });
+
+  describe('PUT /api/v1/admin/users/:id/profile (CD-1)', () => {
+    it('successfully updates customer name and altPhone and logs USER_PROFILE_UPDATED_BY_ADMIN', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Customer Updated By Admin',
+          altPhone: '0988776655',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.statusCode).toBe(200);
+      expect(res.body.user.name).toBe('Customer Updated By Admin');
+      expect(res.body.user.altPhone).toBe('0988776655');
+
+      // Verify DB update
+      const dbUser = await prisma.user.findUnique({
+        where: { id: customerUser.id },
+      });
+      expect(dbUser?.name).toBe('Customer Updated By Admin');
+      expect(dbUser?.altPhone).toBe('0988776655');
+
+      // Verify AuditLog
+      const audit = await prisma.auditLog.findFirst({
+        where: {
+          event: 'USER_PROFILE_UPDATED_BY_ADMIN',
+          actorId: adminUser.id,
+        },
+      });
+      expect(audit).toBeDefined();
+      expect((audit?.meta as any)?.targetUserId).toBe(customerUser.id);
+      expect((audit?.meta as any)?.newName).toBe('Customer Updated By Admin');
+      expect((audit?.meta as any)?.newAltPhone).toBe('0988776655');
+    });
+
+    it('rejects attempt to update profile of an ADMIN account with 403 Forbidden', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${adminUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Hacked Admin' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects attempt to update profile of a non-customer account with 400 BadRequest', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${runnerUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Updated Runner' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects non-admin caller with 403 Forbidden', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/profile`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ name: 'Unauthorized Update' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects payload when neither name nor altPhone is provided with 400 BadRequest', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+  });
 });
