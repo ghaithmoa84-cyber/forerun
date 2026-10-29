@@ -304,6 +304,32 @@ describe('Admin User Operations Integration Tests (feature/admin-support-ops)', 
       expect(resetLog.meta?.targetUserId).toBe(customerUser.id);
     });
 
+    it('successfully retrieves historical audit logs recorded with legacy meta.userId pattern (e.g. USER_SUSPENDED)', async () => {
+      // Seed a historical audit entry created with meta: { userId: ... }
+      await prisma.auditLog.create({
+        data: {
+          actorId: adminUser.id,
+          actorRole: 'ADMIN',
+          event: 'USER_SUSPENDED',
+          fromStatus: 'VERIFIED',
+          toStatus: 'SUSPENDED',
+          meta: { userId: customerUser.id, previousStatus: 'VERIFIED' },
+        },
+      });
+
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      const suspendedLog = res.body.find((l: any) => l.event === 'USER_SUSPENDED');
+      expect(suspendedLog).toBeDefined();
+      expect(suspendedLog.actorId).toBe(adminUser.id);
+      expect(suspendedLog.fromStatus).toBe('VERIFIED');
+      expect(suspendedLog.toStatus).toBe('SUSPENDED');
+      expect(suspendedLog.meta?.userId).toBe(customerUser.id);
+    });
+
     it('rejects attempt to retrieve audit logs of an ADMIN account with 403 Forbidden', async () => {
       const res = await request
         .get(`/api/v1/admin/users/${adminUser.id}/audit-logs`)
