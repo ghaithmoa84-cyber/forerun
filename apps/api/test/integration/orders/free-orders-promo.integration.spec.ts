@@ -217,6 +217,69 @@ describe('Free Orders Promo Integration Tests (Decision D59)', () => {
       });
       expect(user.freeOrdersRemaining).toBe(1);
     });
+    it('calling pricing disclosure and fee preview is strictly read-only and never consumes slots', async () => {
+      await request
+        .put('/api/v1/admin/pricing')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          baseFee: 60,
+          extraStoreFee: 20,
+          peripheralFee: 40,
+          freeOrdersPromoEnabled: true,
+          freeOrdersCount: 3,
+        });
+
+      await prisma.user.update({
+        where: { id: customerUser.id },
+        data: { freeOrdersRemaining: 3 },
+      });
+
+      // 1. Call customer disclosure 10 times in a row
+      for (let i = 0; i < 10; i++) {
+        const disclosureRes = await request
+          .get('/api/v1/customer/pricing/disclosure')
+          .set('Authorization', `Bearer ${customerToken}`);
+        expect(disclosureRes.status).toBe(200);
+        expect(disclosureRes.body.freeOrdersPromoEnabled).toBe(true);
+      }
+
+      // Verify slots remain unchanged at 3
+      let user = await prisma.user.findUniqueOrThrow({
+        where: { id: customerUser.id },
+      });
+      expect(user.freeOrdersRemaining).toBe(3);
+
+      // 2. Create an order (slot drops from 3 to 2)
+      const createRes = await request
+        .post('/api/v1/customer/orders')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send(makeOrderPayload());
+      expect(createRes.status).toBe(201);
+      const orderId = createRes.body.id;
+
+      user = await prisma.user.findUniqueOrThrow({
+        where: { id: customerUser.id },
+      });
+      expect(user.freeOrdersRemaining).toBe(2);
+
+      // 3. Call admin fee preview 5 times on this order
+      for (let i = 0; i < 5; i++) {
+        const previewRes = await request
+          .post(`/api/v1/admin/orders/${orderId}/fee-preview`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({});
+        expect(previewRes.status).toBe(200);
+        expect(previewRes.body.isFreeOrder).toBe(true);
+        expect(previewRes.body.totalFee).toBe(0);
+        expect(previewRes.body.freeOrdersRemaining).toBe(2);
+      }
+
+      // 4. Verify slots are strictly intact at 2
+      user = await prisma.user.findUniqueOrThrow({
+        where: { id: customerUser.id },
+      });
+      expect(user.freeOrdersRemaining).toBe(2);
+    });
   });
 
   describe('3. Three Cancellation Paths (Slot Restoration)', () => {
