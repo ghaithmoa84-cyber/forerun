@@ -177,3 +177,16 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
 }
 
+
+// Automated distribution to landing page public folder
+val copyReleaseApkToLandingPage by tasks.registering(Copy::class) {
+    description = "Copies universal release APK to landing page public directory as forerun.apk"
+    group = "distribution"
+    from(layout.buildDirectory.file("outputs/apk/release/app-universal-release.apk"))
+    into(rootProject.file("../../apps/landing-page/public"))
+    rename { "forerun.apk" }
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy(copyReleaseApkToLandingPage)
+}

@@ -1,101 +1,76 @@
-# Firebase App Distribution — دليل التوزيع
+# دليل توزيع وتحديث تطبيق FORERUN Android
 
-> **آخر تحديث:** 2026-10-02
-> **الحالة:** مفعّل ✅
-
----
-
-## ما تم إعداده (مرة واحدة — مكتمل)
-
-| البند | الحالة |
-|---|---|
-| Firebase Project | `forerun-c819d` ✅ |
-| App Distribution | مفعّل ✅ |
-| APK مرفوع | النسخة الأولى ✅ |
-| Invite Link | مفعّل ✅ |
+> **آخر تحديث:** 2026-10-29
+> **الحالة:** مفعّل ومؤتمت بالكامل (Production Ready) ✅
 
 ---
 
-## رابط الدعوة للمستخدمين الجدد
+## 1. القناة الإنتاجية الأساسية — التحميل المباشر والتحديث الداخلي
 
-> ⚠️ احفظ هذا الرابط — أرسله لأي مستخدم جديد تريد منحه وصولاً للتطبيق.
-
-**رابط الدعوة:** `https://appdistribution.firebase.dev/i/aa7a4768f6595870`
-
-### ما يفعله المستخدم الجديد (مرة واحدة فقط):
-1. يفتح رابط الدعوة على هاتفه
-2. يحمّل تطبيق **Firebase App Tester** من Google Play
-3. يسجّل دخول ببريده الإلكتروني
-4. يرى التطبيق ويضغط **Download**
-5. يثبّته — وعند أي تحديث يصله إشعار تلقائي
-
----
-
-## عند كل إصدار جديد
-
-### الخطوة 1 — بناء APK موقّع
-```bash
-cd apps/android
-
-# Windows (يقرأ keystore.properties تلقائياً):
-.\gradlew.bat assembleRelease
-
-# أو بتمرير المتغيرات يدوياً:
-# .\gradlew.bat assembleRelease \
-#   -Pandroid.injected.signing.store.file=forerun-release.jks \
-#   -Pandroid.injected.signing.store.password=<STORE_PASSWORD> \
-#   -Pandroid.injected.signing.key.alias=forerun \
-#   -Pandroid.injected.signing.key.password=<KEY_PASSWORD>
-
-# الملفات الناتجة:
-# app/build/outputs/apk/release/app-arm64-v8a-release.apk    ← هواتف 64-bit (الأكثر شيوعاً)
-# app/build/outputs/apk/release/app-armeabi-v7a-release.apk  ← هواتف 32-bit
-# app/build/outputs/apk/release/app-x86_64-release.apk       ← المحاكيات
+### الرابط المعتمد الدائم للإنتاج:
+```text
+https://faow.run/forerun.apk
 ```
+هذا الرابط ثابت دائماً، ولا يتغير مع أي إصدار جديد.
 
-### الخطوة 2 — رفع APK على Firebase
-1. افتح [Firebase Console](https://console.firebase.google.com) → مشروع `forerun-c819d`
-2. **Release & Monitor** → **App Distribution**
-3. اضغط **Upload** وارفع `app-arm64-v8a-release.apk`
-4. أضف Release Notes (مثال: `إصلاح FCM · تحسينات الأداء`)
-5. اضغط **Distribute**
-
-### النتيجة:
-- كل المستخدمين المسجّلين يصلهم إشعار فوري: **"تحديث جديد متاح"**
-- يضغطون زر واحد → تحديث تلقائي
+### آلية الأتمتة وضمان عدم الخطأ (Zero-Risk Pipeline):
+سابقاً كان نسخ الـ APK يتم يدوياً بعد البناء، مما قد يسبب خطأً بشرياً (نسخ ملف خاطئ أو نسيانه).
+تمت **أتمتة العملية برمجياً داخل Gradle**:
+- عند تشغيل أمر البناء:
+  ```bash
+  cd apps/android
+  ./gradlew assembleRelease
+  ```
+- بمجرد اكتمال البناء وتوقيع الحزمة، يتم تلقائياً تفعيل مهمة:
+  `copyReleaseApkToLandingPage`
+- تقوم هذه المهمة بحسب الكود التالي بنسخ الحزمة الشاملة (`app-universal-release.apk`) حصراً، وتسميتها `forerun.apk` ونقلها إلى `apps/landing-page/public/forerun.apk`:
+  ```kotlin
+  val copyReleaseApkToLandingPage by tasks.registering(Copy::class) {
+      from(layout.buildDirectory.file("outputs/apk/release/app-universal-release.apk"))
+      into(rootProject.file("../../apps/landing-page/public"))
+      rename { "forerun.apk" }
+  }
+  tasks.matching { it.name == "assembleRelease" }.configureEach {
+      finalizedBy(copyReleaseApkToLandingPage)
+  }
+  ```
+- **النتيجة:** يستحيل نسيان نسخ الملف، ويستحيل حفظه في مكان خاطئ أو نسخ حزمة ذات معمارية ناقصة (arm32 فقط أو arm64 فقط).
 
 ---
 
-## معلومات التطبيق
+## 2. إدارة وتفعيل الإصدارات عبر لوحة التحكم
+
+بعد رفع الكود إلى Git ونشر موقع الهبوط، تتحكم الإدارة في إطلاق التحديث عبر لوحة التحكم الإدارية:
+👉 `/dashboard/app-version`
+
+| الحقل | الوظيفة | القاعدة البرمجية |
+|---|---|---|
+| `latestVersionCode` | رقم الإصدار الأحدث المتوفر | إذا كان رقم العميل أصغر منه، يُعرض التحديث |
+| `minSupportedVersionCode` | أدنى إصدار مسموح به | إذا كان رقم العميل أصغر منه، يكون التحديث **إلزامياً** |
+| `latestVersionName` | الاسم الظاهر للمستخدم | نص للعرض فقط (مثل `0.1.3`) |
+| `downloadUrl` | رابط الملف المباشر | يجب أن يكون دائماً: `https://faow.run/forerun.apk` |
+
+---
+
+## 3. قناة الاختبارات الداخلية (Firebase App Distribution)
+
+> مخصصة للمطورين والمختبرين قبل الإطلاق العام للجمهور.
+
+- **Firebase Project:** `forerun-c819d`
+- **رابط الدعوة للمختبرين:** `https://appdistribution.firebase.dev/i/aa7a4768f6595870`
+- **رفع الإصدار:** عبر Firebase Console → App Distribution أو أداة `firebase appdistribution:distribute`.
+
+---
+
+## 4. معلومات التوقيع والـ Keystore
 
 | البند | القيمة |
 |---|---|
 | Package Name | `com.forerun.customer` |
-| Firebase App ID | `1:482968000948:android:0e623122ece7b9e604bae1` |
 | Keystore File | `forerun-release.jks` |
 | Key Alias | `forerun` |
-| موقع Keystore | `D:\FAWRUNF\FAWRUN\apps\android\app\forerun-release.jks` |
-| نسخة احتياطية | `D:\Backups\FORERUN-KEYSTORE\` |
+| إعدادات التوقيع | `apps/android/app/keystore.properties` |
+| موقع Keystore | `apps/android/app/forerun-release.jks` |
 
----
-
-## أتمتة الرفع (Sprint 8F — مستقبلاً)
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase appdistribution:distribute \
-  app/build/outputs/apk/release/app-arm64-v8a-release.apk \
-  --app 1:482968000948:android:0e623122ece7b9e604bae1 \
-  --groups testers \
-  --release-notes "وصف التحديث هنا"
-```
-
----
-
-## ملاحظات حرجة
-
-- ⚠️ **لا ترفع `forerun-release.jks` إلى GitHub** — موجود في `.gitignore`
-- ⚠️ **لا ترفع `google-services.json` إلى GitHub** — موجود في `.gitignore`
-- ⚠️ **كلمات مرور Keystore** — محفوظة عند المستخدم فقط، لا تُكتب في أي ملف في المستودع
-- ℹ️ **للانتقال لـ Google Play** لاحقاً — راجع `docs/android/ROADMAP.md` Sprint 10
+### تنبيهات الأمان:
+- ⚠️ ملفات `forerun-release.jks` و `keystore.properties` و `google-services.json` محمية داخل `.gitignore` ولا تُرفع أبداً للمستودع العام.
