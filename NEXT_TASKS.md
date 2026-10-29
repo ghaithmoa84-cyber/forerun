@@ -58,7 +58,7 @@
 
 ---
 
-### 2. مسار لوحة تفاصيل العميل — Customer Details Drawer (`feature/admin-customer-details`) — ✅ مكتمل ومختبر بنسبة 100% (بانتظار إذن الدمج)
+### 2. مسار لوحة تفاصيل العميل — Customer Details Drawer (`feature/admin-customer-details`) — ✅ مدموج في master بالكامل بـ fb31a48
 
 > **القرار المرتبط:** D62 (توسيع استجابة تفاصيل العميل وإجراءات خدمة العملاء دون كسر الخصوصية D35)  
 > **ملاحظة:** مقسم لمهام مستقلة لتفادي التعديلات الكاسرة (Breaking Changes) أو تسريب البيانات وفق قاعدة D35.
@@ -76,9 +76,15 @@
 ## حالة فروع العمل وشجرة الكود (Branch Status)
 
 - ⏳ **عمل معلّق بانتظار إذن الدمج إلى `master`:**
-  - فرع `feature/admin-customer-details` (القرار **D62** — مكتمل ومختبر بنسبة 100% عبر 4 commits ذرية وبوابة الجودة الرباعية واختبارات الأندرويد، بانتظار إذن الدمج الصريح بعد المراجعة).
+  - *(لا يوجد حالياً فروع معلقة بانتظار الدمج)*
 
 - ✅ **الفروع المدموجة سابقاً:**
+  - فرع `feature/admin-customer-details` (القرار **D62** — دُمج في `master` بـ `fb31a48` عبر `git merge --no-ff` — محتفظ به محلياً مؤقتاً كاحتياط):
+    - **CD-1:** مسار `PUT /api/v1/admin/users/:id/profile` محمي بـ `ADMIN` و `@Throttle(10/min)` لتعديل الاسم ورقم الهاتف البديل وتسجيل `USER_PROFILE_UPDATED_BY_ADMIN` في `AuditLog`.
+    - **CD-2:** مسار `GET /api/v1/admin/users/:id` محمي بـ `@Throttle(30/min)` مع إحصائيات الطلبات المسلمة والملغاة وآخر 5 طلبات وعزل كامل للـ DTO.
+    - **CD-3:** مسار `GET /api/v1/admin/users/:id/audit-logs` محمي بـ `@Throttle(30/min)` لسجلات التدقيق التاريخية (`meta.userId`) والحديثة (`meta.targetUserId`).
+    - **CD-4:** درج تفاصيل العميل الجانبي التفاعلي (Slide-over Drawer) في `apps/admin-web` مع 4 تبويبات وإجراءات سريعة.
+    - **الجودة:** 29/29 وحدة في `users.service.spec.ts` و 24/24 تكامل في `admin-user-ops.integration.spec.ts`، واجتياز كامل لبوابة الجودة الرباعية على `master` حياً (544 وحدة + 24 تكامل + 37 Android).
   - فرع `feature/admin-support-ops` (القرارات **D60** و **D61** — دُمج في `master` بـ `0e4fe1b` عبر `git merge --no-ff` — محتفظ به محلياً مؤقتاً كاحتياط):
     - **D60:** مسار `PUT /api/v1/admin/users/:id/reset-password` محمي بـ `ADMIN` مع حظر استهداف المسؤولين (403)، تقييد المعدل `@Throttle(10/min)`، تشفير بـ `CONFIG.BCRYPT_ROUNDS`، إلغاء فوري لكافة الجلسات النشطة وحذف `DeviceToken`، وتسجيل `USER_PASSWORD_RESET_BY_ADMIN` في `AuditLog`، مع واجهة تفاعلية في `admin-web` لتوليد كلمة مرور ونسخها وفتح واتساب المباشر.
     - **D61:** مسار `DELETE /api/v1/admin/users/:id` محمي بـ `ADMIN` مع موانع 409 الصارمة (طلب نشط للعميل، طلبات نشطة أو غير مسواة أو تسويات معلقة للمندوب)، وضبط `isDeleted = true` وحذف التوكنات وتعطيل المندوب، وتسجيل `USER_SOFT_DELETED` في `AuditLog` مع واجهة تأكيد وأسباب اختيارية باللغة العربية.
