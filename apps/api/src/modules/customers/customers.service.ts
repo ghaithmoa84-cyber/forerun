@@ -47,6 +47,7 @@ export class CustomersService {
       status: customer.user.status,
       completedOrders: customer.completedOrders,
       totalFeesPaid: customer.totalFeesPaid,
+      freeOrdersRemaining: customer.user.freeOrdersRemaining,
       createdAt: customer.createdAt,
     };
   }
@@ -128,6 +129,7 @@ export class CustomersService {
       status: updatedUser.status,
       completedOrders: customer.completedOrders,
       totalFeesPaid: customer.totalFeesPaid,
+      freeOrdersRemaining: updatedUser.freeOrdersRemaining,
       createdAt: customer.createdAt,
     };
   }

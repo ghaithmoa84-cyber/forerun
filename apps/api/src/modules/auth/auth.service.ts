@@ -10,6 +10,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { PricingService } from '../pricing/pricing.service.js';
 import { TelegramService, escapeTelegramHtml } from '../notifications/telegram.service.js';
 import { CONFIG, ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
 import type { RegisterRequest, LoginRequest, RefreshRequest, LogoutDto } from '@forerun/shared-types';
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
     private readonly telegramService: TelegramService,
+    private readonly pricingService: PricingService,
   ) {}
 
   async register(dto: RegisterRequest) {
@@ -42,6 +44,11 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, CONFIG.BCRYPT_ROUNDS);
 
+    const pricingConfig = await this.pricingService.getPricingConfig();
+    const freeOrdersRemaining = pricingConfig.freeOrdersPromoEnabled
+      ? pricingConfig.freeOrdersCount
+      : 0;
+
     const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -51,6 +58,7 @@ export class AuthService {
           passwordHash,
           role: 'CUSTOMER',
           status: 'PENDING_VERIFICATION',
+          freeOrdersRemaining,
         },
       });
 
@@ -77,7 +85,7 @@ export class AuthService {
           event: 'USER_REGISTERED',
           fromStatus: undefined,
           toStatus: 'PENDING_VERIFICATION',
-          meta: { userId: user.id, role: 'CUSTOMER' },
+          meta: { userId: user.id, role: 'CUSTOMER', freeOrdersRemaining },
         },
         tx,
       );

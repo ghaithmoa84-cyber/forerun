@@ -962,19 +962,22 @@ export class RunnerOrdersService {
       idempotencyKey,
     } = params;
 
-    const ledgerEntries = await this.ledgerService.createMany(
-      [
-        {
-          type: 'ORDER_FEE_TOTAL',
-          amount: feeResult.newFee.totalFee,
-          description: `Order fee for ${orderNumber}`,
-          orderId,
-          runnerId: runnerId ?? undefined,
-          meta: { idempotencyKey },
-        },
-      ],
-      tx,
-    );
+    let ledgerEntries: Array<{ type: string }> = [];
+    if (feeResult.newFee.totalFee > 0) {
+      ledgerEntries = await this.ledgerService.createMany(
+        [
+          {
+            type: 'ORDER_FEE_TOTAL',
+            amount: feeResult.newFee.totalFee,
+            description: `Order fee for ${orderNumber}`,
+            orderId,
+            runnerId: runnerId ?? undefined,
+            meta: { idempotencyKey },
+          },
+        ],
+        tx,
+      );
+    }
 
     await this.auditService.log(
       {
@@ -991,20 +994,22 @@ export class RunnerOrdersService {
       },
       tx,
     );
-    await this.auditService.log(
-      {
-        orderId,
-        actorId: runnerUserId,
-        actorRole: 'SYSTEM',
-        event: 'LEDGER_ENTRY_CREATED',
-        meta: {
-          orderNumber,
-          count: ledgerEntries.length,
-          types: ledgerEntries.map((entry) => entry.type),
+    if (ledgerEntries.length > 0) {
+      await this.auditService.log(
+        {
+          orderId,
+          actorId: runnerUserId,
+          actorRole: 'SYSTEM',
+          event: 'LEDGER_ENTRY_CREATED',
+          meta: {
+            orderNumber,
+            count: ledgerEntries.length,
+            types: ledgerEntries.map((entry) => entry.type),
+          },
         },
-      },
-      tx,
-    );
+        tx,
+      );
+    }
     await this.auditService.log(
       {
         actorId: runnerUserId,

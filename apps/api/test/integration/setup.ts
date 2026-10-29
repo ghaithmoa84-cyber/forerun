@@ -81,11 +81,15 @@ export async function cleanDatabase() {
       baseFee: DEFAULT_PRICING_CONFIG.baseFee,
       extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
       peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+      freeOrdersPromoEnabled: DEFAULT_PRICING_CONFIG.freeOrdersPromoEnabled,
+      freeOrdersCount: DEFAULT_PRICING_CONFIG.freeOrdersCount,
     },
     update: {
       baseFee: DEFAULT_PRICING_CONFIG.baseFee,
       extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
       peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+      freeOrdersPromoEnabled: DEFAULT_PRICING_CONFIG.freeOrdersPromoEnabled,
+      freeOrdersCount: DEFAULT_PRICING_CONFIG.freeOrdersCount,
     },
   });
 }

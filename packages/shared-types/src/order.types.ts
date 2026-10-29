@@ -43,6 +43,8 @@ export const EstimatedFeeSchema = z.object({
   customFeeReason: z.string().nullable().optional(),
   totalFee: z.number(),
   note: z.string(),
+  isFreeOrder: z.boolean().optional().default(false),
+  freeOrdersRemaining: z.number().int().optional().default(0),
 });
 
 export type EstimatedFee = z.infer<typeof EstimatedFeeSchema>;
@@ -52,6 +54,7 @@ export const CreateOrderResponseSchema = z.object({
   orderNumber: z.string(),
   status: z.string(),
   idempotent: z.boolean().optional(),
+  wasFreeOrderSlot: z.boolean().optional().default(false),
   estimatedFee: EstimatedFeeSchema,
 });
 

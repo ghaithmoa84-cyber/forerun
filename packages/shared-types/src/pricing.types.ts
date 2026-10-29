@@ -3,18 +3,29 @@ import {
   PRICING_LIMITS,
   CUSTOM_FEE_CAP,
   CUSTOM_FEE_REASON_MAX_LENGTH,
+  DEFAULT_FREE_ORDERS_COUNT,
+  FREE_ORDERS_LIMITS,
 } from '@forerun/shared-constants';
 
 export const PricingConfigSchema = z.object({
   baseFee: z.number().int().nonnegative(),
   peripheralFee: z.number().int().nonnegative(),
   extraStoreFee: z.number().int().nonnegative(),
+  freeOrdersPromoEnabled: z.boolean().default(false),
+  freeOrdersCount: z
+    .number()
+    .int()
+    .min(FREE_ORDERS_LIMITS.min)
+    .max(FREE_ORDERS_LIMITS.max)
+    .default(DEFAULT_FREE_ORDERS_COUNT),
 });
 
 export type PricingConfig = Readonly<{
   baseFee: number;
   peripheralFee: number;
   extraStoreFee: number;
+  freeOrdersPromoEnabled: boolean;
+  freeOrdersCount: number;
 }>;
 
 export const UpdatePlatformPricingSchema = z.object({
@@ -51,6 +62,23 @@ export const UpdatePlatformPricingSchema = z.object({
       PRICING_LIMITS.peripheralFee.max,
       `رسم المنطقة الطرفية يجب ألا يتجاوز ${PRICING_LIMITS.peripheralFee.max}`,
     ),
+  freeOrdersPromoEnabled: z
+    .boolean({
+      invalid_type_error: 'يجب أن تكون حالة العرض قيمة منطقية (صح/خطأ)',
+    })
+    .optional(),
+  freeOrdersCount: z
+    .number({ invalid_type_error: 'يجب أن يكون عدد الطلبات المجانية رقماً' })
+    .int('يجب أن يكون عدد الطلبات المجانية عدداً صحيحاً')
+    .min(
+      FREE_ORDERS_LIMITS.min,
+      `عدد الطلبات المجانية يجب ألا يقل عن ${FREE_ORDERS_LIMITS.min}`,
+    )
+    .max(
+      FREE_ORDERS_LIMITS.max,
+      `عدد الطلبات المجانية يجب ألا يتجاوز ${FREE_ORDERS_LIMITS.max}`,
+    )
+    .optional(),
   updatedAt: z.preprocess(
     (value) => (value === null || value === '' ? undefined : value),
     z.coerce.date().optional(),
@@ -134,6 +162,8 @@ export const FeePreviewResponseSchema = z.object({
   customFee: z.number().int(),
   customFeeReason: z.string().nullable().optional(),
   totalFee: z.number().int(),
+  isFreeOrder: z.boolean().default(false),
+  freeOrdersRemaining: z.number().int().default(0),
 });
 
 export type FeePreviewResponse = z.infer<typeof FeePreviewResponseSchema>;
@@ -142,6 +172,8 @@ export const PlatformPricingResponseSchema = z.object({
   baseFee: z.number().int(),
   extraStoreFee: z.number().int(),
   peripheralFee: z.number().int(),
+  freeOrdersPromoEnabled: z.boolean().default(false),
+  freeOrdersCount: z.number().int().default(DEFAULT_FREE_ORDERS_COUNT),
   updatedAt: z.union([z.date(), z.string()]).nullable(),
   updatedByUserId: z.string().nullable(),
 });
@@ -154,6 +186,7 @@ export const CustomerPricingDisclosureResponseSchema = z.object({
   baseFee: z.number().int().nonnegative(),
   extraStoreFee: z.number().int().nonnegative(),
   peripheralFee: z.number().int().nonnegative(),
+  freeOrdersPromoEnabled: z.boolean().default(false),
 });
 
 export type CustomerPricingDisclosureResponse = z.infer<

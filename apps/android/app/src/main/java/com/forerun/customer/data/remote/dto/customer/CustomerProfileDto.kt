@@ -12,5 +12,6 @@ data class CustomerProfileDto(
     @Json(name = "status") val status: String,
     @Json(name = "completedOrders") val completedOrders: Int,
     @Json(name = "totalFeesPaid") val totalFeesPaid: Int,
-    @Json(name = "createdAt") val createdAt: String
+    @Json(name = "createdAt") val createdAt: String,
+    @Json(name = "freeOrdersRemaining") val freeOrdersRemaining: Int = 0
 )

@@ -34,7 +34,9 @@ data class EstimatedFeeDto(
     @Json(name = "peripheralFee") val peripheralFee: Int,
     @Json(name = "extraStoresFee") val extraStoresFee: Int,
     @Json(name = "totalFee") val totalFee: Int,
-    @Json(name = "note") val note: String
+    @Json(name = "note") val note: String,
+    @Json(name = "isFreeOrder") val isFreeOrder: Boolean = false,
+    @Json(name = "freeOrdersRemaining") val freeOrdersRemaining: Int = 0
 )
 
 @JsonClass(generateAdapter = true)
@@ -42,7 +44,8 @@ data class CreateOrderResponseDto(
     @Json(name = "id") val id: String,
     @Json(name = "orderNumber") val orderNumber: String,
     @Json(name = "status") val status: String,
-    @Json(name = "estimatedFee") val estimatedFee: EstimatedFeeDto
+    @Json(name = "estimatedFee") val estimatedFee: EstimatedFeeDto,
+    @Json(name = "wasFreeOrderSlot") val wasFreeOrderSlot: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)

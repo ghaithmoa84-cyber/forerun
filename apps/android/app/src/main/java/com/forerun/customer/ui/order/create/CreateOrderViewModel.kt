@@ -14,6 +14,7 @@ import com.forerun.customer.domain.repository.AddressResult
 import com.forerun.customer.domain.usecase.CreateOrderUseCase
 import com.forerun.customer.domain.usecase.GetAvailableRunnersUseCase
 import com.forerun.customer.domain.usecase.GetCustomerAddressUseCase
+import com.forerun.customer.domain.usecase.account.GetAccountProfileUseCase
 import com.forerun.customer.domain.usecase.order.GetPricingDisclosureUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -48,7 +49,8 @@ data class CreateOrderUiState(
     val errorMessage: String? = null,
     val showFeeDisclosure: Boolean = false,
     val isLoadingDisclosure: Boolean = false,
-    val disclosurePricing: PricingDisclosure? = null
+    val disclosurePricing: PricingDisclosure? = null,
+    val freeOrdersRemaining: Int = 0
 )
 
 sealed interface CreateOrderIntent {
@@ -83,6 +85,7 @@ class CreateOrderViewModel @Inject constructor(
     private val getCustomerAddressUseCase: GetCustomerAddressUseCase,
     private val getAvailableRunnersUseCase: GetAvailableRunnersUseCase,
     private val getPricingDisclosureUseCase: GetPricingDisclosureUseCase,
+    private val getAccountProfileUseCase: GetAccountProfileUseCase,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -160,6 +163,16 @@ class CreateOrderViewModel @Inject constructor(
                 },
                 onFailure = {
                     _uiState.update { it.copy(isLoadingRunners = false) }
+                }
+            )
+
+            // 3. Load Profile Free Orders Promo
+            getAccountProfileUseCase().fold(
+                onSuccess = { profile ->
+                    _uiState.update { it.copy(freeOrdersRemaining = profile.freeOrdersRemaining) }
+                },
+                onFailure = {
+                    // Graceful fallback: keeps existing freeOrdersRemaining
                 }
             )
         }
@@ -391,7 +404,8 @@ class CreateOrderViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isSubmitting = false,
-                                createdOrder = createdOrder
+                                createdOrder = createdOrder,
+                                freeOrdersRemaining = createdOrder.freeOrdersRemaining
                             )
                         }
                         _events.emit(CreateOrderEvent.OrderCreated(createdOrder))

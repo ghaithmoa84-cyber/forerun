@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { prisma } from '../setup';
+import { cleanDatabase, prisma } from '../setup';
 import { PricingService } from '../../../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../../../src/database/prisma.service';
 import type { AuditService } from '../../../src/modules/audit/audit.service';
@@ -9,6 +9,7 @@ describe('PlatformPricing Integration (Sprint 6A Phase 1)', () => {
   let pricingService: PricingService;
 
   beforeAll(async () => {
+    await cleanDatabase();
     pricingService = new PricingService(
       prisma as unknown as PrismaService,
       { log: () => Promise.resolve() } as unknown as AuditService,
@@ -36,6 +37,8 @@ describe('PlatformPricing Integration (Sprint 6A Phase 1)', () => {
       baseFee: 60,
       peripheralFee: 40,
       extraStoreFee: 20,
+      freeOrdersPromoEnabled: false,
+      freeOrdersCount: 3,
     });
   });
 });

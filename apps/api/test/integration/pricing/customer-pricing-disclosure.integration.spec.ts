@@ -59,12 +59,13 @@ describe('Customer Pricing Disclosure Integration (D40)', () => {
       baseFee: 70,
       extraStoreFee: 25,
       peripheralFee: 45,
+      freeOrdersPromoEnabled: false,
     });
 
     // Rule 7 — Least Privilege Data Exposure / D35 privacy pattern check:
     // Assert strictly that no internal administrative metadata or relation fields leak
     const bodyKeys = Object.keys(res.body).sort();
-    expect(bodyKeys).toEqual(['baseFee', 'extraStoreFee', 'peripheralFee']);
+    expect(bodyKeys).toEqual(['baseFee', 'extraStoreFee', 'freeOrdersPromoEnabled', 'peripheralFee']);
     expect(res.body.id).toBeUndefined();
     expect(res.body.updatedAt).toBeUndefined();
     expect(res.body.updatedByUserId).toBeUndefined();
@@ -100,6 +101,7 @@ describe('Customer Pricing Disclosure Integration (D40)', () => {
       baseFee: 90,
       extraStoreFee: 35,
       peripheralFee: 55,
+      freeOrdersPromoEnabled: false,
     });
   });
 

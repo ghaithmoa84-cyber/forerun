@@ -58,7 +58,7 @@ export class CustomerOrdersService {
   ) {
     const customer = await this.prisma.customer.findUnique({
       where: { userId },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { name: true, freeOrdersRemaining: true } } },
     });
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -145,6 +145,7 @@ export class CustomerOrdersService {
       userId: string;
       dto: CreateOrderRequest;
       fee: FeeResult;
+      wasFreeOrderSlot?: boolean;
       orderStoresData: Array<{
         storeName: string;
         isAnyStore: boolean;
@@ -190,6 +191,7 @@ export class CustomerOrdersService {
         peripheralFee: fee.peripheralFee,
         extraStoresFee: fee.extraStoresFee,
         totalFee: fee.totalFee,
+        wasFreeOrderSlot: params.wasFreeOrderSlot ?? false,
         createIdempotencyKey: dto.idempotencyKey ?? null,
       },
     });
@@ -376,6 +378,7 @@ export class CustomerOrdersService {
           orderNumber: existing.orderNumber!,
           status: existing.status,
           idempotent: true,
+          wasFreeOrderSlot: existing.wasFreeOrderSlot ?? false,
           estimatedFee: {
             baseFee: existing.baseFee,
             peripheralFee: existing.peripheralFee,
@@ -384,6 +387,8 @@ export class CustomerOrdersService {
             customFeeReason: existing.customFeeReason,
             totalFee: existing.totalFee,
             note: 'الرسم النهائي يُحدد بعد المراجعة',
+            isFreeOrder: existing.wasFreeOrderSlot ?? false,
+            freeOrdersRemaining: customer.user?.freeOrdersRemaining ?? 0,
           },
         };
       }
@@ -398,15 +403,63 @@ export class CustomerOrdersService {
       // D22: الحساب يتم داخل الـ transaction لتطابق اللقطة مع صف الإعدادات لحظة الإيداع
       const result = await this.prisma.$transaction(
         async (tx) => {
-          const fee = await this.calculateOrderFee(tx, orderStoresData.length);
+          const pricingConfig = await this.pricingService.getPricingConfig(tx);
+          const fee = this.pricingService.calculateFee(
+            {
+              isPeripheral: false,
+              purchasedStoreCount: orderStoresData.length,
+            },
+            pricingConfig,
+          );
+
+          let wasFreeOrderSlot = false;
+          let effectiveTotalFee = fee.totalFee;
+
+          if (
+            pricingConfig.freeOrdersPromoEnabled &&
+            (customer.user?.freeOrdersRemaining ?? 0) > 0
+          ) {
+            const promoDeduct = await tx.user.updateMany({
+              where: { id: userId, freeOrdersRemaining: { gt: 0 } },
+              data: { freeOrdersRemaining: { decrement: 1 } },
+            });
+
+            if (promoDeduct.count === 1) {
+              wasFreeOrderSlot = true;
+              effectiveTotalFee = 0;
+            }
+          }
+
           const order = await this.createOrderRecord(tx, {
             customerId: customer.id,
             userId,
             dto,
-            fee,
+            fee: {
+              ...fee,
+              totalFee: effectiveTotalFee,
+            },
+            wasFreeOrderSlot,
             orderStoresData,
           });
-          return { order, fee };
+
+          if (wasFreeOrderSlot) {
+            await this.auditService.log(
+              {
+                orderId: order.id,
+                actorId: userId,
+                actorRole: 'CUSTOMER',
+                event: 'ORDER_FREE_PROMO_APPLIED',
+                meta: {
+                  orderId: order.id,
+                  originalTotalFee: fee.totalFee,
+                  savedAmount: fee.totalFee,
+                },
+              },
+              tx,
+            );
+          }
+
+          return { order, fee: { ...fee, totalFee: effectiveTotalFee }, wasFreeOrderSlot };
         },
         { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
       );
@@ -437,6 +490,7 @@ export class CustomerOrdersService {
             orderNumber: concurrentExisting.orderNumber!,
             status: concurrentExisting.status,
             idempotent: true,
+            wasFreeOrderSlot: concurrentExisting.wasFreeOrderSlot ?? false,
             estimatedFee: {
               baseFee: concurrentExisting.baseFee,
               peripheralFee: concurrentExisting.peripheralFee,
@@ -445,6 +499,8 @@ export class CustomerOrdersService {
               customFeeReason: concurrentExisting.customFeeReason,
               totalFee: concurrentExisting.totalFee,
               note: 'الرسم النهائي يُحدد بعد المراجعة',
+              isFreeOrder: concurrentExisting.wasFreeOrderSlot ?? false,
+              freeOrdersRemaining: customer.user?.freeOrdersRemaining ?? 0,
             },
           };
         }
@@ -463,6 +519,7 @@ export class CustomerOrdersService {
       orderNumber: orderRecord.orderNumber!,
       status: orderRecord.status,
       idempotent: false,
+      wasFreeOrderSlot: orderRecord.wasFreeOrderSlot ?? false,
       estimatedFee: {
         baseFee: calculatedFee.baseFee,
         peripheralFee: calculatedFee.peripheralFee,
@@ -471,6 +528,8 @@ export class CustomerOrdersService {
         customFeeReason: calculatedFee.customFeeReason ?? null,
         totalFee: calculatedFee.totalFee,
         note: 'الرسم النهائي يُحدد بعد المراجعة',
+        isFreeOrder: orderRecord.wasFreeOrderSlot ?? false,
+        freeOrdersRemaining: customer.user?.freeOrdersRemaining ?? 0,
       },
     };
   }
@@ -754,6 +813,28 @@ export class CustomerOrdersService {
           if (runnerUpdated.count === 0) {
             throw new ConflictException('CONCURRENT_RUNNER_STATE_CHANGE');
           }
+        }
+
+        if (order.wasFreeOrderSlot) {
+          await tx.user.update({
+            where: { id: order.customer.userId },
+            data: { freeOrdersRemaining: { increment: 1 } },
+          });
+
+          await this.auditService.log(
+            {
+              orderId: order.id,
+              actorId: userId,
+              actorRole: 'CUSTOMER',
+              event: 'ORDER_FREE_PROMO_RESTORED',
+              meta: {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                reason: 'CUSTOMER_CANCELLED',
+              },
+            },
+            tx,
+          );
         }
 
         await this.auditService.log(
