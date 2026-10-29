@@ -16,6 +16,7 @@ import {
   type AdminSoftDeleteUserRequest,
   type AdminUserActionResponse,
   type UserAuditLogEntry,
+  type AdminCustomerDetailsResponse,
 } from '@forerun/shared-types';
 
 @Controller('admin/users')
@@ -40,9 +41,10 @@ export class UsersController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findOne(
     @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
-  ) {
+  ): Promise<AdminCustomerDetailsResponse> {
     return this.usersService.findOne(params.id);
   }
 

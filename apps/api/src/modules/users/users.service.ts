@@ -9,7 +9,7 @@ import {
 import { type Prisma, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CONFIG } from '@forerun/shared-constants';
-import type { AdminUserActionResponse, UserAuditLogEntry } from '@forerun/shared-types';
+import type { AdminUserActionResponse, UserAuditLogEntry, AdminCustomerDetailsResponse } from '@forerun/shared-types';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -78,7 +78,7 @@ export class UsersService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<AdminCustomerDetailsResponse> {
     const user = await this.prisma.user.findUnique({
       where: { id, isDeleted: false },
       include: {
@@ -88,9 +88,41 @@ export class UsersService {
       },
     });
 
-    if (!user || !user.customer) {
+    if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    if (user.role === 'ADMIN') {
+      throw new ForbiddenException('Cannot view details of an administrator account');
+    }
+
+    if (!user.customer) {
+      throw new NotFoundException('Customer profile not found');
+    }
+
+    const [recentOrders, cancelledOrders, totalOrders] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { customerId: user.customer.id },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          totalFee: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+      this.prisma.order.count({
+        where: {
+          customerId: user.customer.id,
+          status: 'CANCELLED',
+        },
+      }),
+      this.prisma.order.count({
+        where: { customerId: user.customer.id },
+      }),
+    ]);
 
     return {
       id: user.id,
@@ -117,6 +149,19 @@ export class UsersService {
             updatedAt: user.customer.address.updatedAt,
           }
         : null,
+      stats: {
+        completedOrders: user.customer.completedOrders,
+        cancelledOrders,
+        totalOrders,
+        totalFeesPaid: user.customer.totalFeesPaid,
+      },
+      recentOrders: recentOrders.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        totalFee: o.totalFee,
+        createdAt: o.createdAt,
+      })),
     };
   }
 

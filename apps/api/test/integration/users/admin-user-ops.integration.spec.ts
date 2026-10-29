@@ -328,4 +328,68 @@ describe('Admin User Operations Integration Tests (feature/admin-support-ops)', 
       expect(res.status).toBe(404);
     });
   });
+
+  describe('GET /api/v1/admin/users/:id (CD-2)', () => {
+    it('successfully retrieves customer details with aggregated stats and recent orders', async () => {
+      // Create a test order for customer
+      const order = await prisma.order.create({
+        data: {
+          customerId: customerUser.customer.id,
+          status: 'DELIVERED',
+          deliveryLat: 33.5138,
+          deliveryLng: 36.2765,
+          deliveryDesc: 'Customer Test Address',
+          baseFee: 60,
+          totalFee: 100,
+        },
+      });
+
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(customerUser.id);
+      expect(res.body.name).toBe(customerUser.name);
+      expect(res.body.whatsapp).toBe(customerUser.whatsapp);
+      expect(res.body.customer).toBeDefined();
+      expect(res.body.stats).toBeDefined();
+      expect(res.body.stats.totalOrders).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(res.body.recentOrders)).toBe(true);
+      expect(res.body.recentOrders.length).toBeGreaterThanOrEqual(1);
+
+      const foundOrder = res.body.recentOrders.find((o: any) => o.id === order.id);
+      expect(foundOrder).toBeDefined();
+      expect(foundOrder.status).toBe('DELIVERED');
+      expect(foundOrder.totalFee).toBe(100);
+
+      // Verify Least Privilege: no passwordHash or tokens
+      expect(res.body.passwordHash).toBeUndefined();
+      expect(res.body.refreshTokens).toBeUndefined();
+    });
+
+    it('rejects attempt to inspect an ADMIN account with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${adminUser.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects non-admin caller with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 404 NotFound if user does not exist', async () => {
+      const res = await request
+        .get('/api/v1/admin/users/cuidnotexist00000000000000')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
 });

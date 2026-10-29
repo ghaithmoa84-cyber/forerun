@@ -51,6 +51,48 @@ export type AdminUserActionResponse = {
   message: string;
 };
 
+export type AdminCustomerRecentOrder = {
+  id: string;
+  orderNumber: string | null;
+  status: string;
+  totalFee: number;
+  createdAt: Date;
+};
+
+export type AdminCustomerStats = {
+  completedOrders: number;
+  cancelledOrders: number;
+  totalOrders: number;
+  totalFeesPaid: number;
+};
+
+export type AdminCustomerDetailsResponse = {
+  id: string;
+  name: string;
+  whatsapp: string;
+  altPhone: string | null;
+  role: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  customer: {
+    id: string;
+    completedOrders: number;
+    totalFeesPaid: number;
+    createdAt: Date;
+  };
+  address: {
+    id: string;
+    lat: number;
+    lng: number;
+    description: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
+  stats: AdminCustomerStats;
+  recentOrders: AdminCustomerRecentOrder[];
+};
+
 export type UserAuditLogEntry = {
   id: string;
   actorId: string | null;
