@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import { toAdminErrorMessage, containsArabic } from '@/lib/errorMessage';
 import { useToast } from '@/components/Toast';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
+import { CustomerDetailsDrawer } from '@/components/CustomerDetailsDrawer';
 
 import {
   USER_STATUS_VALUES,
@@ -61,6 +62,7 @@ export default function UsersPage() {
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+  const [drawerUserId, setDrawerUserId] = useState<string | null>(null);
 
   // Debounce search input by 350ms
   useEffect(() => {
@@ -367,7 +369,7 @@ export default function UsersPage() {
                 </div>
 
                 {/* أزرار الإجراءات */}
-                <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+                <div onClick={(e) => e.stopPropagation()} className="pt-2 border-t border-slate-100 flex flex-col gap-2">
                   {u.status === 'PENDING_VERIFICATION' && (
                     <div className="grid grid-cols-2 gap-2 w-full">
                       <button
@@ -482,7 +484,7 @@ export default function UsersPage() {
                 </tr>
               ) : (
                 filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={u.id} onClick={() => setDrawerUserId(u.id)} className="hover:bg-slate-50/80 transition-colors cursor-pointer">
                     <td className="px-5 py-4 font-bold text-slate-900">{u.name}</td>
                     <td className="px-5 py-4 font-medium text-slate-700">
                       <div className="flex items-center gap-2">
@@ -493,7 +495,7 @@ export default function UsersPage() {
                     <td className="px-5 py-4">{getStatusBadge(u.status)}</td>
                     <td className="px-5 py-4 text-slate-500">{formatDate(u.createdAt)}</td>
                     <td className="px-5 py-4 text-center">
-                      <div className="inline-flex items-center gap-1.5 flex-wrap justify-center">
+                      <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1.5 flex-wrap justify-center">
                         {u.status === 'PENDING_VERIFICATION' && (
                           <>
                             <button
@@ -887,6 +889,46 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+    
+      {/* درج تفاصيل العميل التفاعلي (Slide-over Drawer) - CD-4 */}
+      <CustomerDetailsDrawer
+        userId={drawerUserId}
+        isOpen={drawerUserId !== null}
+        onClose={() => setDrawerUserId(null)}
+        onCustomerUpdated={() => fetchUsers(meta.page)}
+        onResetPasswordClick={(u) => {
+          setDrawerUserId(null);
+          setResetModal({
+            isOpen: true,
+            user: {
+              id: u.id,
+              name: u.name,
+              whatsapp: u.whatsapp,
+              altPhone: null,
+              status: 'VERIFIED',
+              createdAt: new Date(),
+            },
+            password: '',
+            showSuccess: false,
+          });
+        }}
+        onSoftDeleteClick={(u) => {
+          setDrawerUserId(null);
+          setDeleteReason('');
+          setConfirmModal({
+            isOpen: true,
+            action: 'softDelete',
+            user: {
+              id: u.id,
+              name: u.name,
+              whatsapp: '',
+              altPhone: null,
+              status: 'VERIFIED',
+              createdAt: new Date(),
+            },
+          });
+        }}
+      />
     </div>
   );
 }

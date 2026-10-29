@@ -15,6 +15,11 @@ import {
   AdminSoftDeleteUserSchema,
   type AdminSoftDeleteUserRequest,
   type AdminUserActionResponse,
+  type UserAuditLogEntry,
+  type AdminCustomerDetailsResponse,
+  AdminUpdateCustomerProfileSchema,
+  type AdminUpdateCustomerProfileRequest,
+  type AdminUpdateCustomerProfileResponse,
 } from '@forerun/shared-types';
 
 @Controller('admin/users')
@@ -30,10 +35,19 @@ export class UsersController {
     return this.usersService.findAll(query.page, query.limit, query.search);
   }
 
+  @Get(':id/audit-logs')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async getAuditLogs(
+    @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
+  ): Promise<UserAuditLogEntry[]> {
+    return this.usersService.getAuditLogs(params.id);
+  }
+
   @Get(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async findOne(
     @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
-  ) {
+  ): Promise<AdminCustomerDetailsResponse> {
     return this.usersService.findOne(params.id);
   }
 
@@ -67,6 +81,17 @@ export class UsersController {
     @CurrentUser() user: { userId: string; role: string; status: string },
   ) {
     return this.usersService.unsuspend(params.id, user.userId);
+  }
+
+  @Put(':id/profile')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async updateProfile(
+    @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
+    @Body(new ZodValidationPipe(AdminUpdateCustomerProfileSchema))
+    body: AdminUpdateCustomerProfileRequest,
+    @CurrentUser() user: { userId: string; role: string; status: string },
+  ): Promise<AdminUpdateCustomerProfileResponse> {
+    return this.usersService.updateCustomerProfile(params.id, body, user.userId);
   }
 
   @Put(':id/reset-password')

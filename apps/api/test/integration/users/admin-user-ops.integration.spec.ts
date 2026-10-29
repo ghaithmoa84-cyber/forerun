@@ -279,4 +279,215 @@ describe('Admin User Operations Integration Tests (feature/admin-support-ops)', 
       expect(updatedRunner?.isVisible).toBe(false);
     });
   });
+
+  describe('GET /api/v1/admin/users/:id/audit-logs (CD-3)', () => {
+    it('successfully retrieves user audit logs mapped with actorName and event history', async () => {
+      // Trigger an audit log for customer
+      await request
+        .put(`/api/v1/admin/users/${customerUser.id}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ password: 'NewSecurePass@2026' });
+
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThanOrEqual(1);
+
+      const resetLog = res.body.find((l: any) => l.event === 'USER_PASSWORD_RESET_BY_ADMIN');
+      expect(resetLog).toBeDefined();
+      expect(resetLog.actorId).toBe(adminUser.id);
+      expect(resetLog.actorRole).toBe('ADMIN');
+      expect(resetLog.actorName).toBe(adminUser.name);
+      expect(resetLog.meta?.targetUserId).toBe(customerUser.id);
+    });
+
+    it('successfully retrieves historical audit logs recorded with legacy meta.userId pattern (e.g. USER_SUSPENDED)', async () => {
+      // Seed a historical audit entry created with meta: { userId: ... }
+      await prisma.auditLog.create({
+        data: {
+          actorId: adminUser.id,
+          actorRole: 'ADMIN',
+          event: 'USER_SUSPENDED',
+          fromStatus: 'VERIFIED',
+          toStatus: 'SUSPENDED',
+          meta: { userId: customerUser.id, previousStatus: 'VERIFIED' },
+        },
+      });
+
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      const suspendedLog = res.body.find((l: any) => l.event === 'USER_SUSPENDED');
+      expect(suspendedLog).toBeDefined();
+      expect(suspendedLog.actorId).toBe(adminUser.id);
+      expect(suspendedLog.fromStatus).toBe('VERIFIED');
+      expect(suspendedLog.toStatus).toBe('SUSPENDED');
+      expect(suspendedLog.meta?.userId).toBe(customerUser.id);
+    });
+
+    it('rejects attempt to retrieve audit logs of an ADMIN account with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${adminUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects non-admin caller with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 404 NotFound if user does not exist', async () => {
+      const res = await request
+        .get('/api/v1/admin/users/cuidnotexist00000000000000/audit-logs')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/v1/admin/users/:id (CD-2)', () => {
+    it('successfully retrieves customer details with aggregated stats and recent orders', async () => {
+      // Create a test order for customer
+      const order = await prisma.order.create({
+        data: {
+          customerId: customerUser.customer.id,
+          status: 'DELIVERED',
+          deliveryLat: 33.5138,
+          deliveryLng: 36.2765,
+          deliveryDesc: 'Customer Test Address',
+          baseFee: 60,
+          totalFee: 100,
+        },
+      });
+
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(customerUser.id);
+      expect(res.body.name).toBe(customerUser.name);
+      expect(res.body.whatsapp).toBe(customerUser.whatsapp);
+      expect(res.body.customer).toBeDefined();
+      expect(res.body.stats).toBeDefined();
+      expect(res.body.stats.totalOrders).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(res.body.recentOrders)).toBe(true);
+      expect(res.body.recentOrders.length).toBeGreaterThanOrEqual(1);
+
+      const foundOrder = res.body.recentOrders.find((o: any) => o.id === order.id);
+      expect(foundOrder).toBeDefined();
+      expect(foundOrder.status).toBe('DELIVERED');
+      expect(foundOrder.totalFee).toBe(100);
+
+      // Verify Least Privilege: no passwordHash or tokens
+      expect(res.body.passwordHash).toBeUndefined();
+      expect(res.body.refreshTokens).toBeUndefined();
+    });
+
+    it('rejects attempt to inspect an ADMIN account with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${adminUser.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects non-admin caller with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 404 NotFound if user does not exist', async () => {
+      const res = await request
+        .get('/api/v1/admin/users/cuidnotexist00000000000000')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('PUT /api/v1/admin/users/:id/profile (CD-1)', () => {
+    it('successfully updates customer name and altPhone and logs USER_PROFILE_UPDATED_BY_ADMIN', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Customer Updated By Admin',
+          altPhone: '0988776655',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.statusCode).toBe(200);
+      expect(res.body.user.name).toBe('Customer Updated By Admin');
+      expect(res.body.user.altPhone).toBe('0988776655');
+
+      // Verify DB update
+      const dbUser = await prisma.user.findUnique({
+        where: { id: customerUser.id },
+      });
+      expect(dbUser?.name).toBe('Customer Updated By Admin');
+      expect(dbUser?.altPhone).toBe('0988776655');
+
+      // Verify AuditLog
+      const audit = await prisma.auditLog.findFirst({
+        where: {
+          event: 'USER_PROFILE_UPDATED_BY_ADMIN',
+          actorId: adminUser.id,
+        },
+      });
+      expect(audit).toBeDefined();
+      expect((audit?.meta as any)?.targetUserId).toBe(customerUser.id);
+      expect((audit?.meta as any)?.newName).toBe('Customer Updated By Admin');
+      expect((audit?.meta as any)?.newAltPhone).toBe('0988776655');
+    });
+
+    it('rejects attempt to update profile of an ADMIN account with 403 Forbidden', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${adminUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Hacked Admin' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects attempt to update profile of a non-customer account with 400 BadRequest', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${runnerUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Updated Runner' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects non-admin caller with 403 Forbidden', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/profile`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ name: 'Unauthorized Update' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects payload when neither name nor altPhone is provided with 400 BadRequest', async () => {
+      const res = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/profile`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+  });
 });
