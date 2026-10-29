@@ -15,6 +15,7 @@ import {
   AdminSoftDeleteUserSchema,
   type AdminSoftDeleteUserRequest,
   type AdminUserActionResponse,
+  type UserAuditLogEntry,
 } from '@forerun/shared-types';
 
 @Controller('admin/users')
@@ -28,6 +29,14 @@ export class UsersController {
     @Query(new ZodValidationPipe(AdminUsersQuerySchema)) query: AdminUsersQueryRequest,
   ) {
     return this.usersService.findAll(query.page, query.limit, query.search);
+  }
+
+  @Get(':id/audit-logs')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async getAuditLogs(
+    @Param(new ZodValidationPipe(CuidParamSchema)) params: CuidParamRequest,
+  ): Promise<UserAuditLogEntry[]> {
+    return this.usersService.getAuditLogs(params.id);
   }
 
   @Get(':id')

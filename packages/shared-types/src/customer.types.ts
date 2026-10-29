@@ -51,6 +51,19 @@ export type AdminUserActionResponse = {
   message: string;
 };
 
+export type UserAuditLogEntry = {
+  id: string;
+  actorId: string | null;
+  actorRole: string | null;
+  actorName: string | null;
+  event: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  meta: unknown;
+  createdAt: Date;
+};
+
+
 export type AdminUserListItem = {
   id: string;
   name: string;

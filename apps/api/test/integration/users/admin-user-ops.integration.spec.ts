@@ -279,4 +279,53 @@ describe('Admin User Operations Integration Tests (feature/admin-support-ops)', 
       expect(updatedRunner?.isVisible).toBe(false);
     });
   });
+
+  describe('GET /api/v1/admin/users/:id/audit-logs (CD-3)', () => {
+    it('successfully retrieves user audit logs mapped with actorName and event history', async () => {
+      // Trigger an audit log for customer
+      await request
+        .put(`/api/v1/admin/users/${customerUser.id}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ password: 'NewSecurePass@2026' });
+
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThanOrEqual(1);
+
+      const resetLog = res.body.find((l: any) => l.event === 'USER_PASSWORD_RESET_BY_ADMIN');
+      expect(resetLog).toBeDefined();
+      expect(resetLog.actorId).toBe(adminUser.id);
+      expect(resetLog.actorRole).toBe('ADMIN');
+      expect(resetLog.actorName).toBe(adminUser.name);
+      expect(resetLog.meta?.targetUserId).toBe(customerUser.id);
+    });
+
+    it('rejects attempt to retrieve audit logs of an ADMIN account with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${adminUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects non-admin caller with 403 Forbidden', async () => {
+      const res = await request
+        .get(`/api/v1/admin/users/${customerUser.id}/audit-logs`)
+        .set('Authorization', `Bearer ${customerToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('returns 404 NotFound if user does not exist', async () => {
+      const res = await request
+        .get('/api/v1/admin/users/cuidnotexist00000000000000/audit-logs')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
 });

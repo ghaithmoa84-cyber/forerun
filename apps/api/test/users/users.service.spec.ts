@@ -53,6 +53,9 @@ interface MockPrisma {
   runner: {
     update: ReturnType<typeof vi.fn>;
   };
+  auditLog: {
+    findMany: ReturnType<typeof vi.fn>;
+  };
 }
 
 describe('UsersService - unsuspend', () => {
@@ -82,6 +85,9 @@ describe('UsersService - unsuspend', () => {
       },
       order: {
         count: vi.fn(),
+      },
+      auditLog: {
+        findMany: vi.fn(),
       },
       settlement: {
         count: vi.fn(),
@@ -595,6 +601,177 @@ describe('UsersService - softDelete (AS-3)', () => {
     expect(mockPrisma.user.update).toHaveBeenCalledWith({
       where: { id: 'runner_usr' },
       data: { isDeleted: true },
+    });
+  });
+});
+
+
+describe('UsersService - getAuditLogs (CD-3)', () => {
+  let usersService: UsersService;
+  let mockPrisma: MockPrisma;
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (cb) => cb(mockPrisma)),
+      user: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        count: vi.fn(),
+        findMany: vi.fn(),
+      },
+      refreshToken: {
+        updateMany: vi.fn(),
+      },
+      deviceToken: {
+        deleteMany: vi.fn(),
+      },
+      order: {
+        count: vi.fn(),
+      },
+      settlement: {
+        count: vi.fn(),
+      },
+      runner: {
+        update: vi.fn(),
+      },
+      auditLog: {
+        findMany: vi.fn(),
+      },
+    };
+
+    usersService = new UsersService(
+      mockPrisma as unknown as PrismaService,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+  });
+  it('throws NotFoundException if user is not found', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(usersService.getAuditLogs('nonexistent_id')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('throws ForbiddenException if target user is an ADMIN', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'admin_usr',
+      role: 'ADMIN',
+    });
+
+    await expect(usersService.getAuditLogs('admin_usr')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('returns mapped audit logs with actorName for customer or runner', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'cust_123',
+      role: 'CUSTOMER',
+    });
+
+    const mockDate = new Date('2026-10-29T10:00:00Z');
+    mockPrisma.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'log_1',
+        actorId: 'admin_1',
+        actorRole: 'ADMIN',
+        event: 'USER_PASSWORD_RESET_BY_ADMIN',
+        fromStatus: null,
+        toStatus: null,
+        meta: { targetUserId: 'cust_123' },
+        createdAt: mockDate,
+        actor: {
+          id: 'admin_1',
+          name: 'Super Admin',
+          role: 'ADMIN',
+        },
+      },
+      {
+        id: 'log_2',
+        actorId: 'cust_123',
+        actorRole: 'CUSTOMER',
+        event: 'USER_REGISTERED',
+        fromStatus: null,
+        toStatus: 'PENDING_VERIFICATION',
+        meta: { userId: 'cust_123' },
+        createdAt: mockDate,
+        actor: {
+          id: 'cust_123',
+          name: 'Ahmad Customer',
+          role: 'CUSTOMER',
+        },
+      },
+      {
+        id: 'log_3',
+        actorId: null,
+        actorRole: null,
+        event: 'SYSTEM_EVENT',
+        fromStatus: null,
+        toStatus: null,
+        meta: { userId: 'cust_123' },
+        createdAt: mockDate,
+        actor: null,
+      },
+    ]);
+
+    const result = await usersService.getAuditLogs('cust_123');
+
+    expect(result).toHaveLength(3);
+    expect(result[0]).toEqual({
+      id: 'log_1',
+      actorId: 'admin_1',
+      actorRole: 'ADMIN',
+      actorName: 'Super Admin',
+      event: 'USER_PASSWORD_RESET_BY_ADMIN',
+      fromStatus: null,
+      toStatus: null,
+      meta: { targetUserId: 'cust_123' },
+      createdAt: mockDate,
+    });
+    expect(result[1]).toEqual({
+      id: 'log_2',
+      actorId: 'cust_123',
+      actorRole: 'CUSTOMER',
+      actorName: 'Ahmad Customer',
+      event: 'USER_REGISTERED',
+      fromStatus: null,
+      toStatus: 'PENDING_VERIFICATION',
+      meta: { userId: 'cust_123' },
+      createdAt: mockDate,
+    });
+    expect(result[2]).toEqual({
+      id: 'log_3',
+      actorId: null,
+      actorRole: null,
+      actorName: null,
+      event: 'SYSTEM_EVENT',
+      fromStatus: null,
+      toStatus: null,
+      meta: { userId: 'cust_123' },
+      createdAt: mockDate,
+    });
+
+    expect(mockPrisma.auditLog.findMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { actorId: 'cust_123' },
+          { meta: { path: ['userId'], equals: 'cust_123' } },
+          { meta: { path: ['targetUserId'], equals: 'cust_123' } },
+        ],
+      },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   });
 });

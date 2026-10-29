@@ -9,7 +9,7 @@ import {
 import { type Prisma, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CONFIG } from '@forerun/shared-constants';
-import type { AdminUserActionResponse } from '@forerun/shared-types';
+import type { AdminUserActionResponse, UserAuditLogEntry } from '@forerun/shared-types';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -529,5 +529,52 @@ export class UsersService {
       statusCode: 200,
       message: 'User archived successfully',
     };
+  }
+
+  async getAuditLogs(userId: string): Promise<UserAuditLogEntry[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.role === 'ADMIN') {
+      throw new ForbiddenException('Cannot view audit logs of an administrator account');
+    }
+
+    const logs = await this.prisma.auditLog.findMany({
+      where: {
+        OR: [
+          { actorId: userId },
+          { meta: { path: ['userId'], equals: userId } },
+          { meta: { path: ['targetUserId'], equals: userId } },
+        ],
+      },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return logs.map((log) => ({
+      id: log.id,
+      actorId: log.actorId,
+      actorRole: log.actorRole,
+      actorName: log.actor?.name ?? null,
+      event: log.event,
+      fromStatus: log.fromStatus,
+      toStatus: log.toStatus,
+      meta: log.meta,
+      createdAt: log.createdAt,
+    }));
   }
 }
