@@ -18,6 +18,7 @@ model User {
   status          UserStatus        @default(PENDING_VERIFICATION)
   previousStatus  UserStatus?
   isDeleted       Boolean           @default(false)
+  freeOrdersRemaining Int           @default(0)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   admin           Admin?
@@ -145,6 +146,7 @@ model Order {
   createIdempotencyKey String?         @unique
   customFee         Int             @default(0)
   customFeeReason   String?
+  wasFreeOrderSlot  Boolean         @default(false)
   auditLogs         AuditLog[]
   ledgerEntries     LedgerEntry[]
   cancelledByUser   User?           @relation("CancelledByUser", fields: [cancelledByUserId], references: [id])
@@ -298,6 +300,8 @@ model PlatformPricing {
   baseFee         Int
   extraStoreFee   Int
   peripheralFee   Int
+  freeOrdersPromoEnabled Boolean @default(false)
+  freeOrdersCount        Int     @default(3)
   updatedAt       DateTime @default(now())
   updatedByUserId String?
   User            User?    @relation(fields: [updatedByUserId], references: [id])

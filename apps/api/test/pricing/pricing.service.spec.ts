@@ -595,6 +595,8 @@ describe('PricingService', () => {
         baseFee: 60,
         peripheralFee: 40,
         extraStoreFee: 20,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
       });
     });
 
@@ -607,7 +609,13 @@ describe('PricingService', () => {
         extraStoreFee: 20,
       });
       let config = await service.getPricingConfig();
-      expect(config).toEqual({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 });
+      expect(config).toEqual({
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 20,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
+      });
 
       // Case 2: non-integer peripheralFee
       prisma.platformPricing.findUnique.mockResolvedValue({
@@ -617,7 +625,13 @@ describe('PricingService', () => {
         extraStoreFee: 20,
       });
       config = await service.getPricingConfig();
-      expect(config).toEqual({ baseFee: 60, peripheralFee: 40, extraStoreFee: 20 });
+      expect(config).toEqual({
+        baseFee: 60,
+        peripheralFee: 40,
+        extraStoreFee: 20,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
+      });
     });
 
     it('returns fallback and does not throw when DB throws an error', async () => {
@@ -629,6 +643,8 @@ describe('PricingService', () => {
         baseFee: 60,
         peripheralFee: 40,
         extraStoreFee: 20,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
       });
     });
 
@@ -854,6 +870,8 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: 80,
+        isFreeOrder: false,
+        freeOrdersRemaining: 0,
       });
       // Verify NO database writes
       expect(prisma.order.update).not.toHaveBeenCalled();
@@ -904,6 +922,8 @@ describe('PricingService', () => {
         customFee: 50,
         customFeeReason: 'طرد ثقيل',
         totalFee: 150,
+        isFreeOrder: false,
+        freeOrdersRemaining: 0,
       });
       expect(prisma.order.update).not.toHaveBeenCalled();
     });
@@ -1048,6 +1068,8 @@ describe('PricingService', () => {
         customFee: 0,
         customFeeReason: null,
         totalFee: 80,
+        isFreeOrder: false,
+        freeOrdersRemaining: 0,
       });
     });
 
@@ -1181,6 +1203,8 @@ describe('PricingService', () => {
         baseFee: DEFAULT_PRICING_CONFIG.baseFee,
         extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
         peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
         updatedAt: null,
         updatedByUserId: null,
       });
@@ -1193,6 +1217,8 @@ describe('PricingService', () => {
         baseFee: 75,
         extraStoreFee: 25,
         peripheralFee: 50,
+        freeOrdersPromoEnabled: true,
+        freeOrdersCount: 5,
         updatedAt: now,
         updatedByUserId: 'usr-admin-1',
       });
@@ -1203,6 +1229,8 @@ describe('PricingService', () => {
         baseFee: 75,
         extraStoreFee: 25,
         peripheralFee: 50,
+        freeOrdersPromoEnabled: true,
+        freeOrdersCount: 5,
         updatedAt: now,
         updatedByUserId: 'usr-admin-1',
       });
@@ -1219,6 +1247,8 @@ describe('PricingService', () => {
         baseFee: 60,
         extraStoreFee: 20,
         peripheralFee: 40,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
         updatedAt: oldDate,
         updatedByUserId: 'usr-old',
       });
@@ -1229,6 +1259,8 @@ describe('PricingService', () => {
         baseFee: 80,
         extraStoreFee: 30,
         peripheralFee: 50,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
         updatedAt: newDate,
         updatedByUserId: 'usr-admin-1',
       });
@@ -1247,6 +1279,8 @@ describe('PricingService', () => {
         baseFee: 80,
         extraStoreFee: 30,
         peripheralFee: 50,
+        freeOrdersPromoEnabled: false,
+        freeOrdersCount: 3,
         updatedAt: newDate,
         updatedByUserId: 'usr-admin-1',
       });
@@ -1272,12 +1306,16 @@ describe('PricingService', () => {
               baseFee: 60,
               extraStoreFee: 20,
               peripheralFee: 40,
+              freeOrdersPromoEnabled: false,
+              freeOrdersCount: 3,
               updatedAt: oldDate,
             },
             after: {
               baseFee: 80,
               extraStoreFee: 30,
               peripheralFee: 50,
+              freeOrdersPromoEnabled: false,
+              freeOrdersCount: 3,
               updatedAt: newDate,
             },
           },
@@ -1357,6 +1395,8 @@ describe('PricingService', () => {
         baseFee: 75,
         extraStoreFee: 25,
         peripheralFee: 45,
+        freeOrdersPromoEnabled: true,
+        freeOrdersCount: 3,
         updatedAt: new Date('2026-10-14T09:00:00.000Z'),
         updatedByUserId: 'admin-sensitive-id',
       });
@@ -1367,11 +1407,12 @@ describe('PricingService', () => {
         baseFee: 75,
         extraStoreFee: 25,
         peripheralFee: 45,
+        freeOrdersPromoEnabled: true,
       });
 
       // Strict check: no leaked internal fields
       const keys = Object.keys(result);
-      expect(keys.sort()).toEqual(['baseFee', 'extraStoreFee', 'peripheralFee']);
+      expect(keys.sort()).toEqual(['baseFee', 'extraStoreFee', 'freeOrdersPromoEnabled', 'peripheralFee']);
       expect((result as Record<string, unknown>).id).toBeUndefined();
       expect((result as Record<string, unknown>).updatedAt).toBeUndefined();
       expect((result as Record<string, unknown>).updatedByUserId).toBeUndefined();
@@ -1386,6 +1427,7 @@ describe('PricingService', () => {
         baseFee: DEFAULT_PRICING_CONFIG.baseFee,
         extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
         peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+        freeOrdersPromoEnabled: false,
       });
     });
   });

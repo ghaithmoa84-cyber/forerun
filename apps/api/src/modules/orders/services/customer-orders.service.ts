@@ -58,7 +58,7 @@ export class CustomerOrdersService {
   ) {
     const customer = await this.prisma.customer.findUnique({
       where: { userId },
-      include: { user: { select: { name: true } } },
+      include: { user: { select: { name: true, freeOrdersRemaining: true } } },
     });
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -376,6 +376,7 @@ export class CustomerOrdersService {
           orderNumber: existing.orderNumber!,
           status: existing.status,
           idempotent: true,
+          wasFreeOrderSlot: existing.wasFreeOrderSlot ?? false,
           estimatedFee: {
             baseFee: existing.baseFee,
             peripheralFee: existing.peripheralFee,
@@ -384,6 +385,8 @@ export class CustomerOrdersService {
             customFeeReason: existing.customFeeReason,
             totalFee: existing.totalFee,
             note: 'الرسم النهائي يُحدد بعد المراجعة',
+            isFreeOrder: existing.wasFreeOrderSlot ?? false,
+            freeOrdersRemaining: customer.user?.freeOrdersRemaining ?? 0,
           },
         };
       }
@@ -437,6 +440,7 @@ export class CustomerOrdersService {
             orderNumber: concurrentExisting.orderNumber!,
             status: concurrentExisting.status,
             idempotent: true,
+            wasFreeOrderSlot: concurrentExisting.wasFreeOrderSlot ?? false,
             estimatedFee: {
               baseFee: concurrentExisting.baseFee,
               peripheralFee: concurrentExisting.peripheralFee,
@@ -445,6 +449,8 @@ export class CustomerOrdersService {
               customFeeReason: concurrentExisting.customFeeReason,
               totalFee: concurrentExisting.totalFee,
               note: 'الرسم النهائي يُحدد بعد المراجعة',
+              isFreeOrder: concurrentExisting.wasFreeOrderSlot ?? false,
+              freeOrdersRemaining: customer.user?.freeOrdersRemaining ?? 0,
             },
           };
         }
@@ -463,6 +469,7 @@ export class CustomerOrdersService {
       orderNumber: orderRecord.orderNumber!,
       status: orderRecord.status,
       idempotent: false,
+      wasFreeOrderSlot: orderRecord.wasFreeOrderSlot ?? false,
       estimatedFee: {
         baseFee: calculatedFee.baseFee,
         peripheralFee: calculatedFee.peripheralFee,
@@ -471,6 +478,8 @@ export class CustomerOrdersService {
         customFeeReason: calculatedFee.customFeeReason ?? null,
         totalFee: calculatedFee.totalFee,
         note: 'الرسم النهائي يُحدد بعد المراجعة',
+        isFreeOrder: orderRecord.wasFreeOrderSlot ?? false,
+        freeOrdersRemaining: customer.user?.freeOrdersRemaining ?? 0,
       },
     };
   }

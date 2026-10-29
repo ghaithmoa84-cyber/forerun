@@ -190,6 +190,8 @@ export class PricingService {
       customFee,
       customFeeReason: dto.customFeeReason ?? null,
       totalFee: feeResult.totalFee,
+      isFreeOrder: false,
+      freeOrdersRemaining: 0,
     };
   }
 
@@ -206,6 +208,8 @@ export class PricingService {
         baseFee: DEFAULT_PRICING_CONFIG.baseFee,
         extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
         peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+        freeOrdersPromoEnabled: DEFAULT_PRICING_CONFIG.freeOrdersPromoEnabled,
+        freeOrdersCount: DEFAULT_PRICING_CONFIG.freeOrdersCount,
         updatedAt: null,
         updatedByUserId: null,
       };
@@ -215,6 +219,8 @@ export class PricingService {
       baseFee: row.baseFee,
       extraStoreFee: row.extraStoreFee,
       peripheralFee: row.peripheralFee,
+      freeOrdersPromoEnabled: row.freeOrdersPromoEnabled,
+      freeOrdersCount: row.freeOrdersCount,
       updatedAt: row.updatedAt,
       updatedByUserId: row.updatedByUserId,
     };
@@ -230,6 +236,7 @@ export class PricingService {
       baseFee: config.baseFee,
       extraStoreFee: config.extraStoreFee,
       peripheralFee: config.peripheralFee,
+      freeOrdersPromoEnabled: config.freeOrdersPromoEnabled,
     };
   }
 
@@ -297,12 +304,16 @@ export class PricingService {
             baseFee: currentRow.baseFee,
             extraStoreFee: currentRow.extraStoreFee,
             peripheralFee: currentRow.peripheralFee,
+            freeOrdersPromoEnabled: currentRow.freeOrdersPromoEnabled ?? false,
+            freeOrdersCount: currentRow.freeOrdersCount ?? 3,
             updatedAt: currentRow.updatedAt,
           }
         : {
             baseFee: DEFAULT_PRICING_CONFIG.baseFee,
             extraStoreFee: DEFAULT_PRICING_CONFIG.extraStoreFee,
             peripheralFee: DEFAULT_PRICING_CONFIG.peripheralFee,
+            freeOrdersPromoEnabled: DEFAULT_PRICING_CONFIG.freeOrdersPromoEnabled,
+            freeOrdersCount: DEFAULT_PRICING_CONFIG.freeOrdersCount,
             updatedAt: null,
           };
 
@@ -318,6 +329,8 @@ export class PricingService {
             baseFee: dto.baseFee,
             extraStoreFee: dto.extraStoreFee,
             peripheralFee: dto.peripheralFee,
+            ...(dto.freeOrdersPromoEnabled !== undefined ? { freeOrdersPromoEnabled: dto.freeOrdersPromoEnabled } : {}),
+            ...(dto.freeOrdersCount !== undefined ? { freeOrdersCount: dto.freeOrdersCount } : {}),
             updatedByUserId: userId,
             updatedAt: new Date(),
           },
@@ -339,6 +352,8 @@ export class PricingService {
             baseFee: dto.baseFee,
             extraStoreFee: dto.extraStoreFee,
             peripheralFee: dto.peripheralFee,
+            freeOrdersPromoEnabled: dto.freeOrdersPromoEnabled ?? DEFAULT_PRICING_CONFIG.freeOrdersPromoEnabled,
+            freeOrdersCount: dto.freeOrdersCount ?? DEFAULT_PRICING_CONFIG.freeOrdersCount,
             updatedByUserId: userId,
           },
         });
@@ -348,6 +363,8 @@ export class PricingService {
         baseFee: row.baseFee,
         extraStoreFee: row.extraStoreFee,
         peripheralFee: row.peripheralFee,
+        freeOrdersPromoEnabled: row.freeOrdersPromoEnabled ?? false,
+        freeOrdersCount: row.freeOrdersCount ?? 3,
         updatedAt: row.updatedAt,
       };
 
@@ -373,6 +390,8 @@ export class PricingService {
       baseFee: updatedRow.baseFee,
       extraStoreFee: updatedRow.extraStoreFee,
       peripheralFee: updatedRow.peripheralFee,
+      freeOrdersPromoEnabled: updatedRow.freeOrdersPromoEnabled ?? false,
+      freeOrdersCount: updatedRow.freeOrdersCount ?? 3,
       updatedAt: updatedRow.updatedAt,
       updatedByUserId: updatedRow.updatedByUserId,
     };
@@ -461,6 +480,8 @@ export class PricingService {
         baseFee: row.baseFee,
         peripheralFee: row.peripheralFee,
         extraStoreFee: row.extraStoreFee,
+        freeOrdersPromoEnabled: row.freeOrdersPromoEnabled,
+        freeOrdersCount: row.freeOrdersCount,
       });
 
       if (!tx && isCacheActive) {

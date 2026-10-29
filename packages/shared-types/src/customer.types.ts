@@ -203,6 +203,7 @@ export type CustomerProfile = {
   status: (typeof USER_STATUS_VALUES)[number];
   completedOrders: number;
   totalFeesPaid: number;
+  freeOrdersRemaining: number;
   createdAt: Date;
 };
 
@@ -217,6 +218,7 @@ export type CustomerOrderListItem = {
   orderNumber: string;
   status: (typeof ORDER_STATUS_VALUES)[number];
   totalFee: number;
+  wasFreeOrderSlot?: boolean;
   itemCount: number;
   createdAt: Date;
   deliveredAt: Date | null;
@@ -282,6 +284,7 @@ export type OrderPricing = {
   customFee?: number;
   customFeeReason?: string | null;
   totalFee: number;
+  wasFreeOrderSlot?: boolean;
 };
 
 export type OrderRating = {
@@ -309,6 +312,7 @@ export type CustomerOrderDetails = {
   customFee?: number | null;
   customFeeReason?: string | null;
   totalFee: number;
+  wasFreeOrderSlot?: boolean;
   pricing: OrderPricing;
   deliveryLat: number;
   deliveryLng: number;

@@ -4,10 +4,25 @@ export const PRICING = {
   EXTRA_STORE_FEE: 20,
 } as const;
 
+/**
+ * القيمة الافتراضية لعدد الطلبات المجانية الممنوحة للعملاء الجدد عند تفعيل العرض الترويجي (القرار D59).
+ */
+export const DEFAULT_FREE_ORDERS_COUNT = 3;
+
+/**
+ * حدود تحرير المشرف لعدد الطلبات المجانية الممنوحة في إعدادات المنصة (القرار D59).
+ */
+export const FREE_ORDERS_LIMITS = {
+  min: 1,
+  max: 20,
+} as const;
+
 export const DEFAULT_PRICING_CONFIG = {
   baseFee: PRICING.BASE_FEE,
   peripheralFee: PRICING.PERIPHERAL_FEE,
   extraStoreFee: PRICING.EXTRA_STORE_FEE,
+  freeOrdersPromoEnabled: false,
+  freeOrdersCount: DEFAULT_FREE_ORDERS_COUNT,
 } as const;
 
 /**
