@@ -39,22 +39,22 @@
 
 ## المهام النشطة والقادمة (Active & Upcoming Sprints)
 
-### 1. مسار العروض الترويجية — أول N طلبات مجاناً (`feature/free-orders-promo`) — ⏸️ معلّق بانتظار اعتماد المالك لـ D59
+### 1. مسار العروض الترويجية — أول N طلبات مجاناً (`feature/free-orders-promo`) — 🚀 قيد التنفيذ (معتمد بـ D59)
 
-> **القرار المرتبط:** D59 (مقترح — بانتظار اعتماد المالك الصريح وخطة التراجع قبل فتح الفرع أو كتابة أي كود)  
+> **القرار المرتبط:** D59 (معتمد رسمياً من المالك — خطة التراجع موثّقة في `docs/ROLLBACK_PLAN_free_orders_promo.md` بـ `9eb5ef8`)  
 > **ملاحظة ترقيم:** لا يدخل ضمن `Sprint N` الخاص بالـ backend تفادياً لتضارب الترقيم — يُسمّى وصفياً `feature/free-orders-promo`.
 
 | # | المهمة | الأولوية | الحالة | ملاحظات |
 |---|---|---|---|---|
-| FP-1 | **Migration:** إضافة `freeOrdersRemaining` (Int, default من الإعداد الحالي) إلى `User`، و`wasFreeOrderSlot` (Boolean, default false) إلى `Order` | عالية | ⏳ معلّق | migration واحدة مستقلة، لا تمس أعمدة أخرى |
-| FP-2 | **shared-types:** إضافة `freeOrdersPromoEnabled` و`freeOrdersCount` إلى `PricingConfig` و`UpdatePlatformPricingSchema` + Zod | عالية | ⏳ معلّق | Types First (قاعدة 5) |
+| FP-1 | **Migration & Contracts:** هجرة قاعدة البيانات `20261029170000_add_free_orders_promo` بقيمة بداية `false` وحفظ التوافق، وتحديث `shared-types` و `shared-constants` بقواعد Zod المعربة وحدود `FREE_ORDERS_LIMITS` وعقود Android الآمنة (non-null مع default 0) | عالية | ✅ **مُنجَز** | `035f249` — Types First واجتياز كامل لبوابة الجودة |
+| FP-2 | **Backend — تطبيق الخصم الذري واسترجاع الفتحة:** داخل transaction `createOrder` الخصم الذري بالقفل التفاؤلي وتصفير `totalFee` ووسم `wasFreeOrderSlot`، وزرع الرصيد عند التسجيل، واسترجاع الفتحة عند الإلغاء | عالية | ⏳ الخطوة القادمة | تماشياً مع D21/D53/D58 |
 | FP-3 | **Backend — تطبيق الخصم الذري:** داخل transaction `createOrder`، بعد حساب `totalFee` الطبيعي: `updateMany({ where: { id: userId, freeOrdersRemaining: { gt: 0 } }, data: { decrement: 1 } })`، فإن `count === 1` يُصفَّر `totalFee` ويُعلَّم `wasFreeOrderSlot = true` ويُسجَّل AuditLog | عالية | ⏳ معلّق | نفس نمط القفل التفاؤلي في D21/D53 — لا COUNT(*) حي |
 | FP-4 | **Backend — استرجاع الفتحة عند الإلغاء:** في كل مسار إلغاء (عميل ضمن الحالات المسموحة، أو Admin Force Cancel D39)، إن كان `order.wasFreeOrderSlot === true`: `increment: freeOrdersRemaining` + AuditLog | عالية | ⏳ معلّق | يمنع حرق فتحة لطلب لم يكتمل فعلياً |
 | FP-5 | **Backend — توافق مع D58 Idempotency:** التأكد أن إعادة محاولة إنشاء الطلب بنفس `createIdempotencyKey` تُعيد الطلب المخزَّن (بما فيه `wasFreeOrderSlot`) ولا تستهلك فتحة ثانية | عالية | ⏳ معلّق | يُختبر صراحة مع FP-7 |
 | FP-6 | **Admin UI:** إضافة toggle + حقل عدد الطلبات المجانية في `/dashboard/pricing` مع نفس أسلوب التنبيه الإرشادي في D20 (توضيح أن التعديل لا يؤثر رجعياً على من زُرع له العداد مسبقاً) | متوسطة | ⏳ معلّق | — |
 | FP-7 | **اختبارات تكامل:** (1) تزامن طلبين من نفس العميل لا يستهلكان أكثر من فتحة واحدة فعلياً، (2) استرجاع الفتحة عند الإلغاء بأنواعه، (3) صفر `LedgerEntry` عند `totalFee = 0` (توافق D53)، (4) إعادة المحاولة بنفس `createIdempotencyKey` لا تستهلك فتحة ثانية (توافق D58)، (5) انتهاء الفتحات لا يكسر إنشاء الطلب العادي | عالية | ⏳ معلّق | Zero-Trust: لا إغلاق بند دون دليل تشغيلي |
 | FP-8 | **Android UI:** شريط "متبقي لك X طلبات مجانية" في شاشة الطلب، مصدره استجابة `createOrder`/`previewFee` — لا حساب محلي | متوسطة | ⏳ معلّق | الخادم مصدر الحقيقة (قاعدة 1) — لا عدّ على العميل |
-| FP-9 | **Rollback Plan:** توثيق خطة تراجع مالية عبر `/rollback-plan` قبل الدمج | عالية | ⏳ معلّق | إلزامي لأي عملية تمس Order fees (قسم Financial Operations في AGENTS.md) |
+| FP-9 | **Rollback Plan:** توثيق خطة تراجع مالية عبر `/rollback-plan` قبل الدمج | عالية | ✅ **مُنجَز** | موثّقة في `docs/ROLLBACK_PLAN_free_orders_promo.md` بـ `9eb5ef8` |
 
 ---
 
