@@ -7,6 +7,18 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -109,13 +121,13 @@ fun AddressSetupScreen(
     val context = LocalContext.current
     @StringRes var mapLoadError by rememberSaveable { mutableStateOf<Int?>(null) }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 14.5f)
+        position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 17.0f)
     }
 
     var isInitialPositionSet by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(uiState.lat, uiState.lng, uiState.isEditMode) {
         if (!isInitialPositionSet && uiState.isEditMode) {
-            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 14.5f)
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 17.0f)
             isInitialPositionSet = true
         }
     }
@@ -177,7 +189,7 @@ fun AddressSetupScreen(
                         )
                         coroutineScope.launch {
                             cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(target, 15.0f)
+                                CameraUpdateFactory.newLatLngZoom(target, 17.0f)
                             )
                         }
                     } else {
@@ -189,7 +201,7 @@ fun AddressSetupScreen(
                                 )
                                 coroutineScope.launch {
                                     cameraPositionState.animate(
-                                        CameraUpdateFactory.newLatLngZoom(target, 15.0f)
+                                        CameraUpdateFactory.newLatLngZoom(target, 17.0f)
                                     )
                                 }
                             } else {
@@ -335,7 +347,8 @@ fun AddressSetupScreen(
                         }
                     )
 
-                    // Centered Pulsing Mint Pin Overlay (centered dynamically above bottom card)
+                    // Centered Animated Pin & Tooltip Overlay (centered dynamically above bottom card)
+                    val isMoving = cameraPositionState.isMoving
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -344,31 +357,56 @@ fun AddressSetupScreen(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                            modifier = Modifier.offset(y = (-28).dp)
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(56.dp)
+                            AnimatedVisibility(
+                                visible = !isMoving,
+                                enter = fadeIn() + slideInVertically { it / 2 },
+                                exit = fadeOut()
                             ) {
-                                // Pulse ground halo
-                                Box(
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .clip(CircleShape)
-                                        .background(ForerunGreen.copy(alpha = 0.28f))
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.LocationOn,
-                                    contentDescription = stringResource(R.string.label_selected_delivery_location),
-                                    tint = ForerunGreenDark,
-                                    modifier = Modifier.size(46.dp)
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFF2D3B4D),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.padding(bottom = 6.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.map_pin_tooltip),
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                    )
+                                }
                             }
+
+                            val pinOffsetY by animateDpAsState(
+                                targetValue = if (isMoving) (-8).dp else 0.dp,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                ),
+                                label = "pinFloat"
+                            )
+
+                            Icon(
+                                painter = painterResource(R.drawable.ic_map_pin),
+                                contentDescription = stringResource(R.string.map_pin_tooltip),
+                                tint = Color(0xFF7DDDD4),
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .offset(y = pinOffsetY)
+                            )
+
+                            val shadowAlpha by animateFloatAsState(
+                                targetValue = if (isMoving) 0.2f else 0.5f,
+                                label = "shadowAlpha"
+                            )
                             Box(
                                 modifier = Modifier
-                                    .size(10.dp, 4.dp)
+                                    .width(20.dp)
+                                    .height(4.dp)
                                     .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.25f))
+                                    .background(Color.Black.copy(alpha = shadowAlpha))
                             )
                         }
                     }

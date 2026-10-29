@@ -22,11 +22,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,11 +46,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.forerun.customer.R
 import com.forerun.customer.core.config.AppConfig
+import com.forerun.customer.core.update.ApkDownloader
+import com.forerun.customer.core.update.DownloadState
 import com.forerun.customer.core.version.AppUpdateHolder
 import com.forerun.customer.domain.model.AppVersion
 import com.forerun.customer.ui.theme.Dimens
 import com.forerun.customer.ui.theme.ForerunBackground
 import com.forerun.customer.ui.theme.ForerunBorder
+import com.forerun.customer.ui.theme.ForerunDanger
 import com.forerun.customer.ui.theme.ForerunPrimary
 import com.forerun.customer.ui.theme.ForerunPrimaryLight
 import com.forerun.customer.ui.theme.ForerunSurface
@@ -51,6 +61,7 @@ import com.forerun.customer.ui.theme.ForerunTextMuted
 import com.forerun.customer.ui.theme.ForerunTextOnPrimary
 import com.forerun.customer.ui.theme.ForerunTextPrimary
 import com.forerun.customer.ui.theme.WhatsAppGreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun UpdateRequiredScreen(
@@ -75,6 +86,8 @@ fun UpdateRequiredContent(
     }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
     val versionName = version?.latestVersionName ?: ""
 
     Column(
@@ -152,33 +165,116 @@ fun UpdateRequiredContent(
 
         Spacer(modifier = Modifier.height(Dimens.Space32))
 
-        // Download & Install Button
-        Button(
-            onClick = {
-                val url = version?.downloadUrl
-                if (!url.isNullOrBlank()) {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    try {
-                        context.startActivity(intent)
-                    } catch (_: Exception) {
-                        // Safe fallback
+        // Download & Install Action Area
+        when (val state = downloadState) {
+            is DownloadState.Idle -> {
+                Button(
+                    onClick = {
+                        val downloadUrl = version?.downloadUrl
+                        if (!downloadUrl.isNullOrBlank()) {
+                            scope.launch {
+                                ApkDownloader(context)
+                                    .downloadAndInstall(downloadUrl)
+                                    .collect { downloadState = it }
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Dimens.ButtonHeight),
+                    shape = RoundedCornerShape(Dimens.RadiusMedium),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ForerunPrimary,
+                        contentColor = ForerunTextOnPrimary
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.update_download_button),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            is DownloadState.Downloading -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Dimens.Space8),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    LinearProgressIndicator(
+                        progress = { state.progress / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(Dimens.RadiusPill)),
+                        color = ForerunPrimary,
+                        trackColor = ForerunPrimaryLight
+                    )
+                    Spacer(Modifier.height(Dimens.Space8))
+                    Text(
+                        text = stringResource(R.string.update_downloading_progress, state.progress),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ForerunTextPrimary
+                    )
+                }
+            }
+
+            is DownloadState.Installing -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Dimens.Space8),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        color = ForerunPrimary,
+                        modifier = Modifier.size(28.dp),
+                        strokeWidth = 3.dp
+                    )
+                    Spacer(Modifier.height(Dimens.Space8))
+                    Text(
+                        text = stringResource(R.string.update_installing),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ForerunTextPrimary
+                    )
+                }
+            }
+
+            is DownloadState.Failed -> {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(state.messageRes),
+                        color = ForerunDanger,
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(Dimens.Space8))
+                    Button(
+                        onClick = { downloadState = DownloadState.Idle },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Dimens.ButtonHeight),
+                        shape = RoundedCornerShape(Dimens.RadiusMedium),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ForerunPrimary,
+                            contentColor = ForerunTextOnPrimary
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.update_retry),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(Dimens.ButtonHeight),
-            shape = RoundedCornerShape(Dimens.RadiusMedium),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = ForerunPrimary,
-                contentColor = ForerunTextOnPrimary
-            )
-        ) {
-            Text(
-                text = stringResource(R.string.update_download_button),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            }
         }
 
         Spacer(modifier = Modifier.height(Dimens.Space12))
