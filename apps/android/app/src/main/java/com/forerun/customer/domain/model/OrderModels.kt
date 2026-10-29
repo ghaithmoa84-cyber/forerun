@@ -15,7 +15,10 @@ data class CreatedOrder(
     val orderNumber: String,
     val status: String,
     val totalFee: Int,
-    val feeNote: String
+    val feeNote: String,
+    val isFreeOrder: Boolean = false,
+    val freeOrdersRemaining: Int = 0,
+    val wasFreeOrderSlot: Boolean = false
 )
 
 data class RunnerInfo(

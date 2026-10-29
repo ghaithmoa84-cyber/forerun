@@ -10,5 +10,6 @@ data class CustomerProfile(
     val status: UserStatus,
     val completedOrders: Int,
     val totalFeesPaid: Int,
-    val createdAt: Instant? = null
+    val createdAt: Instant? = null,
+    val freeOrdersRemaining: Int = 0
 )

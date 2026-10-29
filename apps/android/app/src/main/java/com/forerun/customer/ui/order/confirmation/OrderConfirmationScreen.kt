@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Button
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.forerun.customer.R
 import com.forerun.customer.ui.theme.Dimens
 import com.forerun.customer.ui.theme.ForerunGreen
+import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSuccess
@@ -180,41 +182,79 @@ fun OrderConfirmationScreen(
                             fontSize = 14.sp,
                             color = ForerunTextMuted
                         )
-                        Text(
-                            text = stringResource(R.string.order_confirmation_fee_value, estimatedFee),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ForerunTextPrimary
-                        )
+                        if (estimatedFee == 0) {
+                            Text(
+                                text = stringResource(R.string.order_confirmation_fee_free),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunGreen
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.order_confirmation_fee_value, estimatedFee),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunTextPrimary
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(Dimens.Space12))
 
                     // Fee Note Box
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(Dimens.RadiusMedium))
-                            .background(Color(0xFFFFF8E1))
-                            .padding(Dimens.Space12)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                    if (estimatedFee == 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(Dimens.RadiusMedium))
+                                .background(ForerunGreenLight)
+                                .padding(Dimens.Space12)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = ForerunWarning,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(Dimens.Space8))
-                            Text(
-                                text = stringResource(R.string.order_confirmation_fee_note),
-                                fontSize = 12.sp,
-                                color = Color(0xFFB78103),
-                                fontWeight = FontWeight.Medium
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = ForerunGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(Dimens.Space8))
+                                Text(
+                                    text = stringResource(R.string.order_confirmation_free_slot_applied),
+                                    fontSize = 12.sp,
+                                    color = ForerunGreenDark,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(Dimens.RadiusMedium))
+                                .background(Color(0xFFFFF8E1))
+                                .padding(Dimens.Space12)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = ForerunWarning,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(Dimens.Space8))
+                                Text(
+                                    text = stringResource(R.string.order_confirmation_fee_note),
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFB78103),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -266,6 +267,13 @@ fun CreateOrderScreen(
             contentPadding = PaddingValues(Dimens.Space16),
             verticalArrangement = Arrangement.spacedBy(Dimens.Space16)
         ) {
+            // 0. Free Orders Promo Banner
+            if (uiState.freeOrdersRemaining > 0) {
+                item {
+                    FreeOrdersPromoBanner(freeOrdersRemaining = uiState.freeOrdersRemaining)
+                }
+            }
+
             // 1. Dual Mode Switcher Tabs
             item {
                 OrderModeTabs(
@@ -847,6 +855,73 @@ private fun StructuredOrderItemCard(
                         focusedLabelColor = ForerunGreenDark,
                         cursorColor = ForerunGreenDark
                     )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FreeOrdersPromoBanner(
+    freeOrdersRemaining: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Dimens.RadiusMedium),
+        colors = CardDefaults.cardColors(
+            containerColor = ForerunGreenLight
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.Space12),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(ForerunGreen),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = ForerunTextOnPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(Dimens.RadiusPill))
+                        .background(ForerunGreen)
+                        .padding(horizontal = Dimens.Space8, vertical = Dimens.Space2)
+                ) {
+                    Text(
+                        text = stringResource(R.string.free_orders_promo_badge),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ForerunTextOnPrimary
+                    )
+                }
+                Spacer(modifier = Modifier.height(Dimens.Space4))
+                Text(
+                    text = if (freeOrdersRemaining == 1) {
+                        stringResource(R.string.free_orders_promo_banner_single)
+                    } else {
+                        stringResource(R.string.free_orders_promo_banner_plural, freeOrdersRemaining)
+                    },
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ForerunGreenDark
                 )
             }
         }

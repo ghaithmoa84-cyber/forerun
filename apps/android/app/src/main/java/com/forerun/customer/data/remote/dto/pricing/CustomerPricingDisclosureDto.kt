@@ -7,5 +7,6 @@ import com.squareup.moshi.JsonClass
 data class CustomerPricingDisclosureDto(
     @Json(name = "baseFee") val baseFee: Int = 0,
     @Json(name = "extraStoreFee") val extraStoreFee: Int = 0,
-    @Json(name = "peripheralFee") val peripheralFee: Int = 0
+    @Json(name = "peripheralFee") val peripheralFee: Int = 0,
+    @Json(name = "freeOrdersPromoEnabled") val freeOrdersPromoEnabled: Boolean = false
 )

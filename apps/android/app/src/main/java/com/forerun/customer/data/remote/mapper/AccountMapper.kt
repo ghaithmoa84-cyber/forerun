@@ -17,7 +17,8 @@ object AccountMapper {
         status = UserStatus.fromString(status),
         completedOrders = completedOrders,
         totalFeesPaid = totalFeesPaid,
-        createdAt = parseCreatedAt(createdAt)
+        createdAt = parseCreatedAt(createdAt),
+        freeOrdersRemaining = freeOrdersRemaining
     )
 
     // The API contract does not guarantee the timestamp shape. An unparseable

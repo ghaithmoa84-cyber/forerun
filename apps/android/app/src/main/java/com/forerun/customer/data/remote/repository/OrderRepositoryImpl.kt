@@ -31,7 +31,8 @@ class OrderRepositoryImpl @Inject constructor(
                     PricingDisclosure(
                         baseFee = dto.baseFee,
                         extraStoreFee = dto.extraStoreFee,
-                        peripheralFee = dto.peripheralFee
+                        peripheralFee = dto.peripheralFee,
+                        freeOrdersPromoEnabled = dto.freeOrdersPromoEnabled
                     )
                 )
             }
@@ -78,7 +79,10 @@ class OrderRepositoryImpl @Inject constructor(
                         orderNumber = data.orderNumber,
                         status = data.status,
                         totalFee = data.estimatedFee.totalFee,
-                        feeNote = data.estimatedFee.note
+                        feeNote = data.estimatedFee.note,
+                        isFreeOrder = data.estimatedFee.isFreeOrder,
+                        freeOrdersRemaining = data.estimatedFee.freeOrdersRemaining,
+                        wasFreeOrderSlot = data.wasFreeOrderSlot
                     )
                 )
             }

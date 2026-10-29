@@ -1,13 +1,16 @@
 package com.forerun.customer.ui.order.create
 
 import com.forerun.customer.R
+import com.forerun.customer.data.FakeAccountRepository
 import com.forerun.customer.data.FakeAddressRepository
 import com.forerun.customer.data.FakeOrderRepository
+import com.forerun.customer.domain.model.CreatedOrder
 import com.forerun.customer.domain.model.CustomerAddress
 import com.forerun.customer.domain.repository.AddressResult
 import com.forerun.customer.domain.usecase.CreateOrderUseCase
 import com.forerun.customer.domain.usecase.GetAvailableRunnersUseCase
 import com.forerun.customer.domain.usecase.GetCustomerAddressUseCase
+import com.forerun.customer.domain.usecase.account.GetAccountProfileUseCase
 import com.forerun.customer.domain.usecase.order.GetPricingDisclosureUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,6 +42,8 @@ class CreateOrderViewModelTest {
     private lateinit var getCustomerAddressUseCase: GetCustomerAddressUseCase
     private lateinit var getAvailableRunnersUseCase: GetAvailableRunnersUseCase
     private lateinit var getPricingDisclosureUseCase: GetPricingDisclosureUseCase
+    private lateinit var fakeAccountRepository: FakeAccountRepository
+    private lateinit var getAccountProfileUseCase: GetAccountProfileUseCase
 
     @Before
     fun setUp() {
@@ -49,6 +54,8 @@ class CreateOrderViewModelTest {
         getCustomerAddressUseCase = GetCustomerAddressUseCase(fakeAddressRepository)
         getAvailableRunnersUseCase = GetAvailableRunnersUseCase(fakeOrderRepository)
         getPricingDisclosureUseCase = GetPricingDisclosureUseCase(fakeOrderRepository)
+        fakeAccountRepository = FakeAccountRepository()
+        getAccountProfileUseCase = GetAccountProfileUseCase(fakeAccountRepository)
     }
 
     private fun createViewModel(): CreateOrderViewModel {
@@ -57,6 +64,7 @@ class CreateOrderViewModelTest {
             getCustomerAddressUseCase,
             getAvailableRunnersUseCase,
             getPricingDisclosureUseCase,
+            getAccountProfileUseCase,
             ApplicationProvider.getApplicationContext()
         )
     }
@@ -647,5 +655,50 @@ class CreateOrderViewModelTest {
         // User explicitly abandons order (back button / dismiss screen)
         viewModel.onIntent(CreateOrderIntent.AbandonOrder)
         assertNull(viewModel.activeIdempotencyKey)
+    }
+
+    @Test
+    fun loadInitialData_withFreeOrdersRemaining_setsState() = runTest(testDispatcher) {
+        fakeAccountRepository.profile = fakeAccountRepository.profile.copy(freeOrdersRemaining = 3)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertEquals(3, viewModel.uiState.value.freeOrdersRemaining)
+    }
+
+    @Test
+    fun submitOrder_updatesFreeOrdersRemainingFromCreatedOrder() = runTest(testDispatcher) {
+        fakeAccountRepository.profile = fakeAccountRepository.profile.copy(freeOrdersRemaining = 3)
+        fakeAddressRepository.getAddressResult = AddressResult.Success(
+            CustomerAddress(lat = 35.55, lng = 35.80, description = "بسنادا")
+        )
+        fakeOrderRepository.createOrderResult = Result.success(
+            CreatedOrder(
+                id = "order_promo_1",
+                orderNumber = "FW-000100",
+                status = "PENDING_REVIEW",
+                totalFee = 0,
+                feeNote = "عرض ترويجي",
+                isFreeOrder = true,
+                freeOrdersRemaining = 2,
+                wasFreeOrderSlot = true
+            )
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.SetInputMode(OrderInputMode.QUICK))
+        viewModel.onIntent(CreateOrderIntent.UpdateQuickText("خبز حليب"))
+        viewModel.onIntent(CreateOrderIntent.SubmitOrder)
+        advanceUntilIdle()
+
+        viewModel.onIntent(CreateOrderIntent.ConfirmOrderSubmit)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.freeOrdersRemaining)
+        assertEquals(0, state.createdOrder?.totalFee)
+        assertTrue(state.createdOrder?.isFreeOrder == true)
+        assertTrue(state.createdOrder?.wasFreeOrderSlot == true)
     }
 }

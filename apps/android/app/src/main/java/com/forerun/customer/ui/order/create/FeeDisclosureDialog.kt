@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -112,6 +113,35 @@ fun FeeDisclosureDialog(
                             fontSize = 12.sp,
                             color = ForerunTextMuted
                         )
+                    }
+                }
+
+                if (pricing?.freeOrdersPromoEnabled == true) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(Dimens.RadiusMedium))
+                            .background(ForerunMintLight)
+                            .padding(Dimens.Space12)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.Space8),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = ForerunMintDark,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.fee_disclosure_free_promo_item),
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ForerunMintDark
+                            )
+                        }
                     }
                 }
 

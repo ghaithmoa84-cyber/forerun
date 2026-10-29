@@ -556,4 +556,12 @@
     <string name="update_optional_banner_btn">تحديث الآن</string>
     <string name="update_optional_banner_dismiss">تذكيري لاحقاً</string>
     <string name="map_pin_tooltip">موقع التوصيل المحدد</string>
+
+    <!-- Free Orders Promotion Strings -->
+    <string name="free_orders_promo_banner_single">لديك طلب مجاني واحد متبقٍ! توصيل هذا الطلب مجاناً (0 ل.س).</string>
+    <string name="free_orders_promo_banner_plural">لديك %1$d طلبات مجانية متبقية! توصيل هذا الطلب مجاناً (0 ل.س).</string>
+    <string name="free_orders_promo_badge">عرض ترويجي • توصيل مجاني</string>
+    <string name="order_confirmation_fee_free">مجاناً (0 ل.س)</string>
+    <string name="order_confirmation_free_slot_applied">تم تطبيق عرض الطلبات المجانية على طلبك بنجاح!</string>
+    <string name="fee_disclosure_free_promo_item">عرض خاص للمستخدمين الجدد: توصيل مجاني بالكامل (0 ل.س)!</string>
 </resources>
