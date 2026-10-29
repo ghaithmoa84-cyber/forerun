@@ -216,6 +216,8 @@ describe('Admin Pricing Endpoints Integration (Sprint 6A-7)', () => {
         customFee: 50,
         customFeeReason: 'طرد ثقيل ومعقد',
         totalFee: 170,
+        isFreeOrder: false,
+        freeOrdersRemaining: 0,
       });
 
       // 3. Verify order in DB was NOT modified at all

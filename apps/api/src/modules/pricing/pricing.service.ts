@@ -118,6 +118,13 @@ export class PricingService {
         orderStores: {
           select: { id: true },
         },
+        customer: {
+          include: {
+            user: {
+              select: { freeOrdersRemaining: true },
+            },
+          },
+        },
       },
     });
 
@@ -183,15 +190,21 @@ export class PricingService {
       { ...pricingConfig, baseFee: effectiveBaseFee },
     );
 
+    const isEligibleForFree =
+      Boolean(order.wasFreeOrderSlot) ||
+      (Boolean(pricingConfig.freeOrdersPromoEnabled) &&
+        (order.customer?.user?.freeOrdersRemaining ?? 0) > 0);
+    const totalFee = isEligibleForFree ? 0 : feeResult.totalFee;
+
     return {
       baseFee: feeResult.baseFee,
       peripheralFee: feeResult.peripheralFee,
       extraStoresFee: feeResult.extraStoresFee,
       customFee,
       customFeeReason: dto.customFeeReason ?? null,
-      totalFee: feeResult.totalFee,
-      isFreeOrder: false,
-      freeOrdersRemaining: 0,
+      totalFee,
+      isFreeOrder: isEligibleForFree,
+      freeOrdersRemaining: order.customer?.user?.freeOrdersRemaining ?? 0,
     };
   }
 
@@ -542,7 +555,8 @@ export class PricingService {
     const extraStoresFee =
       Math.max(0, purchasedStoreCount - 1) * effectiveConfig.extraStoreFee;
 
-    const totalFee = baseFee + peripheralFee + extraStoresFee + customFee;
+    const calculatedTotal = baseFee + peripheralFee + extraStoresFee + customFee;
+    const totalFee = order.wasFreeOrderSlot ? 0 : calculatedTotal;
 
     const newFee: FeeResult = {
       baseFee,

@@ -145,6 +145,7 @@ export class CustomerOrdersService {
       userId: string;
       dto: CreateOrderRequest;
       fee: FeeResult;
+      wasFreeOrderSlot?: boolean;
       orderStoresData: Array<{
         storeName: string;
         isAnyStore: boolean;
@@ -190,6 +191,7 @@ export class CustomerOrdersService {
         peripheralFee: fee.peripheralFee,
         extraStoresFee: fee.extraStoresFee,
         totalFee: fee.totalFee,
+        wasFreeOrderSlot: params.wasFreeOrderSlot ?? false,
         createIdempotencyKey: dto.idempotencyKey ?? null,
       },
     });
@@ -401,15 +403,63 @@ export class CustomerOrdersService {
       // D22: الحساب يتم داخل الـ transaction لتطابق اللقطة مع صف الإعدادات لحظة الإيداع
       const result = await this.prisma.$transaction(
         async (tx) => {
-          const fee = await this.calculateOrderFee(tx, orderStoresData.length);
+          const pricingConfig = await this.pricingService.getPricingConfig(tx);
+          const fee = this.pricingService.calculateFee(
+            {
+              isPeripheral: false,
+              purchasedStoreCount: orderStoresData.length,
+            },
+            pricingConfig,
+          );
+
+          let wasFreeOrderSlot = false;
+          let effectiveTotalFee = fee.totalFee;
+
+          if (
+            pricingConfig.freeOrdersPromoEnabled &&
+            (customer.user?.freeOrdersRemaining ?? 0) > 0
+          ) {
+            const promoDeduct = await tx.user.updateMany({
+              where: { id: userId, freeOrdersRemaining: { gt: 0 } },
+              data: { freeOrdersRemaining: { decrement: 1 } },
+            });
+
+            if (promoDeduct.count === 1) {
+              wasFreeOrderSlot = true;
+              effectiveTotalFee = 0;
+            }
+          }
+
           const order = await this.createOrderRecord(tx, {
             customerId: customer.id,
             userId,
             dto,
-            fee,
+            fee: {
+              ...fee,
+              totalFee: effectiveTotalFee,
+            },
+            wasFreeOrderSlot,
             orderStoresData,
           });
-          return { order, fee };
+
+          if (wasFreeOrderSlot) {
+            await this.auditService.log(
+              {
+                orderId: order.id,
+                actorId: userId,
+                actorRole: 'CUSTOMER',
+                event: 'ORDER_FREE_PROMO_APPLIED',
+                meta: {
+                  orderId: order.id,
+                  originalTotalFee: fee.totalFee,
+                  savedAmount: fee.totalFee,
+                },
+              },
+              tx,
+            );
+          }
+
+          return { order, fee: { ...fee, totalFee: effectiveTotalFee }, wasFreeOrderSlot };
         },
         { timeout: CONFIG.TRANSACTION_TIMEOUT_MS },
       );
@@ -763,6 +813,28 @@ export class CustomerOrdersService {
           if (runnerUpdated.count === 0) {
             throw new ConflictException('CONCURRENT_RUNNER_STATE_CHANGE');
           }
+        }
+
+        if (order.wasFreeOrderSlot) {
+          await tx.user.update({
+            where: { id: order.customer.userId },
+            data: { freeOrdersRemaining: { increment: 1 } },
+          });
+
+          await this.auditService.log(
+            {
+              orderId: order.id,
+              actorId: userId,
+              actorRole: 'CUSTOMER',
+              event: 'ORDER_FREE_PROMO_RESTORED',
+              meta: {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                reason: 'CUSTOMER_CANCELLED',
+              },
+            },
+            tx,
+          );
         }
 
         await this.auditService.log(

@@ -569,6 +569,28 @@ export class AdminOrderCommandService {
           where: { id: order.id },
         });
 
+        if (order.wasFreeOrderSlot) {
+          await tx.user.update({
+            where: { id: order.customer.userId },
+            data: { freeOrdersRemaining: { increment: 1 } },
+          });
+
+          await this.auditService.log(
+            {
+              orderId: order.id,
+              actorId: adminId,
+              actorRole: 'ADMIN',
+              event: 'ORDER_FREE_PROMO_RESTORED',
+              meta: {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                reason: 'ADMIN_REJECTED',
+              },
+            },
+            tx,
+          );
+        }
+
         await this.auditService.log(
           {
             orderId: order.id,
@@ -1127,6 +1149,28 @@ export class AdminOrderCommandService {
             throw new ConflictException('CONCURRENT_RUNNER_STATE_CHANGE');
           }
           runnerToNotifyUserId = order.runner.userId;
+        }
+
+        if (order.wasFreeOrderSlot) {
+          await tx.user.update({
+            where: { id: order.customer.userId },
+            data: { freeOrdersRemaining: { increment: 1 } },
+          });
+
+          await this.auditService.log(
+            {
+              orderId: order.id,
+              actorId: adminId,
+              actorRole: 'ADMIN',
+              event: 'ORDER_FREE_PROMO_RESTORED',
+              meta: {
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                reason: 'ADMIN_FORCE_CANCELLED',
+              },
+            },
+            tx,
+          );
         }
 
         await this.auditService.log(

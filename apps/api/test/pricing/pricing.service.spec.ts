@@ -895,7 +895,16 @@ describe('PricingService', () => {
       expect(result.totalFee).toBe(100);
       expect(prisma.order.findUnique).toHaveBeenCalledWith({
         where: { id: 'ord-prev-deleted' },
-        include: { orderStores: { select: { id: true } } },
+        include: {
+          orderStores: { select: { id: true } },
+          customer: {
+            include: {
+              user: {
+                select: { freeOrdersRemaining: true },
+              },
+            },
+          },
+        },
       });
     });
 
