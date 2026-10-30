@@ -8,7 +8,7 @@ vi.mock('bcrypt', () => ({
 }));
 
 import { AuthService } from '../../src/modules/auth/auth.service.js';
-import { CONFIG, LOGIN_LOCKED_MESSAGE, ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
+import { LOGIN_LOCKED_MESSAGE, ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
 import type { PrismaService } from '../../src/database/prisma.service.js';
 import type { JwtService } from '@nestjs/jwt';
 import type { AuditService } from '../../src/modules/audit/audit.service.js';
@@ -16,14 +16,38 @@ import type { NotificationsService } from '../../src/modules/notifications/notif
 import type { TelegramService } from '../../src/modules/notifications/telegram.service.js';
 import type { PricingService } from '../../src/modules/pricing/pricing.service.js';
 
+interface MockPrisma {
+  user: {
+    findUnique: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
+  };
+  refreshToken: {
+    create: ReturnType<typeof vi.fn>;
+  };
+  $transaction: (cb: (tx: MockPrisma) => Promise<unknown>) => Promise<unknown>;
+}
+
+interface MockJwt {
+  sign: ReturnType<typeof vi.fn>;
+}
+
+interface MockAudit {
+  log: ReturnType<typeof vi.fn>;
+}
+
+interface MockTelegram {
+  sendMessage: ReturnType<typeof vi.fn>;
+}
+
 describe('AuthService - Login Lockout Unit Tests (BF-2)', () => {
   let authService: AuthService;
-  let mockPrisma: any;
-  let mockJwt: any;
-  let mockAudit: any;
-  let mockNotifications: any;
-  let mockTelegram: any;
-  let mockPricing: any;
+  let mockPrisma: MockPrisma;
+  let mockJwt: MockJwt;
+  let mockAudit: MockAudit;
+  let mockNotifications: Record<string, unknown>;
+  let mockTelegram: MockTelegram;
+  let mockPricing: Record<string, unknown>;
 
   const mockUser = {
     id: 'user-123',
@@ -49,7 +73,7 @@ describe('AuthService - Login Lockout Unit Tests (BF-2)', () => {
       refreshToken: {
         create: vi.fn().mockResolvedValue({}),
       },
-      $transaction: vi.fn(async (cb: (tx: any) => Promise<any>) => {
+      $transaction: vi.fn(async (cb: (tx: MockPrisma) => Promise<unknown>) => {
         return cb(mockPrisma);
       }),
     };
