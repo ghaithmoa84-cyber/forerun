@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -72,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -103,11 +106,14 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
 
 private const val TAG = "AddressSetupScreen"
+private const val VILLAGE_HOUSE_ZOOM = 18.5f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,14 +126,22 @@ fun AddressSetupScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     @StringRes var mapLoadError by rememberSaveable { mutableStateOf<Int?>(null) }
+    val mapStyleOptions = remember(context) {
+        try {
+            MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_village)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load custom village map style", e)
+            null
+        }
+    }
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 17.0f)
+        position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), VILLAGE_HOUSE_ZOOM)
     }
 
     var isInitialPositionSet by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(uiState.lat, uiState.lng, uiState.isEditMode) {
         if (!isInitialPositionSet && uiState.isEditMode) {
-            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), 17.0f)
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), VILLAGE_HOUSE_ZOOM)
             isInitialPositionSet = true
         }
     }
@@ -189,7 +203,7 @@ fun AddressSetupScreen(
                         )
                         coroutineScope.launch {
                             cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(target, 17.0f)
+                                CameraUpdateFactory.newLatLngZoom(target, VILLAGE_HOUSE_ZOOM)
                             )
                         }
                     } else {
@@ -201,7 +215,7 @@ fun AddressSetupScreen(
                                 )
                                 coroutineScope.launch {
                                     cameraPositionState.animate(
-                                        CameraUpdateFactory.newLatLngZoom(target, 17.0f)
+                                        CameraUpdateFactory.newLatLngZoom(target, VILLAGE_HOUSE_ZOOM)
                                     )
                                 }
                             } else {
@@ -334,6 +348,12 @@ fun AddressSetupScreen(
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
+                        properties = remember(mapStyleOptions) {
+                            MapProperties(
+                                isBuildingEnabled = true,
+                                mapStyleOptions = mapStyleOptions
+                            )
+                        },
                         uiSettings = remember {
                             MapUiSettings(
                                 compassEnabled = false,
@@ -347,7 +367,7 @@ fun AddressSetupScreen(
                         }
                     )
 
-                    // Centered Animated Pin & Tooltip Overlay (centered dynamically above bottom card)
+                    // Centered Animated Precision Pin & Ground Target Overlay (centered dynamically above bottom card)
                     val isMoving = cameraPositionState.isMoving
                     Box(
                         modifier = Modifier
@@ -355,9 +375,49 @@ fun AddressSetupScreen(
                             .padding(bottom = pinBottomPadding),
                         contentAlignment = Alignment.Center
                     ) {
+                        // Ground Target Dot & Pulse Ring (always anchored at the exact center target point)
+                        val groundPulseAlpha by animateFloatAsState(
+                            targetValue = if (isMoving) 0.85f else 0.4f,
+                            label = "groundPulseAlpha"
+                        )
+                        val groundPulseScale by animateFloatAsState(
+                            targetValue = if (isMoving) 1.25f else 1.0f,
+                            label = "groundPulseScale"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .graphicsLayer {
+                                    scaleX = groundPulseScale
+                                    scaleY = groundPulseScale
+                                }
+                                .clip(CircleShape)
+                                .background(ForerunOrange.copy(alpha = groundPulseAlpha * 0.25f))
+                                .border(1.5.dp, ForerunOrange.copy(alpha = groundPulseAlpha), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(4.dp)
+                                    .clip(CircleShape)
+                                    .background(ForerunOrange)
+                            )
+                        }
+
+                        // Precision Needle Pin & Tooltip (lift up on drag, land on drop)
+                        val pinFloatOffset by animateDpAsState(
+                            targetValue = if (isMoving) (-14).dp else 0.dp,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            ),
+                            label = "pinFloat"
+                        )
+
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.offset(y = (-28).dp)
+                            modifier = Modifier.offset(y = (-26).dp + pinFloatOffset)
                         ) {
                             AnimatedVisibility(
                                 visible = !isMoving,
@@ -366,7 +426,7 @@ fun AddressSetupScreen(
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFF2D3B4D),
+                                    color = Color(0xFF1E293B),
                                     shadowElevation = 4.dp,
                                     modifier = Modifier.padding(bottom = 6.dp)
                                 ) {
@@ -379,40 +439,17 @@ fun AddressSetupScreen(
                                 }
                             }
 
-                            val pinOffsetY by animateDpAsState(
-                                targetValue = if (isMoving) (-8).dp else 0.dp,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMedium
-                                ),
-                                label = "pinFloat"
-                            )
-
                             Icon(
-                                painter = painterResource(R.drawable.ic_map_pin),
+                                painter = painterResource(R.drawable.ic_precision_pin),
                                 contentDescription = stringResource(R.string.map_pin_tooltip),
-                                tint = Color(0xFF7DDDD4),
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .offset(y = pinOffsetY)
-                            )
-
-                            val shadowAlpha by animateFloatAsState(
-                                targetValue = if (isMoving) 0.2f else 0.5f,
-                                label = "shadowAlpha"
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(20.dp)
-                                    .height(4.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = shadowAlpha))
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(width = 40.dp, height = 54.dp)
                             )
                         }
                     }
 
-                    // Floating GPS Button
-                    FloatingActionButton(
+                    // Floating "موقعي الحالي" Pill Button (Explicit Arabic Text + GPS Icon)
+                    Surface(
                         onClick = {
                             val fineCheck = ContextCompat.checkSelfPermission(
                                 context,
@@ -435,25 +472,39 @@ fun AddressSetupScreen(
                                 )
                             }
                         },
-                        containerColor = ForerunSurface,
-                        contentColor = ForerunGreen,
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.White,
+                        shadowElevation = 6.dp,
+                        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(Dimens.Space16)
-                            .size(48.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Place,
-                            contentDescription = stringResource(R.string.address_current_location),
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.Space6),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = null,
+                                tint = Color(0xFF0284C7),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.address_current_location),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = Color(0xFF1E293B)
+                            )
+                        }
                     }
 
-                    // Floating Coordinates Badge
+                    // Floating Coordinates Badge (Positioned at TopStart to avoid overlap with location button)
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = Dimens.Space16)
+                            .align(Alignment.TopStart)
+                            .padding(Dimens.Space16)
                             .clip(RoundedCornerShape(Dimens.RadiusPill))
                             .background(ForerunSurface.copy(alpha = 0.92f))
                             .border(1.dp, ForerunBorder, RoundedCornerShape(Dimens.RadiusPill))
