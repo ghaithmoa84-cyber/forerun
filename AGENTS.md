@@ -98,6 +98,12 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 - التوثيق في docs/android/ قبل أي sprint جديد
 - فروع العمل المعلقة (Dangling Branches): أي فرع عمل يبقى مفتوحاً لأكثر من بضعة أيام دون دمج يجب تسجيله صراحة في NEXT_TASKS.md كـ "عمل معلّق بانتظار الدمج" لتجنب نسيانه أو تفرّع فروع لاحقة من كود قديم (القرار D36 و D37).
 
+### قاعدة إلزامية — ترتيب النشر لتفادي نافذة خطر Schema Drift الحية (منذ حادثة 2026-10-29)
+- `git push origin master` يُفعّل تلقائياً بناء ونشر حاوية API جديدة على Railway، بينما `prisma migrate deploy` خطوة يدوية منفصلة بعدها — هذا يخلق نافذة زمنية حقيقية يمكن أن تستقبل فيها الحاوية الجديدة حركة مرور إنتاجية حقيقية بقاعدة بيانات لا تزال بالمخطط القديم، مسبباً أعطالاً فعلية (`PrismaClientKnownRequestError: column does not exist`) لمستخدمين حقيقيين.
+- **الإلزام:** لأي migration تضيف أعمدة/جداول جديدة فقط (بقيم `DEFAULT` آمنة، بلا حذف أو تعديل لأعمدة قائمة) — نفّذ `prisma migrate deploy` يدوياً من Railway Console **قبل** `git push origin master`، لا بعده. هذا الترتيب آمن تماماً لأن الكود القديم لا يطلب الأعمدة الجديدة فيستمر بالعمل عادياً حتى يصل الكود الجديد.
+- لأي migration تحذف أو تُعدّل أعمدة/جداول موجودة — الترتيب يبقى معكوساً (نشر كود متوافق خلفياً أولاً، ثم migration) تفادياً لكسر الكود القديم الذي لا يزال يعمل أثناء الانتقال؛ راجع `docs/ROLLBACK_PLAN_*` ذي الصلة لكل حالة تحديداً.
+- بعد أي `prisma migrate deploy` — تحقق فوراً عبر اختبار دخان حي (`login`/`refresh`) للتأكد من عدم وجود نافذة أعطال، ولا تعتبر النشر مكتملاً إلا بعد هذا التحقق.
+
 ### Security Rules
 - No hardcoded secrets
 - Authorization on every endpoint
@@ -133,5 +139,6 @@ Active in `.agents/skills/`:
 - pnpm test — Run all tests
 - pnpm db:generate — Generate Prisma client
 - pnpm db:push — ⚠️ EMERGENCY ONLY — pushes schema to DB directly without a migration; causes schema drift. Use `prisma migrate deploy` instead.
-- node scripts/diff-schema.js — Detect schema drift against the live production DB
+- cd apps/api && npx prisma migrate status — Check migration & schema status (Production Railway Console & Local)
+- node scripts/diff-schema.js — Detect schema drift against DB (Local dev environment only; not copied in production Dockerfile)
 - docs/runbook-schema-drift.md — Runbook for schema drift diagnosis

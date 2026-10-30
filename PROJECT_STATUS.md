@@ -38,9 +38,9 @@
 | الحقيقة | الحالة |
 |---|---|
 | منصة الإنتاج وقاعدة البيانات | **Railway** — وليس Supabase |
-| Schema Drift | **0**، آخر فحص: **2026-10-28** (تأكيد خلو الانحراف عبر `Database schema is up to date!`) |
-| سجل `_prisma_migrations` (في الكود) | **12 migrations** في دورة الإنتاج النشطة (17 migration إجمالاً في prisma/migrations) |
-| Migration الحالية في إنتاج Railway | **12 migrations** مُطبَّقة بنجاح 100% (17 إجمالاً، آخرها `20261026120000_add_create_idempotency_key_to_order`) |
+| Schema Drift | **0**، آخر فحص: **2026-10-30** (تأكيد خلو الانحراف عبر `Database schema is up to date!` بواسطة `npx prisma migrate status`) |
+| سجل `_prisma_migrations` (في الكود) | **13 migrations** في دورة الإنتاج النشطة (18 migration إجمالاً في prisma/migrations) |
+| Migration الحالية في إنتاج Railway | **13 migrations** مُطبَّقة بنجاح 100% (18 إجمالاً، آخرها `20261029170000_add_free_orders_promo`) |
 | آلية نشر الـ migrations | `prisma migrate deploy` يُنفَّذ يدويًا من Railway Console؛ لا يوجد auto-migrate في Dockerfile |
 
 ### 1.2 إصدارات وإصلاحات مكتملة — 2026-09-23
@@ -193,12 +193,14 @@ node -e 'const{PrismaClient}=require("@prisma/client");const p=new PrismaClient(
 # قائمة Runners
 node -e 'const{PrismaClient}=require("@prisma/client");const p=new PrismaClient();p.runner.findMany().then(r=>console.log(JSON.stringify(r,null,2))).finally(()=>p.$disconnect());'
 
-# حالة الـ migrations
-pnpm exec prisma migrate status
+# حالة الـ migrations وتطابق المخطط (المرجع المعتمد لفحص الإنتاج)
+npx prisma migrate status
 
 # تطبيق migrations جديدة
-pnpm exec prisma migrate deploy
+npx prisma migrate deploy
 ```
+
+> ⚠️ **ملاحظة تشخيصية لفحص الإنتاج:** أداة `npx prisma migrate status` (تُنفّذ بعد `cd /app/apps/api` في Railway Console) هي المرجع الحي المعتمد للتأكد من تطابق المخطط وعدم وجود Schema Drift في الإنتاج (`Database schema is up to date!`). أما سكربت `node scripts/diff-schema.js` فهو يعمل في بيئة التطوير المحلية فقط (الملف غير منسوخ ضمن `Dockerfile` لحاوية الإنتاج، ومحاولة تشغيله داخل الحاوية تعطي `MODULE_NOT_FOUND`).
 
 ### التحقق من CORS
 ```bash
@@ -371,10 +373,11 @@ fawrun/
 | 2026-10-29 | اكتمال نافذتي الصيانة (migrations × 4 + CORS الدومينات الرسمية) · تشغيل حزمة اختبارات الحمل والتزامن (5 سيناريوهات) على الإنتاج: 0 أخطاء 500، p50=315ms، حراسات التزامن والـ Idempotency ناجحة 100%، حد WebSocket المتزامن مرتبط بباقة Railway Hobby (26/50) لا بالكود · تنظيف 61 حساباً و16 طلباً تجريبياً · إغلاق المنفذ العام لقاعدة البيانات |
 | 2026-10-29 | إصدار حزمة Android Release الموقعة v0.1.3 (versionCode: 4) متضمنة تحسينات D57 و D58 (إعادة الاتصال بالشبكة، مزامنة الطلبات بالـ WebSocket، ومفتاح عدم التكرار)، وتفعيل التحميل المباشر الفعلي لملف `forerun.apk` من النطاق الموثوق `https://faow.run/forerun.apk` في صفحة الهبوط `apps/landing-page` مع إثبات توقيع v2 عبر apksigner. |
 | 2026-10-29 | القراران **D60 و D61** — دمج الفرع `feature/admin-support-ops` في `master` بـ `0e4fe1b` عبر `git merge --no-ff`: إضافة إعادة تعيين كلمة المرور إدارياً وإلغاء الجلسات النشطة، والحذف المنطقي المشروط (Soft Delete) مع موانع 409 للعميل والمندوب والتسويات، وواجهات التحكم الإدارية بالتعريب الكامل، واجتياز البوابة الرباعية بنجاح 100% (533 وحدة + 158 تكامل). |
-| 2026-10-29 | **نشر الإنتاج بنجاح (D59)**: دفع الكود إلى `origin/master` (`4e892a5`)، تطبيق migration `20261029170000_add_free_orders_promo` بنجاح على قاعدة بيانات Railway، تأكيد تطابق المخطط (18 migrations · Schema up to date)، تأكيد تفعيل حارس الإنتاج (`freeOrdersPromoEnabled = false` و `freeOrdersCount = 3` في صف `default`)، ونجاح اختبارات الدخان الحية (API Health HTTP 200 · CORS HTTP 204 على نطاق `admin.faow.run` · و Vercel Admin Web بنجاح). <br>⚠️ **ملاحظة إجرائية:** عند تطبيق migration `20261029170000_add_free_orders_promo`، لم يُنفَّذ فحص بيانات المستخدمين المسبق المطلوب في تدفق العمل قبل تطبيق الهجرة، بل بعدها. البيانات الحالية في قاعدة الإنتاج (تاريخ 2026-10-29) هي حسابات اختبار أنشأها المالك وأصدقاؤه للتجريب الداخلي وليست عملاء حقيقيين من السوق — لذا لم يترتب ضرر فعلي، لكن هذا يُسجَّل كدرس إجرائي: فحص بيانات المستخدمين يجب أن يسبق أي `prisma migrate deploy` دون استثناء، بصرف النظر عن تقييم الخطر مسبقاً، تماشياً مع D34. |
+| 2026-10-29 | **نشر الإنتاج بنجاح (D59)**: دفع الكود إلى `origin/master` (`4e892a5`)، تطبيق migration `20261029170000_add_free_orders_promo` بنجاح على قاعدة بيانات Railway، تأكيد تطابق المخطط (18 migrations · Schema up to date)، تأكيد تفعيل حارس الإنتاج (`freeOrdersPromoEnabled = false` و `freeOrdersCount = 3` في صف `default`)، ونجاح اختبارات الدخان الحية (API Health HTTP 200 · CORS HTTP 204 على نطاق `admin.faow.run` · و Vercel Admin Web بنجاح). <br>⚠️ **ملاحظة إجرائية:** عند تطبيق migration `20261029170000_add_free_orders_promo`، لم يُنفَّذ فحص بيانات المستخدمين المسبق المطلوب في تدفق العمل قبل تطبيق الهجرة، بل بعدها. البيانات الحالية في قاعدة الإنتاج (تاريخ 2026-10-29) هي حسابات اختبار أنشأها المالك وأصدقاؤه للتجريب الداخلي وليست عملاء حقيقيين من السوق — لذا لم يترتب ضرر فعلي، لكن هذا يُسجَّل كدرس إجرائي: فحص بيانات المستخدمين يجب أن يسبق أي `prisma migrate deploy` دون استثناء، بصرف النظر عن تقييم الخطر مسبقاً، تماشياً مع D34. <br>⚠️ **تنبيه:** راجع تفاصيل **حادثة انقطاع مؤقت أثناء نشر D59 (Deployment Race Window)** بتاريخ 2026-10-30 أدناه. |
 | 2026-10-29 | القرار **D59** — دمج مسار العروض الترويجية "أول N طلبات مجاناً" (`feature/free-orders-promo`) في `master` بـ `eb96714` عبر `git merge --no-ff`: هجرة `20261029170000_add_free_orders_promo` بقيمة افتراضية `freeOrdersPromoEnabled = false` (حارس إنتاج لمنع التفعيل التلقائي)، خصم ذري بالقفل التفاؤلي داخل معاملة `createOrder`، حماية D58 Idempotency قبل الخصم، استرجاع الفتحة في كافة مسارات الإلغاء الثلاثة (إلغاء العميل، رفض الأدمن، إلغاء D39 الإجباري) مع AuditLog، صفر قيود LedgerEntry عند تسليم الطلب المجاني (D53)، لوحة تحكم إدارية في `/dashboard/pricing` بتبديل العرض والعدد وتنبيه الأثر غير الرجعي، واجهة Android بشريط ترويجي وتصفير الرسوم وتأكيد الفتحة المجانية في شاشة التأكيد والرسوم. خطة التراجع موثقة في `docs/ROLLBACK_PLAN_free_orders_promo.md`. نجاح 544/544 وحدة API و 9/9 تكامل و 75 مهمة Android و 0 أخطاء بناء. |
 | 2026-10-29 | القرار **D62** — دمج الفرع `feature/admin-customer-details` في `master` بـ `fb31a48` عبر `git merge --no-ff`: توسيع لوحة تفاصيل العميل والدرج الجانبي التفاعلي (Slide-over Drawer) في صفحة `/users` بـ 4 تبويبات وإحصائيات الطلبات وآخر 5 طلبات، مسار `PUT /admin/users/:id/profile` لتعديل الاسم ورقم الهاتف البديل مع `AuditLog`، مسار `GET /admin/users/:id/audit-logs` لسجل الحركات الرقابية مع التوافق التاريخي الكامل لـ `meta.userId` و `meta.targetUserId`، بدون أي تسريب لبيانات داخلية أو كسر لأسطح Android و PWA، واجتياز كامل لبوابة الجودة الرباعية حياً على `master` (544 وحدة + 24 تكامل + 37 Android). |
 | 2026-10-30 | **إصدار حزمة Android Release الموقعة v0.1.4 (versionCode: 5)**: تحسين شاشة تحديد العنوان في تطبيق العميل بنمط خريطة مخصص للقرى والبلدات (`map_style_village.json`) لإظهار المحلات التجارية بالكامل ومخططات المباني والشوارع بالألوان الأساسية المتباينة، رفع التقريب التلقائي إلى `18.5` لرؤية أسطح ومداخل البيوت بدقة، إضافة دبوس استهداف إبرة برتقالي فائق الدقة (`ic_precision_pin.xml`) مع نقطة ارتكاز أرضية، استبدال زر الـ GPS بزر كبسولة يحمل نصاً صريحاً **"موقعي الحالي"**، وتحديث حزمة التحميل المباشر `forerun.apk` في صفحة الهبوط `apps/landing-page` بنجاح 100%. |
+| 2026-10-30 | **حادثة انقطاع مؤقت أثناء نشر D59 (Deployment Race Window):** رصد تنبيه Sentry حي يوثّق فشل فعلي لمسارات `POST /api/v1/auth/login` و `POST /api/v1/auth/refresh` بخطأ `PrismaClientKnownRequestError: The column User.freeOrdersRemaining does not exist in the current database` لمدة تقديرية حتى 16 ساعة بعد نشر الكود. السبب الجذري المؤكد: نافذة زمنية بين (أ) اكتمال بناء Railway التلقائي للحاوية الجديدة من `git push origin master` — والتي تحمل Prisma Client متوقِّعاً العمود الجديد بناءً على `schema.prisma` المحدَّث — و(ب) التنفيذ اليدوي لاحقاً لـ `prisma migrate deploy` من Railway Console. خلال تلك النافذة، استقبلت الحاوية الجديدة حركة مرور حقيقية من مستخدمين فعليين (حسابات اختبار داخلية) بينما كانت قاعدة البيانات لا تزال بالمخطط القديم. **تم التحقق لاحقاً (2026-10-30) من أن الحالة الحية سليمة بالكامل:** العمود موجود، وجدول `AppVersion` (من D51) موجود، و`prisma migrate status` يؤكد "Database schema is up to date!" بلا أي انحراف. لم يُتخذ أي إجراء تصحيحي إضافي لأن الفجوة أُغلقت تلقائياً عند التنفيذ اليدوي للـ migration في حينه. |
 
 ---
 
@@ -383,7 +386,7 @@ fawrun/
 1. **عند أي خطأ، ابحث في جدول Playbook أولًا** (بند 4).
 2. **انسخ نص الخطأ كاملًا** — لا تلخّصه.
 3. **افحص `schema.prisma` قبل أي كتابة FK.**
-4. **استخدم أوامر التشخيص السريعة** (بند 4) بدلًا من الاستنتاجات.
+4. **استخدم أوامر التشخيص السريعة** (بند 4) بدلًا من الاستنتاجات، واعتمد `npx prisma migrate status` (من داخل `cd /app/apps/api` في Railway Console) كأداة معتمدة حية لفحص تطابق المخطط والـ migrations (سكربت `scripts/diff-schema.js` مخصص للبيئة المحلية فقط وغير موجود في حاوية الإنتاج).
 5. **بعد كل حل، حدّث بند 4 وبند 9.**
 6. **احفظ screenshots لـ Railway Variables + Vercel Settings** في `docs/screenshots/`.
 
