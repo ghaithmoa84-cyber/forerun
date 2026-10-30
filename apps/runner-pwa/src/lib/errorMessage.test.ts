@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosHeaders } from 'axios';
 import {
   toUserMessage,
   isNetworkError,
@@ -102,7 +102,7 @@ test('toUserMessage: preserves 403 login lockout message completely without trun
       status: 403,
       statusText: 'Forbidden',
       headers: {},
-      config: { headers: {} as any },
+      config: { headers: new AxiosHeaders() },
     };
 
     const result = toUserMessage(lockoutErr);
