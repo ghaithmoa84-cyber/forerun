@@ -19,6 +19,8 @@ model User {
   previousStatus  UserStatus?
   isDeleted       Boolean           @default(false)
   freeOrdersRemaining Int           @default(0)
+  failedLoginAttempts Int           @default(0)
+  loginLockedAt       DateTime?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   admin           Admin?

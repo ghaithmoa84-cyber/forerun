@@ -16,6 +16,10 @@ export const CONFIG = {
   ORDER_NUMBER_PREFIX: 'FW',
   ORDER_NUMBER_PAD_LENGTH: 6,
   DAMASCUS_TIMEZONE: 'Asia/Damascus',
+  MAX_FAILED_LOGIN_ATTEMPTS: 5,
+  MAX_CONCURRENT_WS_CONNECTIONS: 5,
 } as const;
 
 export const ACCOUNT_SUSPENDED_MESSAGE = 'Account is suspended' as const;
+export const LOGIN_LOCKED_MESSAGE =
+  'لقد تجاوزت الحد المسموح من محاولات تسجيل الدخول. يرجى التواصل مع إدارة فَوْراً عبر واتساب لإعادة تفعيل الدخول.' as const;
