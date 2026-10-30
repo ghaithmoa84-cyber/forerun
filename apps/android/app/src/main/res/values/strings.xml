@@ -151,8 +151,10 @@
     <string name="address_setup_title_edit">تعديل عنوان التوصيل</string>
     <string name="address_setup_subtitle_new">حدد موقعك على الخريطة لتسهيل التوصيل السريع</string>
     <string name="address_setup_subtitle_edit">عدّل موقع وعنوان التوصيل الخاص بك</string>
-    <string name="address_description_label">تفاصيل العنوان أو علامة مميزة</string>
-    <string name="address_description_hint">مثال: القنجرة - جانب البلدية - طابق 1</string>
+    <string name="address_description_label">تفاصيل العنوان الدقيق (إجباري)</string>
+    <string name="address_description_hint">مثال: جانب البلدية - دخلة المدرسة - طابق 1</string>
+    <string name="address_detected_area_format">المنطقة على الخريطة: %1$s</string>
+    <string name="error_address_details_mandatory">يرجى كتابة تفاصيل دقيقة للعنوان (مثل اسم المبنى، الطابق، أو علامة مميزة)</string>
     <string name="address_save_button">تأكيد وحفظ العنوان</string>
     <string name="address_saving_button">جاري الحفظ…</string>
     <string name="address_current_location">موقعي الحالي</string>

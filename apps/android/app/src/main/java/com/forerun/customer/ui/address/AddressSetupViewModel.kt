@@ -31,6 +31,7 @@ data class AddressSetupUiState(
     val geocodingError: String? = null,
     val lat: Double = 33.5138,
     val lng: Double = 36.2765,
+    val detectedArea: String = "",
     val description: String = "",
     val descriptionError: String? = null,
     val errorMessage: String? = null,
@@ -90,7 +91,8 @@ class AddressSetupViewModel @Inject constructor(
                         if (!placeName.isNullOrBlank()) {
                             _uiState.update {
                                 it.copy(
-                                    description = placeName,
+                                    detectedArea = placeName,
+                                    description = if (it.description.isBlank() && !it.isEditMode) placeName else it.description,
                                     descriptionError = null,
                                     isGeocodingLoading = false,
                                     geocodingError = null
@@ -177,7 +179,7 @@ class AddressSetupViewModel @Inject constructor(
     private val isSavingGuard = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun saveAddress() {
-        if (_uiState.value.isSaving || !isSavingGuard.compareAndSet(false, true)) {
+        if (_uiState.value.isSaving || _uiState.value.saveSuccess || !isSavingGuard.compareAndSet(false, true)) {
             return
         }
 
@@ -187,6 +189,12 @@ class AddressSetupViewModel @Inject constructor(
         if (trimmedDesc.isEmpty()) {
             isSavingGuard.set(false)
             _uiState.update { it.copy(descriptionError = getApplication<Application>().getString(R.string.error_address_description_required)) }
+            return
+        }
+
+        if (trimmedDesc.length < 5) {
+            isSavingGuard.set(false)
+            _uiState.update { it.copy(descriptionError = getApplication<Application>().getString(R.string.error_address_details_mandatory)) }
             return
         }
 
@@ -211,6 +219,7 @@ class AddressSetupViewModel @Inject constructor(
                         _events.emit(AddressSetupEvent.AddressSaved(savedAddress))
                     },
                     onFailure = { error ->
+                        isSavingGuard.set(false)
                         _uiState.update {
                             it.copy(
                                 isSaving = false,
@@ -224,7 +233,18 @@ class AddressSetupViewModel @Inject constructor(
                         }
                     }
                 )
-            } finally {
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = ErrorSanitizer.getGenericErrorMessage(
+                            e,
+                            context = getApplication(),
+                            fallbackResId = R.string.error_address_save_failed_generic,
+                            tag = "AddressSetupViewModel"
+                        )
+                    )
+                }
                 isSavingGuard.set(false)
             }
         }

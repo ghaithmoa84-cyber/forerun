@@ -96,6 +96,8 @@ import com.forerun.customer.ui.theme.ForerunGreen
 import com.forerun.customer.ui.theme.ForerunGreenDark
 import com.forerun.customer.ui.theme.ForerunGreenLight
 import com.forerun.customer.ui.theme.ForerunOrange
+import com.forerun.customer.ui.theme.ForerunOrangeDark
+import com.forerun.customer.ui.theme.ForerunOrangeSoft
 import com.forerun.customer.ui.theme.ForerunSoftSurface
 import com.forerun.customer.ui.theme.ForerunSurface
 import com.forerun.customer.ui.theme.ForerunTextMuted
@@ -138,18 +140,22 @@ fun AddressSetupScreen(
         position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), VILLAGE_HOUSE_ZOOM)
     }
 
-    var isInitialPositionSet by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(uiState.lat, uiState.lng, uiState.isEditMode) {
-        if (!isInitialPositionSet && uiState.isEditMode) {
+    var isCameraInitializedWithLoadedAddress by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading, uiState.lat, uiState.lng) {
+        if (!uiState.isLoading && !isCameraInitializedWithLoadedAddress) {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(uiState.lat, uiState.lng), VILLAGE_HOUSE_ZOOM)
-            isInitialPositionSet = true
+            isCameraInitializedWithLoadedAddress = true
         }
     }
 
     LaunchedEffect(cameraPositionState.isMoving) {
-        if (!cameraPositionState.isMoving) {
+        if (!cameraPositionState.isMoving && isCameraInitializedWithLoadedAddress && !uiState.isLoading) {
             val target = cameraPositionState.position.target
-            viewModel.onIntent(AddressSetupIntent.UpdateCoordinates(target.latitude, target.longitude))
+            val latDiff = Math.abs(target.latitude - uiState.lat)
+            val lngDiff = Math.abs(target.longitude - uiState.lng)
+            if (latDiff > 0.0001 || lngDiff > 0.0001) {
+                viewModel.onIntent(AddressSetupIntent.UpdateCoordinates(target.latitude, target.longitude))
+            }
         }
     }
 
@@ -157,9 +163,11 @@ fun AddressSetupScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is AddressSetupEvent.AddressSaved -> {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.address_success_message)
-                    )
+                    android.widget.Toast.makeText(
+                        context,
+                        R.string.address_success_message,
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
                     onNavigateBack()
                 }
                 is AddressSetupEvent.ShowToast -> {
@@ -563,6 +571,32 @@ fun AddressSetupScreen(
 
                         Spacer(modifier = Modifier.height(Dimens.Space10))
 
+                        if (uiState.detectedArea.isNotBlank()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Dimens.Space6),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(Dimens.RadiusSmall))
+                                    .background(ForerunOrangeSoft)
+                                    .padding(horizontal = Dimens.Space10, vertical = Dimens.Space6)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = ForerunOrange,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.address_detected_area_format, uiState.detectedArea),
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = ForerunOrangeDark,
+                                    maxLines = 1
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(Dimens.Space8))
+                        }
+
                         // Description Field
                         OutlinedTextField(
                             value = uiState.description,
@@ -619,7 +653,7 @@ fun AddressSetupScreen(
                         // Submit Button
                         Button(
                             onClick = { viewModel.onIntent(AddressSetupIntent.SaveAddress) },
-                            enabled = !uiState.isSaving,
+                            enabled = !uiState.isSaving && !uiState.saveSuccess,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(Dimens.ButtonHeight),
@@ -629,7 +663,7 @@ fun AddressSetupScreen(
                                 contentColor = ForerunTextOnPrimary
                             )
                         ) {
-                            if (uiState.isSaving) {
+                            if (uiState.isSaving || uiState.saveSuccess) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(22.dp),
                                     color = ForerunTextOnPrimary,
@@ -637,7 +671,7 @@ fun AddressSetupScreen(
                                 )
                                 Spacer(modifier = Modifier.width(Dimens.Space8))
                                 Text(
-                                    text = stringResource(R.string.address_saving_button),
+                                    text = if (uiState.saveSuccess) stringResource(R.string.address_success_message) else stringResource(R.string.address_saving_button),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
