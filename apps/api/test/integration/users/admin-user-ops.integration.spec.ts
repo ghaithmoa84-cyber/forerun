@@ -85,6 +85,61 @@ describe('Admin User Operations Integration Tests (feature/admin-support-ops)', 
       expect(auditEntry).toBeDefined();
       expect((auditEntry?.meta as any)?.targetUserId).toBe(customerUser.id);
       expect((auditEntry?.meta as any)?.targetRole).toBe('CUSTOMER');
+      expect((auditEntry?.meta as any)?.wasLocked).toBe(false);
+    });
+
+    it('unlocks a locked user when password is reset by admin, allowing immediate login with new credentials (BF-3)', async () => {
+      // 1. Lock the customer account
+      await prisma.user.update({
+        where: { id: customerUser.id },
+        data: {
+          failedLoginAttempts: 5,
+          loginLockedAt: new Date(),
+        },
+      });
+
+      // 2. Verify account is locked upon login attempt (even with valid or invalid password)
+      const lockedLoginRes = await request.post('/api/v1/auth/login').send({
+        whatsapp: customerUser.whatsapp,
+        password: 'Customer@12345',
+      });
+      expect(lockedLoginRes.status).toBe(403);
+      expect(lockedLoginRes.body.message).toContain('لقد تجاوزت الحد المسموح من محاولات تسجيل الدخول');
+
+      // 3. Admin resets password
+      const resetRes = await request
+        .put(`/api/v1/admin/users/${customerUser.id}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ password: 'UnlockedPass@2026' });
+
+      expect(resetRes.status).toBe(200);
+
+      // 4. Verify user in DB has reset attempts and null loginLockedAt
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: customerUser.id },
+        select: { failedLoginAttempts: true, loginLockedAt: true },
+      });
+      expect(updatedUser?.failedLoginAttempts).toBe(0);
+      expect(updatedUser?.loginLockedAt).toBeNull();
+
+      // 5. Verify audit log recorded wasLocked: true
+      const auditEntry = await prisma.auditLog.findFirst({
+        where: {
+          event: 'USER_PASSWORD_RESET_BY_ADMIN',
+          actorId: adminUser.id,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(auditEntry).toBeDefined();
+      expect((auditEntry?.meta as any)?.wasLocked).toBe(true);
+
+      // 6. Immediate login with new password succeeds with 200 OK
+      const newLoginRes = await request.post('/api/v1/auth/login').send({
+        whatsapp: customerUser.whatsapp,
+        password: 'UnlockedPass@2026',
+      });
+      expect(newLoginRes.status).toBe(200);
+      expect(newLoginRes.body.accessToken).toBeDefined();
     });
 
     it('rejects attempt to reset password of an ADMIN account with 403 Forbidden', async () => {
