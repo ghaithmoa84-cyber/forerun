@@ -76,4 +76,11 @@ class ErrorSanitizerTest {
 
         assertEquals(arabicFromResources, result)
     }
+    @Test
+    fun getGenericErrorMessage_withLockoutArabicMessage_preservesLockoutMessageExactly() {
+        val lockoutMsg = "لقد تجاوزت الحد المسموح من محاولات تسجيل الدخول. يرجى التواصل مع إدارة فَوْراً عبر واتساب لإعادة تفعيل الدخول."
+        val result = ErrorSanitizer.getGenericErrorMessage(lockoutMsg, context = context)
+
+        assertEquals(lockoutMsg, result)
+    }
 }

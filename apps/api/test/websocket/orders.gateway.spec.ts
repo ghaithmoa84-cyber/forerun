@@ -123,4 +123,71 @@ describe('OrdersGateway', () => {
     expect(mockSocket.disconnect).not.toHaveBeenCalled();
     expect(mockSocket.join).toHaveBeenCalledWith('runner:runner-1');
   });
+  describe('BF-4: Concurrent WebSocket Connections Limiting', () => {
+    it('allows up to 5 concurrent connections for same user, rejects 6th, and allows reconnect after disconnect', async () => {
+      (jwtService.verify as ReturnType<typeof vi.fn>).mockReturnValue({
+        sub: 'concurrent-user-1',
+        role: 'CUSTOMER',
+      });
+      prisma.user.findUnique.mockResolvedValue({
+        status: 'VERIFIED',
+        isDeleted: false,
+        role: 'CUSTOMER',
+      });
+
+      const sockets: Array<{
+        handshake: { auth?: { token?: string } };
+        data: Record<string, unknown>;
+        disconnect: ReturnType<typeof vi.fn>;
+        join: ReturnType<typeof vi.fn>;
+      }> = [];
+
+      // 1. Establish 5 successful connections
+      for (let i = 0; i < 5; i++) {
+        const s = {
+          handshake: { auth: { token: 'valid-token' } },
+          data: {},
+          disconnect: vi.fn(),
+          join: vi.fn(),
+        };
+        sockets.push(s);
+        await gateway.handleConnection(s as unknown as Socket);
+        expect(s.disconnect).not.toHaveBeenCalled();
+      }
+
+      expect(gateway.getActiveConnections('concurrent-user-1')).toBe(5);
+
+      // 2. 6th connection should be rejected immediately
+      const socket6 = {
+        handshake: { auth: { token: 'valid-token' } },
+        data: {},
+        disconnect: vi.fn(),
+        join: vi.fn(),
+      };
+      await gateway.handleConnection(socket6 as unknown as Socket);
+      expect(socket6.disconnect).toHaveBeenCalledWith(true);
+      expect(socket6.join).not.toHaveBeenCalled();
+      expect(gateway.getActiveConnections('concurrent-user-1')).toBe(5);
+
+      // Disconnecting rejected socket should not decrement
+      gateway.handleDisconnect(socket6 as unknown as Socket);
+      expect(gateway.getActiveConnections('concurrent-user-1')).toBe(5);
+
+      // 3. Disconnect one of the initial 5 sockets
+      gateway.handleDisconnect(sockets[0] as unknown as Socket);
+      expect(gateway.getActiveConnections('concurrent-user-1')).toBe(4);
+
+      // 4. A new connection should now be accepted
+      const socket7 = {
+        handshake: { auth: { token: 'valid-token' } },
+        data: {},
+        disconnect: vi.fn(),
+        join: vi.fn(),
+      };
+      await gateway.handleConnection(socket7 as unknown as Socket);
+      expect(socket7.disconnect).not.toHaveBeenCalled();
+      expect(socket7.join).toHaveBeenCalledWith('customer:concurrent-user-1');
+      expect(gateway.getActiveConnections('concurrent-user-1')).toBe(5);
+    });
+  });
 });

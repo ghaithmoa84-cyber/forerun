@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service.js';
 import { SOCKET_SERVERS } from './socket-registry.js';
 import { getCorsOrigins } from './cors-origins.js';
+import { CONFIG } from '@forerun/shared-constants';
 
 @WebSocketGateway({
   namespace: '/orders',
@@ -26,6 +27,11 @@ export class OrdersGateway
   io: Server;
 
   private readonly logger = new Logger(OrdersGateway.name);
+  private readonly activeConnections = new Map<string, number>();
+
+  getActiveConnections(userId: string): number {
+    return this.activeConnections.get(userId) ?? 0;
+  }
 
   constructor(
     private readonly jwtService: JwtService,
@@ -55,11 +61,23 @@ export class OrdersGateway
         algorithms: ['RS256'],
       });
 
-      client.data.userId = payload.sub;
+      const userId = payload.sub;
+      const currentConnections = this.activeConnections.get(userId) ?? 0;
+      const maxAllowed = CONFIG.MAX_CONCURRENT_WS_CONNECTIONS;
+
+      if (currentConnections >= maxAllowed) {
+        this.logger.warn(`[handleConnection] connection rejected: user ${userId} reached maximum concurrent socket limit (${currentConnections}/${maxAllowed})`);
+        client.disconnect(true);
+        return;
+      }
+
+      this.activeConnections.set(userId, currentConnections + 1);
+      client.data.counted = true;
+      client.data.userId = userId;
       client.data.role = payload.role;
 
       const user = await this.prisma.user.findUnique({
-        where: { id: payload.sub },
+        where: { id: userId },
         select: { status: true, isDeleted: true, role: true },
       });
 
@@ -74,9 +92,9 @@ export class OrdersGateway
       }
 
       if (user.role === 'CUSTOMER') {
-        client.join(`customer:${payload.sub}`);
+        client.join(`customer:${userId}`);
       } else if (user.role === 'RUNNER') {
-        client.join(`runner:${payload.sub}`);
+        client.join(`runner:${userId}`);
       } else if (user.role === 'ADMIN') {
         client.join(`admin:all`);
       }
@@ -88,7 +106,16 @@ export class OrdersGateway
     }
   }
 
-  handleDisconnect(_client: Socket) {
-    // Cleanup logic if needed
+  handleDisconnect(client: Socket) {
+    if (client.data?.counted && client.data?.userId) {
+      const userId = client.data.userId;
+      const current = this.activeConnections.get(userId) ?? 0;
+      if (current <= 1) {
+        this.activeConnections.delete(userId);
+      } else {
+        this.activeConnections.set(userId, current - 1);
+      }
+      client.data.counted = false;
+    }
   }
 }

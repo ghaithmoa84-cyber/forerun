@@ -410,7 +410,7 @@ export class UsersService {
     await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id },
-        select: { id: true, role: true, isDeleted: true },
+        select: { id: true, role: true, isDeleted: true, loginLockedAt: true },
       });
 
       if (!user || user.isDeleted) {
@@ -421,11 +421,16 @@ export class UsersService {
         throw new ForbiddenException('Cannot reset password for admin accounts via this endpoint');
       }
 
+      const wasLocked = Boolean(user.loginLockedAt);
       const passwordHash = await bcrypt.hash(newPassword, CONFIG.BCRYPT_ROUNDS);
 
       await tx.user.update({
         where: { id },
-        data: { passwordHash },
+        data: {
+          passwordHash,
+          failedLoginAttempts: 0,
+          loginLockedAt: null,
+        },
       });
 
       await tx.refreshToken.updateMany({
@@ -445,6 +450,7 @@ export class UsersService {
           meta: {
             targetUserId: id,
             targetRole: user.role,
+            wasLocked,
           },
         },
         tx,

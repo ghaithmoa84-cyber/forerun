@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -12,7 +13,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PricingService } from '../pricing/pricing.service.js';
 import { TelegramService, escapeTelegramHtml } from '../notifications/telegram.service.js';
-import { CONFIG, ACCOUNT_SUSPENDED_MESSAGE } from '@forerun/shared-constants';
+import { CONFIG, ACCOUNT_SUSPENDED_MESSAGE, LOGIN_LOCKED_MESSAGE } from '@forerun/shared-constants';
 import type { RegisterRequest, LoginRequest, RefreshRequest, LogoutDto } from '@forerun/shared-types';
 
 function generateSelector(): string {
@@ -141,6 +142,10 @@ export class AuthService {
       throw new UnauthorizedException('رقم الواتساب أو كلمة المرور غير صحيحة');
     }
 
+    if (user.loginLockedAt) {
+      throw new ForbiddenException(LOGIN_LOCKED_MESSAGE);
+    }
+
     if (user.status === 'SUSPENDED') {
       throw new UnauthorizedException(ACCOUNT_SUSPENDED_MESSAGE);
     }
@@ -153,6 +158,66 @@ export class AuthService {
     const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!passwordValid) {
+      const maxThreshold = CONFIG.MAX_FAILED_LOGIN_ATTEMPTS;
+      let locked = false;
+      const maxRetries = 5;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const freshUser =
+          attempt === 0
+            ? user
+            : await this.prisma.user.findUnique({
+                where: { id: user.id },
+                select: { failedLoginAttempts: true, loginLockedAt: true },
+              });
+
+        if (!freshUser) {
+          break;
+        }
+
+        if (freshUser.loginLockedAt) {
+          locked = true;
+          break;
+        }
+
+        const nextAttempts = freshUser.failedLoginAttempts + 1;
+        const isNowLocked = nextAttempts >= maxThreshold;
+        const lockTime = isNowLocked ? new Date() : null;
+
+        const updateResult = await this.prisma.user.updateMany({
+          where: {
+            id: user.id,
+            failedLoginAttempts: freshUser.failedLoginAttempts,
+            loginLockedAt: null,
+          },
+          data: {
+            failedLoginAttempts: nextAttempts,
+            ...(isNowLocked ? { loginLockedAt: lockTime } : {}),
+          },
+        });
+
+        if (updateResult.count > 0) {
+          if (isNowLocked) {
+            locked = true;
+            await this.auditService.log({
+              actorId: user.id,
+              actorRole: user.role,
+              event: 'USER_LOGIN_LOCKED',
+              meta: {
+                userId: user.id,
+                failedLoginAttempts: nextAttempts,
+                lockedAt: lockTime?.toISOString(),
+              },
+            });
+          }
+          break;
+        }
+      }
+
+      if (locked) {
+        throw new ForbiddenException(LOGIN_LOCKED_MESSAGE);
+      }
+
       // F6: تعريب رسالة المصادقة (BUG-014)
       throw new UnauthorizedException('رقم الواتساب أو كلمة المرور غير صحيحة');
     }
@@ -172,6 +237,16 @@ export class AuthService {
     await this.prisma.$transaction(async (tx) => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 90);
+
+      if (user.failedLoginAttempts > 0 || user.loginLockedAt !== null) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: 0,
+            loginLockedAt: null,
+          },
+        });
+      }
 
       await tx.refreshToken.create({
         data: {
@@ -206,7 +281,6 @@ export class AuthService {
       },
     };
   }
-
   async refresh(dto: RefreshRequest) {
     // Extract selector from the refresh token (first 32 chars = 16 bytes hex)
     // Format: selector:secret

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosHeaders } from 'axios';
 import {
   toUserMessage,
   isNetworkError,
@@ -85,6 +85,28 @@ test('toUserMessage: supports custom fallback message when not network error', (
     const userMessage = toUserMessage(rawError, customFallback);
 
     assert.strictEqual(userMessage, customFallback);
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
+test('toUserMessage: preserves 403 login lockout message completely without truncation (BF-6)', () => {
+  const originalConsoleError = console.error;
+  console.error = () => {};
+
+  try {
+    const lockoutMsg = 'لقد تجاوزت الحد المسموح من محاولات تسجيل الدخول. يرجى التواصل مع إدارة فَوْراً عبر واتساب لإعادة تفعيل الدخول.';
+    const lockoutErr = new AxiosError('Request failed with status code 403');
+    lockoutErr.response = {
+      data: { statusCode: 403, error: 'Forbidden', message: lockoutMsg },
+      status: 403,
+      statusText: 'Forbidden',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    };
+
+    const result = toUserMessage(lockoutErr);
+    assert.strictEqual(result, lockoutMsg);
   } finally {
     console.error = originalConsoleError;
   }

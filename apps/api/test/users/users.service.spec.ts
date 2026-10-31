@@ -373,7 +373,11 @@ describe('UsersService - resetPassword (AS-2)', () => {
 
     expect(mockPrisma.user.update).toHaveBeenCalledWith({
       where: { id: 'cust_1' },
-      data: { passwordHash: expect.any(String) },
+      data: {
+        passwordHash: expect.any(String),
+        failedLoginAttempts: 0,
+        loginLockedAt: null,
+      },
     });
 
     expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
@@ -393,6 +397,7 @@ describe('UsersService - resetPassword (AS-2)', () => {
         meta: {
           targetUserId: 'cust_1',
           targetRole: 'CUSTOMER',
+          wasLocked: false,
         },
       },
       expect.anything(),

@@ -17,6 +17,10 @@ async function bootstrap(): Promise<void> {
     rawBody: true,
   });
 
+  // Explicitly enforce 1mb body limit while preserving rawBody for webhooks (e.g. Sentry HMAC)
+  app.useBodyParser('json', { limit: '1mb' });
+  app.useBodyParser('urlencoded', { limit: '1mb', extended: true });
+
   // Trust proxy must be explicitly configured. Defaulting to `true` lets the
   // client choose the left-most X-Forwarded-For value, which Nest's
   // ThrottlerGuard uses as its tracker, allowing per-IP throttling to be
