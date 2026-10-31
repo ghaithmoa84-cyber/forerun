@@ -76,7 +76,10 @@
 ## حالة فروع العمل وشجرة الكود (Branch Status)
 
 - ⏳ **عمل معلّق بانتظار إذن الدمج إلى `master`:**
-  - فرع `feature/brute-force-hardening` (القرار **D63** — تحصين تسجيل الدخول ضد الهجمات الغاشمة وحماية WebSocket وأجسام الطلبات — جاهز للمراجعة والدمج بانتظار التأكيد الصريح):
+  - *(لا يوجد حالياً فروع معلقة بانتظار الدمج — شجرة master موحدة ونظيفة)*
+
+- ✅ **الفروع المدموجة سابقاً:**
+  - فرع `feature/brute-force-hardening` (القرار **D63** — تحصين تسجيل الدخول ضد الهجمات الغاشمة وحماية WebSocket وأجسام الطلبات — دُمج في `master` بـ `40bb427` عبر `git merge --no-ff` — محتفظ به محلياً مؤقتاً كاحتياط):
     - **BF-1:** هجرة المخطط `20261030140000_add_login_lockout_fields` بإضافة `failedLoginAttempts` و `loginLockedAt` لنموذج `User` بقيم افتراضية آمنة. (⚠️ قاعدة إلزامية: تطبيق `prisma migrate deploy` يدوياً من Railway Console قبل `git push origin master`).
     - **BF-2:** منطق قفل تسجيل الدخول بعد 5 محاولات فاشلة متتالية بالقفل التفاؤلي الذري (`updateMany`)، وفحص `loginLockedAt` أولاً والرفض بـ 403 Forbidden، وتصفير العداد عند الدخول الناجح، مع توثيق `USER_LOGIN_LOCKED` في `AuditLog` دون تسريب العداد للمستخدم.
     - **BF-3:** فك القفل تلقائياً ضمن مسار `PUT /api/v1/admin/users/:id/reset-password` القائم بتصفير العداد ومحو تاريخ القفل، وتوثيق `wasLocked: boolean` في `AuditLog`.
@@ -84,8 +87,6 @@
     - **BF-5:** تثبيت حد 1mb صراحة لحجم جسم الطلب في `main.ts` عبر `useBodyParser` مع الحفاظ على `rawBody: true` وصحة Sentry webhook HMAC.
     - **BF-6:** الحفاظ على رسالة 403 العربية التوجيهية كاملة في `Android` و `runner-pwa` و `admin-web` دون بتر أو استبدال عبر `ErrorSanitizer` و `errorMessage.ts`.
     - **BF-7:** 6/6 سيناريوهات تكامل مخصصة في `login-lockout.integration.spec.ts` واجتياز كامل لبوابة الجودة الرباعية (552 وحدة API، 188 تكامل API، 37 مهمة Android، بناء وتدقيق وأنواع بنسبة 100%).
-
-- ✅ **الفروع المدموجة سابقاً:**
   - فرع `feature/free-orders-promo` (القرار **D59** — مسار العروض الترويجية "أول N طلبات مجاناً" — دُمج في `master` بـ `eb96714` عبر `git merge --no-ff` — محتفظ به محلياً مؤقتاً كاحتياط):
     - **FP-1:** هجرة `20261029170000_add_free_orders_promo` بقيمة بداية `false` وحفظ التوافق، وحدود `FREE_ORDERS_LIMITS` وعقود Android الآمنة (non-null مع default 0).
     - **FP-2 إلى FP-5:** زرع الرصيد مشروطاً بتفعيل العرض عند التسجيل، الخصم الذري بالقفل التفاؤلي وتصفير الرسوم داخل معاملة `createOrder`، فحص Idempotency المسبق قبل الخصم، استرجاع الفتحة في مسارات الإلغاء الثلاثة (العميل، الرفض، D39 القسري)، وصفر قيود `LedgerEntry` للطلبات الصفرية (D53).
