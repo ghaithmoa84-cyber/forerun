@@ -80,7 +80,7 @@
 
 - ✅ **الفروع المدموجة سابقاً:**
   - فرع `feature/brute-force-hardening` (القرار **D63** — تحصين تسجيل الدخول ضد الهجمات الغاشمة وحماية WebSocket وأجسام الطلبات — دُمج في `master` بـ `40bb427` عبر `git merge --no-ff` — محتفظ به محلياً مؤقتاً كاحتياط):
-    - **BF-1:** هجرة المخطط `20261030140000_add_login_lockout_fields` بإضافة `failedLoginAttempts` و `loginLockedAt` لنموذج `User` بقيم افتراضية آمنة. (⚠️ قاعدة إلزامية: تطبيق `prisma migrate deploy` يدوياً من Railway Console قبل `git push origin master`).
+    - **BF-1:** هجرة المخطط `20261030140000_add_login_lockout_fields` بإضافة `failedLoginAttempts` و `loginLockedAt` لنموذج `User` بقيم افتراضية آمنة. (⚠️ قاعدة إلزامية: تطبيق `prisma migrate deploy` يدوياً من Railway Console فور اكتمال بناء الحاوية الجديدة بعد `git push origin master` مباشرة دون أي تأخير).
     - **BF-2:** منطق قفل تسجيل الدخول بعد 5 محاولات فاشلة متتالية بالقفل التفاؤلي الذري (`updateMany`)، وفحص `loginLockedAt` أولاً والرفض بـ 403 Forbidden، وتصفير العداد عند الدخول الناجح، مع توثيق `USER_LOGIN_LOCKED` في `AuditLog` دون تسريب العداد للمستخدم.
     - **BF-3:** فك القفل تلقائياً ضمن مسار `PUT /api/v1/admin/users/:id/reset-password` القائم بتصفير العداد ومحو تاريخ القفل، وتوثيق `wasLocked: boolean` في `AuditLog`.
     - **BF-4:** تقييد اتصالات WebSocket المتزامنة إلى 5 كحد أقصى لكل مستخدم في `OrdersGateway` و `AdminGateway` مع حماية راية `counted` لمنع تسريب العدادات.
