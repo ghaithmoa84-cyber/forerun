@@ -184,33 +184,67 @@ export class AuthService {
         const isNowLocked = nextAttempts >= maxThreshold;
         const lockTime = isNowLocked ? new Date() : null;
 
-        const updateResult = await this.prisma.user.updateMany({
-          where: {
-            id: user.id,
-            failedLoginAttempts: freshUser.failedLoginAttempts,
-            loginLockedAt: null,
-          },
-          data: {
-            failedLoginAttempts: nextAttempts,
-            ...(isNowLocked ? { loginLockedAt: lockTime } : {}),
-          },
-        });
-
-        if (updateResult.count > 0) {
-          if (isNowLocked) {
-            locked = true;
-            await this.auditService.log({
-              actorId: user.id,
-              actorRole: user.role,
-              event: 'USER_LOGIN_LOCKED',
-              meta: {
-                userId: user.id,
+        if (isNowLocked && lockTime) {
+          const lockResult = await this.prisma.$transaction(async (tx) => {
+            const updateResult = await tx.user.updateMany({
+              where: {
+                id: user.id,
+                failedLoginAttempts: freshUser.failedLoginAttempts,
+                loginLockedAt: null,
+              },
+              data: {
                 failedLoginAttempts: nextAttempts,
-                lockedAt: lockTime?.toISOString(),
+                loginLockedAt: lockTime,
               },
             });
+
+            if (updateResult.count > 0) {
+              const revokeResult = await tx.refreshToken.updateMany({
+                where: { userId: user.id, isRevoked: false },
+                data: { isRevoked: true, revokedAt: lockTime },
+              });
+
+              await this.auditService.log(
+                {
+                  actorId: user.id,
+                  actorRole: user.role,
+                  event: 'USER_LOGIN_LOCKED',
+                  meta: {
+                    userId: user.id,
+                    failedLoginAttempts: nextAttempts,
+                    lockedAt: lockTime.toISOString(),
+                    sessionsRevoked: true,
+                    revokedTokensCount: revokeResult.count,
+                  },
+                },
+                tx,
+              );
+
+              return { locked: true };
+            }
+
+            return { locked: false };
+          });
+
+          if (lockResult.locked) {
+            locked = true;
+            break;
           }
-          break;
+        } else {
+          const updateResult = await this.prisma.user.updateMany({
+            where: {
+              id: user.id,
+              failedLoginAttempts: freshUser.failedLoginAttempts,
+              loginLockedAt: null,
+            },
+            data: {
+              failedLoginAttempts: nextAttempts,
+            },
+          });
+
+          if (updateResult.count > 0) {
+            break;
+          }
         }
       }
 
@@ -307,6 +341,10 @@ export class AuthService {
       }
 
       const user = token.user;
+
+      if (user.loginLockedAt) {
+        throw new ForbiddenException(LOGIN_LOCKED_MESSAGE);
+      }
 
       if (user.status === 'SUSPENDED') {
         throw new UnauthorizedException(ACCOUNT_SUSPENDED_MESSAGE);

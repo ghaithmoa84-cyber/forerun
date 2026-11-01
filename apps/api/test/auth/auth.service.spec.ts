@@ -24,6 +24,7 @@ interface MockPrisma {
   };
   refreshToken: {
     create: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
   };
   $transaction: (cb: (tx: MockPrisma) => Promise<unknown>) => Promise<unknown>;
 }
@@ -72,6 +73,7 @@ describe('AuthService - Login Lockout Unit Tests (BF-2)', () => {
       },
       refreshToken: {
         create: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
       $transaction: vi.fn(async (cb: (tx: MockPrisma) => Promise<unknown>) => {
         return cb(mockPrisma);
@@ -158,6 +160,11 @@ describe('AuthService - Login Lockout Unit Tests (BF-2)', () => {
       }),
     );
 
+    expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: mockUser.id, isRevoked: false },
+      data: { isRevoked: true, revokedAt: expect.any(Date) },
+    });
+
     expect(mockAudit.log).toHaveBeenCalledWith(
       expect.objectContaining({
         actorId: mockUser.id,
@@ -166,8 +173,10 @@ describe('AuthService - Login Lockout Unit Tests (BF-2)', () => {
         meta: expect.objectContaining({
           userId: mockUser.id,
           failedLoginAttempts: 5,
+          sessionsRevoked: true,
         }),
       }),
+      mockPrisma,
     );
   });
 

@@ -1,11 +1,20 @@
 # FAWRUN — Next Tasks
 
-> **آخر تحديث:** 2026-10-29
+> **آخر تحديث:** 2026-11-01
 > **المرجع الكامل:** [HANDOFF.md](HANDOFF.md)، [PROJECT_STATUS.md](PROJECT_STATUS.md)
 > **خريطة التوثيق:** [PROJECT_STATUS.md §11](PROJECT_STATUS.md#11-خريطة-التوثيق--أي-ملف-يملك-أي-حقيقة)
 
 ---
 
+## بنود من المراجعة الأمنية — بانتظار تحقق/حل
+
+| # | البند | الحالة | ملاحظة بدليل `file:line` |
+|---|---|---|---|
+| SA-1 | تحقق صلاحيات أسرار CI وحماية الفرع ومصدر مفاتيح JWT | ⏳ بانتظار تحقق مالك GitHub/Railway | `.github/workflows/integration-tests.yml:1,26-29` يحدد `pull_request` ويحقن `JWT_PRIVATE_KEY` و`JWT_PUBLIC_KEY` على مستوى المهمة؛ `gh auth status` أظهر أن الرمز المحلي غير صالح، ولا يتوفر Railway CLI. لا توجد مقارنة حية أو دليل على تطابق/اختلاف مفاتيح الاختبار والإنتاج. الأسرار لا تُمرر عادةً إلى PR من fork وفق توثيق GitHub، وحماية الفرع لا توقف تشغيل workflow بل تضبط الدمج؛ يلزم فحص إعدادات هذا المستودع وPRs الداخلية وحماية master، ومقارنة بصمتي المفتاحين دون عرض القيم؛ إن بقيت صلاحيات متداخلة، استبدال أسرار CI بمفاتيح اختبار مؤقتة مولّدة داخل المهمة. |
+| SA-2 | حد عدد إيصالات R2 (مرتبط بالدين المؤجل D5) | ⏳ بانتظار تشغيل تحقق تكامل معزول | `apps/api/src/modules/receipts/receipts.service.ts:101-130` يفحص العدد عند إصدار الرابط فقط، ثم ينشئ سجل الإيصال دون إعادة الفحص. اختبار التدقيق المحفوظ في `apps/api/test/integration/_audit/r2-receipt-count-bypass.integration.spec.ts:10-113` يستخدم mock للتخزين ويرفض أي قاعدة لا تسمى `forerun_test`؛ لم يُشغّل بعد؛ يلزم تكرار التشغيل 3–5 مرات من قاعدة نظيفة مع حفظ الأمر والخرج الخام وفق D52. |
+| SA-3 | محاسبة محاولات الدخول تحت تنافس CAS | ⏳ بانتظار تشغيل تحقق تكامل متزامن | `apps/api/src/modules/auth/auth.service.ts:158-222` يقارن كلمة المرور قبل تحديث العداد ويعيد محاولة CAS خمس مرات. اختبار التدقيق في `apps/api/test/integration/_audit/auth-concurrent-lockout-cas-retry-exhaustion.integration.spec.ts:10-98` يطلق طلبات متوازية ويزامن نتيجة bcrypt قبل تحديث العداد؛ لم يُشغّل بعد؛ يلزم تكرار التشغيل 3–5 مرات من قاعدة نظيفة مع حفظ الأمر والخرج الخام وفق D52. |
+| SA-4 | جولة مستقلة للتحقق من JWT وخصوصية DTO التقييمات وقراءات Ledger الحساسة | ⏳ التحليل المصدري مكتمل للوحدات الثلاث؛ بانتظار دليل تشغيل | **JWT:** `jwt-auth.guard.ts:48-89` يتحقق من bearer JWT ويعيد قراءة الدور والحالة؛ إعداد RS256 في `app.module.ts:111-119`. **التقييم:** `rating.mapper.ts:3-16` يحجب `note` عن RUNNER؛ ملكية العميل مفحوصة في `ratings.service.ts:47-53,178-200`، وتفاصيل الطلب تقيد التقييمات بمالكها في `customer-orders.service.ts:633-663`. **Ledger:** الـ endpoint الوحيد هو ADMIN-only في `ledger.controller.ts:22-30`. بحث المستدعيات أُعيد بالأمر `rg -n "getEntryById|getEntriesByOrder|listAdminEntries|mapRating\\(" apps/api/src`؛ الناتج الخام: `ledger.service.ts:100 listAdminEntries`, `ledger.service.ts:138 getEntryById`, `ledger.service.ts:150 getEntriesByOrder`, `ledger.controller.ts:29 listAdminEntries`, `ratings.service.ts:158,288 mapRating`, `rating.mapper.ts:3 mapRating`. لم يظهر مستدعٍ آخر لـ `getEntryById` أو `getEntriesByOrder` ضمن `apps/api/src`. هذا تحليل مصدر فقط؛ لم تُشغّل اختبارات تشغيل/خصوصية/عزل، لذا يبقى SA-4 ⏳ ولا يُغلق. |
+| SA-5 | قفل الدخول لا يبطل الجلسات القائمة ولا يمنع تجديدها | ⏳ قيد التنفيذ على فرع fix/sa5-lockout-session-termination | اعتمد مالك المنتج الخيار الأول (إنهاء فوري للجلسات القائمة عند القفل). تم تعديل `auth.service.ts` لإبطال كافة refresh tokens النشطة في نفس المعاملة الذرية التي تضبط `loginLockedAt`، وتوثيق `sessionsRevoked: true` في `AuditLog`، وإضافة فحص دفاعي في `refresh()`. التحقق ناجح بنسبة 100%: اختبار تكامل مخصص في `apps/api/test/integration/auth/login-lockout-session-termination.integration.spec.ts` (3/3)، و `login-lockout.integration.spec.ts` (6/6)، واجتياز بوابة الجودة الكاملة (build، typecheck، lint، 552/552 وحدة). الفرع جاهز ومعزول بانتظار المراجعة والتأكيد الصريح للدمج إلى master وتسجيل القرار D64 في PROJECT_STATUS.md. |
 ## عمل معلّق بانتظار عامل خارجي (External Blocker)
 
 ### ✅ إنجاز نافذتي الصيانة على Railway بنجاح (2026-10-28)
