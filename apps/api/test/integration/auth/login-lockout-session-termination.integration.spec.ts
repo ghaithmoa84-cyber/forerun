@@ -167,5 +167,51 @@ describe('Login Lockout Session Termination Integration Tests (SA-5)', () => {
     expect(refreshRes.status).toBe(403);
     expect(refreshRes.body.message).toBe(LOGIN_LOCKED_MESSAGE);
   });
-});
 
+  it('4. ensures exactly one transaction wins and locks/revokes under simultaneous concurrent lockout race condition', async () => {
+    const request = getRequest();
+
+    // User logs in and obtains active refresh token
+    const loginRes = await request.post('/api/v1/auth/login').send({
+      whatsapp: customerUser.whatsapp,
+      password: 'Customer@12345',
+    });
+    const { refreshToken } = loginRes.body;
+
+    // Set user to 4 failed attempts (1 attempt away from threshold)
+    await prisma.user.update({
+      where: { id: customerUser.id },
+      data: { failedLoginAttempts: 4, loginLockedAt: null },
+    });
+
+    // Fire 2 simultaneous failed login attempts racing to lock the account
+    const [res1, res2] = await Promise.all([
+      request.post('/api/v1/auth/login').send({
+        whatsapp: customerUser.whatsapp,
+        password: 'ConcurrentFail1@123',
+      }),
+      request.post('/api/v1/auth/login').send({
+        whatsapp: customerUser.whatsapp,
+        password: 'ConcurrentFail2@123',
+      }),
+    ]);
+
+    // Both requests must end up rejected with 403 Forbidden
+    expect(res1.status).toBe(403);
+    expect(res2.status).toBe(403);
+    expect(res1.body.message).toBe(LOGIN_LOCKED_MESSAGE);
+    expect(res2.body.message).toBe(LOGIN_LOCKED_MESSAGE);
+
+    // Exactly ONE USER_LOGIN_LOCKED audit log must exist (CAS prevented double execution)
+    const auditLogs = await prisma.auditLog.findMany({
+      where: { event: 'USER_LOGIN_LOCKED', actorId: customerUser.id },
+    });
+    expect(auditLogs).toHaveLength(1);
+
+    // Refresh token must be revoked
+    const refreshRes = await request.post('/api/v1/auth/refresh').send({
+      refreshToken,
+    });
+    expect(refreshRes.status).toBe(401);
+  });
+});
