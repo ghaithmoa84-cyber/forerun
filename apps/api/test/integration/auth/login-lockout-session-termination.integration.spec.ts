@@ -12,7 +12,7 @@ const jwtKeys = crypto.generateKeyPairSync('rsa', {
 });
 
 describe('Login Lockout Session Termination Integration Tests (SA-5)', () => {
-  let customerUser: any;
+  let customerUser: Awaited<ReturnType<typeof seedCustomer>>;
 
   beforeAll(async () => {
     process.env.JWT_PRIVATE_KEY = jwtKeys.privateKey;
