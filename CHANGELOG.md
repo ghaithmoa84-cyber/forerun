@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Version](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### 2026-11-01 — توحيد معيار تاريخ تسوية المندوب على deliveredAt وإلزام اعتماد ورفض الحسابات بـ UserStateMachine (D65)
+
+**الملفات والدوال المعدّلة:**
+- `apps/api/src/modules/settlements/settlements.service.ts` (`getCurrentSettlement`, `checkPendingOrders`) — توحيد معيار تجميع طلبات المندوب في شاشة المعاينة وتنبيهات الإغلاق اليومية ليعتمد على `deliveredAt: { lte: end }` مع استبعاد الطلبات المسوّاة (`settlementItem: null`)، بدلاً من `createdAt: [start, end]`. يضمن ذلك التطابق التام 1:1 مع ما يجمعه `collectDeliveredOrders` عند إغلاق اليوم.
+- `apps/api/src/modules/users/users.service.ts` (`verify`, `reject`) — فرض استدعاء `this.userStateMachine.transition` قبل تحديث قاعدة البيانات عند اعتماد حساب العميل (`VERIFIED`) أو رفضه (`REJECTED`) من قبل الإدارة، التزاماً بالمعيار الثاني للمشروع (Rule 2).
+- `apps/api/test/settlements/settlements.cron.spec.ts` — تحديث اختبار `checkPendingOrders` للتحقق من شرط `deliveredAt: { lte: end }`.
+- `apps/api/test/settlements/settlements.service.spec.ts` — إضافة اختبار صريح يتحقق من استدعاء `prisma.order.findMany` بشرط `deliveredAt` و`settlementItem: null` عند طلب التسوية غير المغلقة (`NOT_CLOSED`).
+- `apps/api/test/users/users.service.spec.ts` — إضافة حزمة اختبارات وحدة كاملة للتحقق من مرور `verify` و`reject` عبر `UserStateMachine` وإطلاق الاستثناءات المناسبة عند محاولة الانتقال من حالات غير صحيحة.
+
+**السبب:** معالجة الملاحظات المعتمدة من المالك: توحيد شاشة المندوب مع كشف التسوية الفعلي لإنهاء أي لبس في توقيت احتساب الطلبات المسلّمة بعد منتصف الليل (البند 1)، وسد الباب الجانبي في ترقية حالات المستخدمين وحصر كافة الانتقالات في آلة الحالات الموحدة (البند 3).
+
+**الأوامر والنتائج:**
+- `pnpm --filter forerun-api test` → نجاح 556/556 اختباراً في 40 ملفاً بنسبة 100%.
+- `pnpm --filter forerun-api test:integration` → نجاح اختبارات إغلاق اليوم وعمليات المستخدمين وتصعيد الحالات بنسبة 100%.
+- `pnpm typecheck` → نجاح 7/7 حزم.
+- `pnpm lint` → 0 تحذيرات و0 أخطاء في 7 حزم.
+- `pnpm build` → بناء ناجح لكافة تطبيقات وحزم المشروع الـ 7.
+
 ### 2026-11-01 — إنهاء جلسات الحساب فور تفعيل قفل الدخول (SA-5)
 
 **الملفات والدوال المعدّلة:**
