@@ -89,6 +89,10 @@ FORERUN is a grocery delivery platform built as a Modular Monolith in a Monorepo
 2. feature-dev implements endpoints
 3. test-engineer runs full local checklist + DTO Privacy & Lifecycle Masking check (Rule 7) for any endpoint exposing third-party data
 4. فرع لكل سبرنت ثم `git merge --no-ff` إلى `master` (إلزامي: الدمج إلى `master` يتطلب تأكيداً صريحاً من الشخص الموجّه بعد اكتمال واختبار الفرع ولا ينفذه الوكيل تلقائياً، ما لم يُطلب صراحة "نفّذ الدمج أيضاً" ضمن نفس التعليمة)
+5. **بروتوكول ما بعد الدمج الإلزامي (Post-Merge Protocol):** فور إتمام الدمج وتحديث التوثيق الرسمي (`PROJECT_STATUS.md` و `NEXT_TASKS.md` و `CHANGELOG.md`)، يلتزم الوكيل بتوضيح خريطة النشر والخطوات الإنتاجية التالية للمالك صراحة:
+   - **أ. حالة السيرفر البعيد (Remote Push):** توضيح ما إذا كان يلزم الرفع الفوري بـ `git push origin master` لنشر الحاوية في Railway، مع بيان هل التعديل يتضمن Schema Migration لقاعدة البيانات (مما يستوجب مراقبة نافذة الخطر وتطبيق `prisma migrate deploy`) أم أنه تعديل برمجي خالص بلا هجرات.
+   - **ب. حالة تطبيق الهاتف (Android In-App Update):** توضيح هل التعديل يمس تطبيق العميل ويتطلب بناء حزمة موقّعة جديدة (Release APK) وتحديث رقم الإصدار في لوحة الإدارة (`/dashboard/app-version` بموجب D51)، أم أنه تعديل Backend/Web خالص لا يتطلب أي إجراء على هواتف المستخدمين.
+   - **ج. السؤال المباشر:** أخذ توجيه وموافقة المالك الصريحة قبل تنفيذ أمر الرفع أو إنهاء الجلسة.
 
 ### Git Rules
 - Semantic commits: feat:, fix:, refactor:, etc.
