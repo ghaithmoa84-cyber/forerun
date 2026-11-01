@@ -1099,3 +1099,142 @@ describe('UsersService - updateCustomerProfile (CD-1)', () => {
     );
   });
 });
+
+describe("UsersService - verify & reject state machine enforcement", () => {
+  let usersService: UsersService;
+  let mockPrisma: MockPrisma;
+  let mockAudit: { log: ReturnType<typeof vi.fn> };
+  let mockNotifications: { emitToCustomer: ReturnType<typeof vi.fn> };
+  let userStateMachine: UserStateMachine;
+
+  beforeEach(() => {
+    mockPrisma = {
+      $transaction: vi.fn(async (cb) => cb(mockPrisma)),
+      user: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        count: vi.fn(),
+        findMany: vi.fn(),
+      },
+      refreshToken: { updateMany: vi.fn() },
+      deviceToken: { deleteMany: vi.fn() },
+      order: { count: vi.fn(), findMany: vi.fn() },
+      auditLog: { findMany: vi.fn() },
+      settlement: { count: vi.fn() },
+      runner: { update: vi.fn() },
+    };
+    mockAudit = { log: vi.fn().mockResolvedValue(undefined) };
+    mockNotifications = { emitToCustomer: vi.fn().mockResolvedValue(undefined) };
+    userStateMachine = new UserStateMachine(USER_TRANSITIONS);
+
+    usersService = new UsersService(
+      mockPrisma as unknown as PrismaService,
+      mockAudit as unknown as AuditService,
+      mockNotifications as unknown as NotificationsService,
+      userStateMachine,
+    );
+  });
+
+  describe("verify", () => {
+    it("successfully verifies user via UserStateMachine and logs USER_VERIFIED", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_pending",
+        status: UserStatus.PENDING_VERIFICATION,
+        isDeleted: false,
+        role: "CUSTOMER",
+      });
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      const transitionSpy = vi.spyOn(userStateMachine, "transition");
+
+      const result = await usersService.verify("usr_pending", "admin_1");
+
+      expect(transitionSpy).toHaveBeenCalledWith(
+        UserStatus.PENDING_VERIFICATION,
+        UserStatus.VERIFIED,
+        "ADMIN",
+      );
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: "usr_pending", status: "PENDING_VERIFICATION", isDeleted: false, role: "CUSTOMER" },
+        data: { status: UserStatus.VERIFIED },
+      });
+      expect(mockAudit.log).toHaveBeenCalledWith(
+        {
+          actorId: "admin_1",
+          actorRole: "ADMIN",
+          event: "USER_VERIFIED",
+          fromStatus: "PENDING_VERIFICATION",
+          toStatus: "VERIFIED",
+          meta: { userId: "usr_pending" },
+        },
+        mockPrisma,
+      );
+      expect(result.statusCode).toBe(200);
+      expect(result.message).toBe("Account verified successfully");
+    });
+
+    it("throws UnprocessableEntityException if user is not in PENDING_VERIFICATION state", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_verified",
+        status: UserStatus.VERIFIED,
+        isDeleted: false,
+        role: "CUSTOMER",
+      });
+
+      await expect(usersService.verify("usr_verified", "admin_1")).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+    });
+  });
+
+  describe("reject", () => {
+    it("successfully rejects user via UserStateMachine and logs USER_REJECTED", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_pending",
+        status: UserStatus.PENDING_VERIFICATION,
+        isDeleted: false,
+        role: "CUSTOMER",
+      });
+      mockPrisma.user.updateMany.mockResolvedValue({ count: 1 });
+      const transitionSpy = vi.spyOn(userStateMachine, "transition");
+
+      const result = await usersService.reject("usr_pending", "admin_1");
+
+      expect(transitionSpy).toHaveBeenCalledWith(
+        UserStatus.PENDING_VERIFICATION,
+        UserStatus.REJECTED,
+        "ADMIN",
+      );
+      expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+        where: { id: "usr_pending", status: "PENDING_VERIFICATION", isDeleted: false, role: "CUSTOMER" },
+        data: { status: UserStatus.REJECTED },
+      });
+      expect(mockAudit.log).toHaveBeenCalledWith(
+        {
+          actorId: "admin_1",
+          actorRole: "ADMIN",
+          event: "USER_REJECTED",
+          fromStatus: "PENDING_VERIFICATION",
+          toStatus: "REJECTED",
+          meta: { userId: "usr_pending" },
+        },
+        mockPrisma,
+      );
+      expect(result.statusCode).toBe(200);
+      expect(result.message).toBe("Account rejected successfully");
+    });
+
+    it("throws UnprocessableEntityException if user is not in PENDING_VERIFICATION state", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_already_rejected",
+        status: UserStatus.REJECTED,
+        isDeleted: false,
+        role: "CUSTOMER",
+      });
+
+      await expect(usersService.reject("usr_already_rejected", "admin_1")).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+    });
+  });
+});
