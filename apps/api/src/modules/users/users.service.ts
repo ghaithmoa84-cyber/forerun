@@ -188,9 +188,15 @@ export class UsersService {
         );
       }
 
+      this.userStateMachine.transition(
+        user.status as UserStatus,
+        UserStatus.VERIFIED,
+        'ADMIN',
+      );
+
       const updateResult = await tx.user.updateMany({
         where: { id, status: 'PENDING_VERIFICATION', isDeleted: false, role: 'CUSTOMER' },
-        data: { status: 'VERIFIED' },
+        data: { status: UserStatus.VERIFIED },
       });
 
       if (updateResult.count !== 1) {
@@ -243,9 +249,15 @@ export class UsersService {
         );
       }
 
+      this.userStateMachine.transition(
+        user.status as UserStatus,
+        UserStatus.REJECTED,
+        'ADMIN',
+      );
+
       const updateResult = await tx.user.updateMany({
         where: { id, status: 'PENDING_VERIFICATION', isDeleted: false, role: 'CUSTOMER' },
-        data: { status: 'REJECTED' },
+        data: { status: UserStatus.REJECTED },
       });
 
       if (updateResult.count !== 1) {

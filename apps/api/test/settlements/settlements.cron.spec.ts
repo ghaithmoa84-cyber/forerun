@@ -51,8 +51,7 @@ describe('SettlementsService cron helpers', () => {
       expect(prisma.order.findMany).toHaveBeenCalledWith({
         where: {
           status: 'DELIVERED',
-          createdAt: {
-            gte: new Date(`${date}T00:00:00+03:00`),
+          deliveredAt: {
             lte: new Date(`${date}T23:59:59.999+03:00`),
           },
           settlementItem: { is: null },

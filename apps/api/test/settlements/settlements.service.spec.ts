@@ -532,6 +532,17 @@ describe('SettlementsService (Critical Settlement Paths)', () => {
       const parsed = RunnerCurrentSettlementSchema.parse(result);
       expect(parsed).toEqual(result);
       expect(parsed.status).toBe('NOT_CLOSED');
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            runnerId,
+            status: 'DELIVERED',
+            deliveredAt: expect.objectContaining({ lte: expect.any(Date) }),
+            settlementItem: null,
+          }),
+        }),
+      );
     });
 
     it('returns PENDING status and valid schema when day is closed with PENDING settlement in DB', async () => {

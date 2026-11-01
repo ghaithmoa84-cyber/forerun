@@ -500,13 +500,14 @@ export class SettlementsService {
       });
     }
 
-    const { start, end } = getUtcRangeForOperationalDate(operationalDate);
+    const { end } = getUtcRangeForOperationalDate(operationalDate);
 
     const rawOrders = await this.prisma.order.findMany({
       where: {
         runnerId,
         status: 'DELIVERED',
-        createdAt: { gte: start, lte: end },
+        deliveredAt: { lte: end },
+        settlementItem: null,
       },
       select: {
         orderNumber: true,
@@ -564,12 +565,12 @@ export class SettlementsService {
   }
 
   async checkPendingOrders(date: string): Promise<number> {
-    const { start, end } = getUtcRangeForOperationalDate(date);
+    const { end } = getUtcRangeForOperationalDate(date);
 
     const pendingOrders = await this.prisma.order.findMany({
       where: {
         status: 'DELIVERED',
-        createdAt: { gte: start, lte: end },
+        deliveredAt: { lte: end },
         settlementItem: { is: null },
       },
       select: { runnerId: true },
