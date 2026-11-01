@@ -5,6 +5,127 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Version](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### 2026-11-01 — إنهاء جلسات الحساب فور تفعيل قفل الدخول (SA-5)
+
+**الملفات والدوال المعدّلة:**
+- `apps/api/src/modules/auth/auth.service.ts` (`login`, `refresh`) — إبطال كافة refresh tokens النشطة في نفس المعاملة الذرية التي تضبط `loginLockedAt`، وتوثيق `sessionsRevoked: true` و`revokedTokensCount` في `AuditLog` لحدث `USER_LOGIN_LOCKED`، وإضافة فحص دفاعي صريح في مسار `refresh()` لرفض أي تجديد للحساب المقفول بـ 403.
+- `apps/api/test/auth/auth.service.spec.ts` — تحديث محاكاة Prisma واختبار قفل الدخول للتحقق من استدعاء `refreshToken.updateMany` وتوثيق إنهاء الجلسات في AuditLog.
+- `apps/api/test/integration/auth/login-lockout-session-termination.integration.spec.ts` — إضافة حزمة اختبارات تكاملية ثلاثية تثبت إبطال الجلسة عند المحاولة الخامسة، إبطال الجلسات المتعددة عبر مختلف الأجهزة فوراً، والرفض بـ 403 عند القفل المباشر.
+- `NEXT_TASKS.md` — تحريك SA-5 إلى "قيد التنفيذ على فرع fix/sa5-lockout-session-termination".
+
+**السبب:** تنفيذ قرار مالك المنتج بالقفل الفوري الشامل للجلسات القائمة ومنع تجديد التوكنات فور بلوغ حد المحاولات الفاشلة (SA-5).
+
+**الأوامر والنتائج:**
+- `pnpm --filter forerun-api test:integration test/integration/auth/login-lockout-session-termination.integration.spec.ts` → نجاح 3/3 اختبارات تكامل جديدة.
+- `pnpm --filter forerun-api test:integration test/integration/auth/login-lockout.integration.spec.ts` → نجاح 6/6 اختبارات تكامل سابقة دون أي انحدار.
+- `pnpm build` → نجاح 7/7 حزم.
+- `pnpm typecheck` → نجاح 7/7 حزم دون أي خطأ نوع.
+- `pnpm lint` → 0 تحذيرات و0 أخطاء في 7 حزم.
+- `pnpm --filter forerun-api test` → نجاح 552/552 اختبار وحدة في 40 ملفاً.
+
+### 2026-11-01 — رفع أولوية SA-5 واستكمال توثيق SA-4
+
+**الملفات والدوال المعدّلة:**
+- `NEXT_TASKS.md` — توضيح اكتمال التحليل المصدري لـ SA-4 مع إبقاء الاختبارات التشغيلية معلّقة؛ رفع SA-5 إلى أولوية عالية وتوثيق خيارات المعالجة دون تنفيذها.
+
+**السبب:** جعل فجوة استمرار الجلسة أثناء قفل الدخول ظاهرةً كقرار أمني/منتجي، وجعل نتيجة البحث السلبي عن مستدعيات Ledger قابلة لإعادة التحقق.
+
+**الأوامر والنتائج:**
+- `rg -n "getEntryById|getEntriesByOrder|listAdminEntries|mapRating\\(" apps/api/src` → المخرجات: `ledger.service.ts:100,138,150` لتعريفات الدوال؛ `ledger.controller.ts:29` مستدعٍ لـ `listAdminEntries` فقط؛ `ratings.service.ts:158,288` و`rating.mapper.ts:3` استدعاءات `mapRating`. لم يظهر استدعاء لـ `getEntryById` أو `getEntriesByOrder`.
+- `git diff --check -- NEXT_TASKS.md CHANGELOG.md` → نجح؛ لم تُشغّل اختبارات ولم يُعدّل كود إنتاج.
+
+### 2026-11-01 — متابعة فحص SA-4 وتوثيق SA-5
+
+**الملفات والدوال المعدّلة:**
+- `NEXT_TASKS.md` — تحديث ملاحظة SA-4 بنتائج فحص المصدر وإضافة SA-5 كفجوة مفتوحة.
+
+**السبب:** توثيق دليل المصدر على تحقق القفل عند login فقط، ومراجعة خصوصية تقييمات `note` وعزل قراءات Ledger دون الادعاء بإثبات تشغيلي.
+
+**الأوامر والنتائج:**
+- `rg -n "loginLockedAt|findLeanById|refresh\\(dto|const user = token.user|accessTokenExpiry|ACCESS_TOKEN_EXPIRY" apps/api/src/common/guards/jwt-auth.guard.ts apps/api/src/modules/auth/auth.service.ts apps/api/src/modules/users/users.service.ts apps/api/src/config/jwt.config.ts packages/shared-constants/src/config.ts` → lockout في login فقط؛ guard وrefresh لا يفحصانه.
+- `rg -n "mapRating|note: isAllowed|order\\.customerId !== customer\\.id|rating\\.customerId !== customer\\.id|admin/ledger|Roles\\('ADMIN'\\)|listAdminEntries|getEntryById|getEntriesByOrder" apps/api/src/modules/ratings/rating.mapper.ts apps/api/src/modules/ratings/ratings.service.ts apps/api/src/modules/ledger/ledger.controller.ts apps/api/src/modules/ledger/ledger.service.ts` → note محجوب عن RUNNER، ملكية العميل مفحوصة عند نقاط التقييم، وواجهة Ledger الوحيدة ADMIN-only؛ لم تظهر استدعاءات أخرى لدوال القراءة الإضافية.
+- لم تُشغّل اختبارات؛ لا توجد نتيجة تشغيلية ولا إغلاق لأي بند.
+
+**الأخطاء والحلول:**
+- لم تتوفر أداة GitHub في الجلسة؛ اقتصر هذا التحقق على نسخة المصدر المحلية.
+
+### 2026-11-01 — إعادة فحص اتصال GitHub
+
+**الملفات والدوال المعدّلة:**
+- `CHANGELOG.md` — تسجيل نتيجة فحص الاتصال بعد تأكيد المستخدم إتمام الربط.
+
+**السبب:** التحقق من توفر وصول GitHub لهذه الجلسة قبل مراجعة إعدادات المستودع الحية.
+
+**الأوامر والنتائج:**
+- `gh auth status` → `The token in default is invalid`.
+- فحص أدوات الجلسة أعاد أدوات GitHub العامة الخاصة بتشخيص PR فقط، ولم يُظهر موصل المستودع؛ بحث التكامل أظهر `installed=false`.
+- `git remote -v` → المستودع هو `https://github.com/ghaithmoa84-cyber/forerun.git`.
+
+**الأخطاء والحلول:**
+- لا يوجد وصول قابل للاستخدام داخل هذه الجلسة حتى الآن؛ لم تُقرأ إعدادات الفرع أو الأسرار.
+### 2026-11-01 — التحقق من ربط GitHub
+
+**الملفات والدوال المعدّلة:**
+- `CHANGELOG.md` — تسجيل حالة فحص الربط.
+
+**السبب:** التحقق من شاشة OAuth التي أرسلها المستخدم قبل متابعة فحص إعدادات المستودع.
+
+**الأوامر والنتائج:**
+- `gh auth status` → ما زال رمز GitHub CLI المحلي غير صالح (`The token in default is invalid`).
+- لم تتوفر أدوات GitHub للمستودع في هذه الجلسة؛ شاشة المستخدم تؤكد ارتباط الحساب بـ OAuth لكنها لا تعرض اختيار مستودع `forerun`.
+
+**الأخطاء والحلول:**
+- وصول التكامل إلى المستودع لم يثبت بعد؛ يلزم إكمال اختيار المستودع من رابط الإعداد على GitHub.
+### 2026-11-01 12:16 — إعادة التحقق من صلاحية GitHub
+
+**الملفات والدوال المعدّلة:**
+- `CHANGELOG.md` — تسجيل نتيجة إعادة فحص الاتصال.
+
+**السبب:** متابعة طلب المستخدم بإتاحة وصول GitHub للتحقق من إعدادات الفرع والأسرار الحية.
+
+**الأوامر والنتائج:**
+- `gh auth status` → `The token in default is invalid`.
+- حالة موصل GitHub ما زالت `installed=false`؛ لم تظهر أدوات إعدادات المستودع.
+
+**الأخطاء والحلول:**
+- لم تتوفر جلسة مصادق عليها بعد؛ لم أقرأ أو أغيّر إعدادات GitHub ولم ألمس أسراراً.
+
+### 2026-11-01 — استكمال تحقق المراجعة الأمنية بعد النشر
+
+**الملفات والدوال المعدّلة:**
+- `apps/api/test/integration/_audit/r2-receipt-count-bypass.integration.spec.ts` — اختبار حد الإيصالات عبر مسارات API مع mock لـ `R2Service` وحارس قاعدة `forerun_test`.
+- `apps/api/test/integration/_audit/auth-concurrent-lockout-cas-retry-exhaustion.integration.spec.ts` — اختبار طلبات دخول متوازية وحاجز مزامنة لقياس تقييمات bcrypt قبل CAS.
+- `NEXT_TASKS.md` — جدول جديد SA-1 إلى SA-4 للمهام المفتوحة وأدلة المصدر.
+- مجلد التقرير الخارجي `security-audit/forerun/run-1` — توضيح سبب استهلاك الميزانية، قيد الإعدادات الحية، ونتائج GitHub العامة الموثقة.
+
+**السبب:** متابعة البنود الثلاثة وتوثيق فجوات التغطية وإعداد اختبارات التدقيق الدائمة دون تغيير كود الإنتاج أو إغلاق بند بلا دليل تشغيل.
+
+**الأوامر والنتائج:**
+- `gh auth status` → فشل المصادقة: `The token in default is invalid`.
+- `git diff --check` → ناجح بعد ضبط نهايات الأسطر.
+- لم تُشغّل اختبارات التكامل؛ بيئة OS sandbox المطلوبة غير متاحة. لم يُستخدم Railway أو تُقرأ قيم أسرار.
+
+**الأخطاء والحلول:**
+- مدقق GitHub لا يملك جلسة صالحة؛ بقي التحقق الحي مع مالك الحساب، وسُجلت نتيجة GitHub العامة من وثائقه الرسمية دون افتراض حالة إعداد المستودع.
+- فشل `git diff --check` أولاً بسبب سطر فارغ زائد في نهاية `NEXT_TASKS.md`، ثم أزيل وأعيد الفحص بنجاح. كما وسّع PowerShell نص رسالة JavaScript خلال تحرير الاختبار؛ أُصلح السطر وفُحص المصدر النهائي.
+
+
+### 2026-11-01 — مراجعة أمنية بعد النشر (جزئية)
+
+**الملفات المعدّلة:**
+- مجلد تقرير المراجعة الخارجي `security-audit/forerun/run-1` — سجل التغطية، النتائج، والتقارير.
+- `CHANGELOG.md` — توثيق تنفيذ المراجعة وحدودها.
+
+**السبب:** طلب المستخدم بدء مراجعة أمنية للمشروع المنشور.
+
+**النتائج:** مراجعة مصدرية فقط؛ 21 وحدة نطاق، منها 3 مغطاة، و3 مسارات تحتاج تحققاً عملياً، و15 وحدة مؤجلة. لا توجد نتائج مؤكدة. بقي مساران غير محسومين خارج سجلات النتائج النهائية. لم يُشغّل كود المشروع ولم يُتصل بالإنتاج.
+
+**الأوامر والنتائج:** قراءة الملفات والتاريخ وفحص سجلات المراجعة؛ محاولتا المدققين الرسميين لـ `coverage-ledger.json` و`findings.json` توقفتا قبل القراءة لعدم توفر حماية النظام no-follow والإدخال غير المتزامن. لم تُشغّل اختبارات أو بناء.
+
+**القيود:** بيئة التشغيل لا توفر العزل المطلوب لتشغيل شيفرة الهدف؛ الميزانية (20 استدعاء) استُنفدت قبل اكتمال التحقق النهائي وتغطية جميع الوحدات. لم يُعدّل كود الإنتاج. حُفظ الملف غير المتتبع الذي كان موجوداً مسبقاً.
+
+
 ### 2026-10-04 11:45 — إعادة هيكلة تقرير مراجعة الكود والأمان (الإصدار 2)
 
 **الملفات المعدّلة:**
@@ -258,7 +379,6 @@ and this project adheres to [Semantic Version](https://semver.org/spec/v2.0.0.ht
 **الأخطاء والحلول:**
 - لا توجد أخطاء تشغيل
 
-## [Unreleased]
 
 ### 2026-09-19 16:21 — Runner settlement list and current endpoints
 
