@@ -7,19 +7,23 @@ import { cleanDatabase, prisma as setupPrisma } from '../setup.js';
 import { createTestApp, closeTestApp, getRequest } from '../helpers/app.helper.js';
 import { seedCustomer } from '../helpers/seed.helper.js';
 
+type BcryptModule = typeof import('bcrypt') & {
+  default?: typeof import('bcrypt');
+};
+
 const mocks = vi.hoisted(() => {
   return { actualBcryptCompare: { current: null as (((plain: string | Buffer, hash: string) => Promise<boolean>) | null) } };
 });
 
 vi.mock('bcrypt', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('bcrypt')>();
-  const realComp = (actual as any).default?.compare ?? actual.compare;
+  const actual = await importOriginal<BcryptModule>();
+  const realComp = actual.default?.compare ?? actual.compare;
   mocks.actualBcryptCompare.current = realComp;
   const mockComp = vi.fn(realComp);
   return {
     ...actual,
     default: {
-      ...((actual as any).default ?? actual),
+      ...(actual.default ?? actual),
       compare: mockComp,
     },
     compare: mockComp,
@@ -77,7 +81,7 @@ describe('Security audit: concurrent login lockout accounting', () => {
     const allComparisonsReached = new Promise<void>((resolve) => { markAllComparisonsReached = resolve; });
     const realCompare = mocks.actualBcryptCompare.current ?? bcrypt.compare.bind(bcrypt);
 
-    vi.mocked(bcrypt.compare).mockImplementation((async (plain: string | Buffer, hash: string) => {
+    vi.mocked(bcrypt.compare).mockImplementation(async (plain: string | Buffer, hash: string) => {
       const matches = await realCompare(plain, hash);
       if (typeof plain === 'string' && plain.startsWith(passwordPrefix)) {
         evaluatedWrongPasswords += 1;
@@ -86,7 +90,7 @@ describe('Security audit: concurrent login lockout accounting', () => {
         await comparisonGate;
       }
       return matches;
-    }) as any);
+    });
 
     const requests = Array.from({ length: parallelAttempts }, (_, index) =>
       request.post('/api/v1/auth/login').send({
