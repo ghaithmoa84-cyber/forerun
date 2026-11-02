@@ -9,14 +9,16 @@ let app: INestApplication;
 
 export interface TestAppOptions {
   customFeeLimit?: number;
+  enableThrottler?: boolean;
 }
 
 export async function createTestApp(options?: TestAppOptions): Promise<INestApplication> {
   let builder = Test.createTestingModule({
     imports: [AppModule],
-  })
-    .overrideProvider(getStorageToken())
-    .useValue({
+  });
+
+  if (!options?.enableThrottler) {
+    builder = builder.overrideProvider(getStorageToken()).useValue({
       increment: async () => ({
         totalHits: 1,
         timeToExpire: 0,
@@ -24,6 +26,7 @@ export async function createTestApp(options?: TestAppOptions): Promise<INestAppl
         timeToBlockExpire: 0,
       }),
     });
+  }
 
   if (options?.customFeeLimit !== undefined) {
     builder = builder
@@ -34,6 +37,7 @@ export async function createTestApp(options?: TestAppOptions): Promise<INestAppl
   const moduleRef = await builder.compile();
 
   app = moduleRef.createNestApplication();
+  (app as any).set('trust proxy', true);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.setGlobalPrefix('api/v1');
   await app.init();
