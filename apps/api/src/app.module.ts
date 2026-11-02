@@ -46,6 +46,11 @@ import { jwtConfig } from './config/jwt.config.js';
           limit: 1000, // Module default fallback; overridden strictly per endpoint in auth.controller.ts (limit: 10)
         },
         {
+          name: 'login_phone',
+          ttl: 900000,
+          limit: 1000, // Module default fallback; overridden strictly per endpoint in auth.controller.ts (limit: 5)
+        },
+        {
           name: 'register',
           ttl: 3600000,
           limit: 1000, // Module default fallback; overridden strictly per endpoint in auth.controller.ts (limit: 3)

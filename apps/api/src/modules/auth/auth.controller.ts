@@ -20,7 +20,10 @@ export class AuthController {
   @Post('login')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @Throttle({ login: { limit: 10, ttl: 900000 } })
+  @Throttle({
+    login: { limit: 10, ttl: 900000 },
+    login_phone: { limit: 5, ttl: 900000 },
+  })
   login(
     @Body(new ZodValidationPipe(LoginSchema)) dto: LoginRequest,
     @Headers('user-agent') deviceInfo?: string,

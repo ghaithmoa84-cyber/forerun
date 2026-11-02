@@ -1,0 +1,34 @@
+
+> forerun-api@0.0.1 test:integration D:\FAWRUNF\FAWRUN\apps\api
+> vitest run --config vitest.config.integration.ts "auth-concurrent-lockout-cas-retry-exhaustion"
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90mD:/FAWRUNF/FAWRUN/apps/api[39m
+
+ [31mظإ»[39m test/integration/_audit/auth-concurrent-lockout-cas-retry-exhaustion.integration.spec.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1663[2mms[22m[39m
+[31m     [31m├ù[31m does not evaluate more than the configured number of concurrent wrong passwords before lockout[39m[33m 499[2mms[22m[39m
+
+[31mظ»ظ»ظ»ظ»ظ»ظ»ظ»[39m[1m[41m Failed Tests 1 [49m[22m[31mظ»ظ»ظ»ظ»ظ»ظ»ظ»[39m
+
+[41m[1m FAIL [22m[49m test/integration/_audit/auth-concurrent-lockout-cas-retry-exhaustion.integration.spec.ts[2m > [22mSecurity audit: concurrent login lockout accounting[2m > [22mdoes not evaluate more than the configured number of concurrent wrong passwords before lockout
+[31m[1mTypeError[22m: Cannot spy on export "compare". Module namespace is not configurable in ESM. See: https://vitest.dev/guide/browser/#limitations[39m
+[36m [2mظإ»[22m test/integration/_audit/auth-concurrent-lockout-cas-retry-exhaustion.integration.spec.ts:[2m61:8[22m[39m
+    [90m 59|[39m     [35mconst[39m realCompare [33m=[39m bcrypt[33m.[39mcompare[33m.[39m[34mbind[39m(bcrypt)[33m;[39m
+    [90m 60|[39m
+    [90m 61|[39m     vi.spyOn(bcrypt, 'compare').mockImplementation(async (plain, hash)ظخ
+    [90m   |[39m        [31m^[39m
+    [90m 62|[39m       [35mconst[39m matches [33m=[39m [35mawait[39m [34mrealCompare[39m(plain[33m,[39m hash)[33m;[39m
+    [90m 63|[39m       if (typeof plain === 'string' && plain.startsWith(passwordPrefixظخ
+
+[31m[1mCaused by: TypeError[22m: Cannot redefine property: compare[39m
+[36m [2mظإ»[22m test/integration/_audit/auth-concurrent-lockout-cas-retry-exhaustion.integration.spec.ts:[2m61:8[22m[39m
+
+[31m[2mظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»ظ»[1/1]ظ»[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m   Start at [22m 15:33:07
+[2m   Duration [22m 7.35s[2m (transform 1.15s, setup 145ms, import 5.17s, tests 1.66s, environment 0ms)[22m
+
+ظëELIFECYCLEظë Command failed with exit code 1.
