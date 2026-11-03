@@ -376,7 +376,7 @@
 ---
 
 ### ⚠️ جدول تنظيف الفروع المحلية المتراكمة (Cleanup Schedule — D36 Compliance)
-توجد 7 فروع عمل محلية مكتملة ومدموجة في `master` محتفظ بها كاحتياط مؤقت:
+توجد 9 فروع عمل وتدقيق محلية محتفظ بها كاحتياط مؤقت:
 1. `feature/admin-support-ops` (دُمج بـ `0e4fe1b`)
 2. `feature/admin-customer-details` (دُمج بـ `fb31a48`)
 3. `feature/free-orders-promo` (دُمج بـ `eb96714`)
@@ -384,5 +384,7 @@
 5. `fix/sa5-lockout-session-termination` (دُمج بـ `04f2fde`)
 6. `fix/settlement-date-alignment-and-user-state-machine` (دُمج بـ `c89d8d4`)
 7. `fix/d66-phone-based-login-throttle` (دُمج بـ `dccabaf`)
+8. `audit/sa3-cas-lockout-verification` (فرع قياس وتحقق SA-3 المسبق لإصلاح D66)
+9. `audit/sa4-jwt-ratings-ledger-verification` (فرع التحقق الحي لـ SA-4 — بانتظار الدمج)
 
 **الموعد المحدد لحذفها محلياً:** نهاية الأسبوع (الأحد 2026-11-08) بعد استقرار ونشر الإصدار وتأكيد عدم الحاجة لأي rollback، تجنباً لنسيانها أو تحوّلها لفروع معلّقة (D36/D37).
