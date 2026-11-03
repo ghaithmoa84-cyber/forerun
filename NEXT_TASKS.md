@@ -385,6 +385,6 @@
 6. `fix/settlement-date-alignment-and-user-state-machine` (دُمج بـ `c89d8d4`)
 7. `fix/d66-phone-based-login-throttle` (دُمج بـ `dccabaf`)
 8. `audit/sa3-cas-lockout-verification` (فرع قياس وتحقق SA-3 المسبق لإصلاح D66)
-9. `audit/sa4-jwt-ratings-ledger-verification` (فرع التحقق الحي لـ SA-4 — بانتظار الدمج)
+9. `audit/sa4-jwt-ratings-ledger-verification` (دُمج بـ `ea9cc12`)
 
 **الموعد المحدد لحذفها محلياً:** نهاية الأسبوع (الأحد 2026-11-08) بعد استقرار ونشر الإصدار وتأكيد عدم الحاجة لأي rollback، تجنباً لنسيانها أو تحوّلها لفروع معلّقة (D36/D37).
