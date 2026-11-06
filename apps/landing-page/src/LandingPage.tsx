@@ -2,8 +2,8 @@ import React from 'react';
 import './LandingPage.css';
 
 // WhatsApp Configuration
-const ADMIN_WHATSAPP_NUMBER = '963981571936';
-const ADMIN_WHATSAPP_DISPLAY = '+963 981 571 936';
+const ADMIN_WHATSAPP_NUMBER = '963995535895';
+const ADMIN_WHATSAPP_DISPLAY = '+963 995 535 895';
 const VERIFY_MSG = encodeURIComponent('مرحباً، أود تفعيل حسابي في تطبيق فَوْراً');
 const APK_DOWNLOAD_URL = '/forerun.apk';
 
