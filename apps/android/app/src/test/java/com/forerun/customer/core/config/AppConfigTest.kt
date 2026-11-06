@@ -57,9 +57,9 @@ class AppConfigTest {
 
     @Test
     fun buildRunnerWhatsAppUrl_internalDashes_areStripped() {
-        val url = AppConfig.buildRunnerWhatsAppUrl("0981-571-936")
+        val url = AppConfig.buildRunnerWhatsAppUrl("0995-535-895")
 
-        assertEquals("https://wa.me/963981571936", url)
+        assertEquals("https://wa.me/963995535895", url)
     }
 
     @Test
@@ -84,4 +84,3 @@ class AppConfigTest {
         assertTrue(path.all { it.isDigit() })
     }
 }
-
